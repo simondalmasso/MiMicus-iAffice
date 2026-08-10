@@ -20,10 +20,12 @@
       "required_minimum_stake": "1000000000000000000"
     },
     "rpc": "https://allora-rpc.mainnet.allora.network/",
-    "rpc_freshness_probe": "CACHE_BUSTED"
+    "rpc_freshness_probe": "CACHE_BUSTED",
+    "static_source_tag": "OFFICIAL_DOC",
+    "live_source_tag": "LIVE_MAINNET"
   },
   "observed_at_utc": "2026-08-10T05:51:34Z",
-  "source_tag": "OFFICIAL_DOC+LIVE_MAINNET",
+  "source_tag": "DERIVED",
   "testnet": {
     "chain_id": "allora-testnet-1",
     "deployed_version": "v0.17.0",
@@ -36,6 +38,8 @@
     "next_topic_id": 90,
     "public_read_proof": "PASS",
     "rpc": "https://allora-rpc.testnet.allora.network/",
-    "rpc_freshness_probe": "CACHE_BUSTED"
+    "rpc_freshness_probe": "CACHE_BUSTED",
+    "static_source_tag": "OFFICIAL_DOC",
+    "live_source_tag": "DERIVED"
   }
 }
