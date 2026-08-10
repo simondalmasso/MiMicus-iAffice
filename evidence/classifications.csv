@@ -1,0 +1,24 @@
+topic_id,classification,reason,evidence,confidence,source_tag
+1,TRADING,Explicit crypto market price/log-return/volatility objective,BTC/USD - Log Returns - 8h,HIGH,DERIVED
+2,TRADING,Explicit crypto market price/log-return/volatility objective,ETH/USD - Log Returns - 8h,HIGH,DERIVED
+3,TRADING,Explicit crypto market price/log-return/volatility objective,SOL/USD - Log Returns - 8h,HIGH,DERIVED
+4,TRADING,Explicit crypto market price/log-return/volatility objective,BTC/USD - Log Returns - 6h,HIGH,DERIVED
+5,TRADING,Explicit crypto market price/log-return/volatility objective,ETH/USD - Log Returns - 6h,HIGH,DERIVED
+6,TRADING,Explicit crypto market price/log-return/volatility objective,SOL/USD - Log Returns - 6h,HIGH,DERIVED
+7,TRADING,Explicit crypto market price/log-return/volatility objective,BERA/USD - Log Returns - 1h,HIGH,DERIVED
+8,TRADING,Explicit crypto market price/log-return/volatility objective,BTC/USD - Price Prediction - 8h,HIGH,DERIVED
+9,TRADING,Explicit crypto market price/log-return/volatility objective,ETH/USD - Price Prediction - 8h,HIGH,DERIVED
+10,TRADING,Explicit crypto market price/log-return/volatility objective,SOL/USD - Price Prediction - 8h,HIGH,DERIVED
+11,TRADING,Explicit crypto market price/log-return/volatility objective,BTC/USD - Log Returns - 24h,HIGH,DERIVED
+12,TRADING,Explicit crypto market price/log-return/volatility objective,ETH/USD - Log Returns - 24h,HIGH,DERIVED
+13,TRADING,Explicit crypto market price/log-return/volatility objective,SOL/USD - Log Returns - 24h,HIGH,DERIVED
+14,TRADING,Explicit crypto market price/log-return/volatility objective,BTC/USD - Price Prediction - 8h,HIGH,DERIVED
+15,TRADING,Explicit crypto market price/log-return/volatility objective,BTC/USD - Log Returns - 24h,HIGH,DERIVED
+16,TRADING,Explicit crypto market price/log-return/volatility objective,ETH/USD - Log Returns - 24h,HIGH,DERIVED
+17,TRADING,Explicit crypto market price/log-return/volatility objective,SOL/USD - Log Returns - 24h,HIGH,DERIVED
+18,TRADING,Explicit crypto market price/log-return/volatility objective,BTC/USD - Log Returns - 20m,HIGH,DERIVED
+19,TRADING,Explicit crypto market price/log-return/volatility objective,NEAR/USD - Log Returns - 8h,HIGH,DERIVED
+20,TRADING,Explicit crypto market price/log-return/volatility objective,BTC/USD - Volatility - 15m,HIGH,DERIVED
+21,TRADING,Explicit crypto market price/log-return/volatility objective,ETH/USD - Volatility - 15m,HIGH,DERIVED
+22,TRADING,Explicit crypto market price/log-return/volatility objective,XRP/USD - Volatility - 15m,HIGH,DERIVED
+23,TRADING,Explicit crypto market price/log-return/volatility objective,SOL/USD - Volatility - 15m,HIGH,DERIVED
