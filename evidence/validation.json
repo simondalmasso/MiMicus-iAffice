@@ -2,6 +2,8 @@
   "compileall": "PASS",
   "direct_runtime_network": "BLOCKED_DNS",
   "github_hosted_ci": "PREPARED_NOT_RUN_COST_GUARD",
+  "live_mainnet_snapshot_engine_processing": "PASS_23_ROWS_15_ACTIVE_23_TRADING_0_NON_TRADING_ACTIVE",
+  "live_public_read_collection": "PASS_VIA_CONNECTED_ZERO_AUTH_READ_SURFACES",
   "secret_scan": "PASS",
   "source_tag": "DERIVED",
   "spend_usd": 0,
