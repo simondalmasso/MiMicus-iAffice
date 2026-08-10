@@ -1,0 +1,23 @@
+{
+  "active_topics": 15,
+  "api_keys_used": 0,
+  "aud_gate0": "CONFIRMED",
+  "base_sha": "14e65398971675e1c9362282ff2431c30db736af",
+  "branch": "order-001-readonly-radar",
+  "gas_usd": 0,
+  "mainnet_head_height": 10375660,
+  "next_topic_id": 24,
+  "non_trading_active_topics": 0,
+  "observed_at_utc": "2026-08-10T05:51:34Z",
+  "order": "001",
+  "private_keys_used": 0,
+  "project": "Allora-Edge",
+  "qualifying_topics": 0,
+  "snapshot_consistency": "NON_ATOMIC_READ_WINDOW",
+  "source_tag": "DERIVED",
+  "spend_usd": 0,
+  "stake_usd": 0,
+  "topic_snapshot_height": 10375462,
+  "total_existing_topics": 23,
+  "transactions": 0
+}
