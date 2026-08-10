@@ -1,0 +1,10 @@
+{
+  "label": "SYNTHETIC_TEST_FIXTURE",
+  "source_tag": "SYNTHETIC_FIXTURE",
+  "economic_evidence": false,
+  "topic_id": 999001,
+  "topic": "EV charger availability at ETA",
+  "input": {"available_chargers": 3, "total_chargers": 4},
+  "ground_truth": 1.0,
+  "purpose": "adapter/loss/ground-truth lifecycle test only"
+}
