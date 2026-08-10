@@ -1,0 +1,12 @@
+{
+  "compileall": "PASS",
+  "direct_runtime_network": "BLOCKED_DNS",
+  "github_hosted_ci": "PREPARED_NOT_RUN_COST_GUARD",
+  "secret_scan": "PASS",
+  "source_tag": "DERIVED",
+  "spend_usd": 0,
+  "synthetic_shadow_demo": "PASS",
+  "tests": "33 PASS",
+  "transactions": 0,
+  "write_lock": "PASS"
+}
