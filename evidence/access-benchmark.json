@@ -1,0 +1,16 @@
+{
+  "benchmark_command": "allora-edge benchmark --requests 10",
+  "direct_runtime_egress": "BLOCKED_DNS",
+  "error": "URLError: Temporary failure in name resolution",
+  "error_rate": "UNKNOWN",
+  "live_read_proof": "PASS_VIA_CONNECTED_READ_TOOLS",
+  "network": "mainnet",
+  "not_economic_evidence": true,
+  "observed_at_utc": "2026-08-10T05:47:00Z",
+  "p50_ms": "UNKNOWN",
+  "p90_ms": "UNKNOWN",
+  "p99_ms": "UNKNOWN",
+  "rate_limit": "UNKNOWN",
+  "source_tag": "DERIVED",
+  "stale_head": "GUARDED_IN_CODE"
+}
