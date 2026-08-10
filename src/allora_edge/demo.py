@@ -36,7 +36,7 @@ class _Reward:
 
 def run_synthetic_demo(path: Path, persist=None) -> dict[str, Any]:
     raw = json.loads(path.read_text(encoding="utf-8"))
-    if raw.get("source_tag") != "SYNTHETIC_TEST_FIXTURE" or raw.get("economic_evidence") is not False:
+    if raw.get("source_tag") != "SYNTHETIC_FIXTURE" or raw.get("economic_evidence") is not False:
         raise RuntimeError("FIXTURE_MUST_BE_SYNTHETIC_AND_NOT_ECONOMIC_EVIDENCE")
     result = ShadowWorkerEngine().run(
         topic_id=int(raw["topic_id"]), topic_class=TopicClass.NON_TRADING,
