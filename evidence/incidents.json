@@ -1,0 +1,32 @@
+[
+  {
+    "code": "HISTORICAL_ARCHIVE_UNAVAILABLE",
+    "detail": "No verified $0 official 30/90-day full historical state/reward source established; active_topics_at_block is not a full historical active-set snapshot.",
+    "severity": "INFO",
+    "source_tag": "LIVE_MAINNET"
+  },
+  {
+    "code": "CONSUMER_API_AUTH_REQUIRED",
+    "detail": "api.allora.network requires API key; not used. Public chain RPC/LCD reads succeed without one.",
+    "severity": "INFO",
+    "source_tag": "OFFICIAL_DOC"
+  },
+  {
+    "code": "SUSTAINED_RUN_BLOCKED_BY_RUNTIME",
+    "detail": "Execution session is not a durable 24h host and cloud provisioning is prohibited.",
+    "severity": "INFO",
+    "source_tag": "DERIVED"
+  },
+  {
+    "code": "REGISTRATION_FEE_EXACT_VALUE_NOT_EXTRACTED",
+    "detail": "Live params was readable but current extraction view did not expose trailing registration_fee field; value left UNKNOWN.",
+    "severity": "INFO",
+    "source_tag": "UNKNOWN"
+  },
+  {
+    "code": "PUBLIC_RPC_CACHE_STALENESS_OBSERVED",
+    "detail": "Unparameterized status reads returned a cached head near 10375463; cache-busted read returned 10375660 at 2026-08-10T05:51:34Z. Client now cache-busts /status and rejects stale/regressing heads.",
+    "severity": "WARN",
+    "source_tag": "LIVE_MAINNET"
+  }
+]
