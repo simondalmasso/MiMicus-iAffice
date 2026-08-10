@@ -1,0 +1,41 @@
+{
+  "mainnet": {
+    "allora_chain_reference_sha": "8cbbba6ebe15edad2bcf1adab72eb67cb4568a08",
+    "catching_up": false,
+    "chain_id": "allora-mainnet-1",
+    "deployed_version": "v0.16.0",
+    "emissions_api_version": "v9",
+    "explorer": "https://explorer.allora.network/",
+    "grpc": "https://allora-grpc.mainnet.allora.network/",
+    "lcd": "https://allora-api.mainnet.allora.network/",
+    "live_head_height": 10375660,
+    "live_head_time": "2026-08-10T05:51:34.481886372Z",
+    "next_topic_id": 24,
+    "params": {
+      "max_top_forecasters_to_reward": "6",
+      "max_top_inferers_to_reward": "32",
+      "max_top_reputers_to_reward": "6",
+      "params_version": "v7",
+      "registration_fee": "UNKNOWN",
+      "required_minimum_stake": "1000000000000000000"
+    },
+    "rpc": "https://allora-rpc.mainnet.allora.network/",
+    "rpc_freshness_probe": "CACHE_BUSTED"
+  },
+  "observed_at_utc": "2026-08-10T05:51:34Z",
+  "source_tag": "OFFICIAL_DOC+LIVE_MAINNET",
+  "testnet": {
+    "chain_id": "allora-testnet-1",
+    "deployed_version": "v0.17.0",
+    "emissions_api_version": "v10",
+    "explorer": "https://explorer.testnet.allora.network/allora-testnet-1",
+    "grpc": "https://allora-grpc.testnet.allora.network/",
+    "lcd": "https://allora-api.testnet.allora.network/",
+    "live_head_height": 10448312,
+    "live_head_time": "2026-08-10T05:51:33.859246866Z",
+    "next_topic_id": 90,
+    "public_read_proof": "PASS",
+    "rpc": "https://allora-rpc.testnet.allora.network/",
+    "rpc_freshness_probe": "CACHE_BUSTED"
+  }
+}
