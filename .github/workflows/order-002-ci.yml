@@ -1,0 +1,199 @@
+name: ORDER-002 exact-head CI
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: order-002-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONUNBUFFERED: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  dependency-integrity:
+    name: lock / dependency integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install exact environment or bootstrap resolver
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          if [[ -f requirements.lock ]]; then
+            python -m pip install -r requirements.lock
+            python -m pip install --no-deps -e .
+          else
+            python -m pip install -e '.[dev]'
+            python -m pip freeze --exclude-editable > /tmp/requirements.lock
+            cat /tmp/requirements.lock
+          fi
+          python -m pip check
+      - name: Verify direct pins
+        run: |
+          python - <<'PY'
+          from importlib.metadata import version
+          expected = {
+              "mcp": "2.0.0",
+              "openai-agents": "0.21.1",
+              "pydantic": "2.13.4",
+              "SQLAlchemy": "2.0.50",
+              "alembic": "1.18.4",
+              "ruff": "0.16.3",
+              "mypy": "2.3.0",
+              "pytest": "9.0.2",
+              "pytest-cov": "7.0.0",
+          }
+          for package, wanted in expected.items():
+              actual = version(package)
+              assert actual == wanted, (package, wanted, actual)
+          print("DIRECT_PINS=PASS")
+          PY
+      - name: Bootstrap lock artifact
+        if: ${{ hashFiles('requirements.lock') == '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: order002-bootstrap-lock
+          path: /tmp/requirements.lock
+
+  quality:
+    name: Ruff format/lint + mypy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          if [[ -f requirements.lock ]]; then python -m pip install -r requirements.lock && python -m pip install --no-deps -e .; else python -m pip install -e '.[dev]'; fi
+      - run: ruff format --check .
+      - run: ruff check .
+      - run: mypy src/mimicus
+
+  unit-integration-coverage:
+    name: unit / integration / coverage >=90
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          if [[ -f requirements.lock ]]; then python -m pip install -r requirements.lock && python -m pip install --no-deps -e .; else python -m pip install -e '.[dev]'; fi
+      - run: pytest tests/unit tests/integration --cov=mimicus --cov-report=term-missing --cov-fail-under=90
+
+  migration-package:
+    name: migration / PostgreSQL compile / package smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          if [[ -f requirements.lock ]]; then python -m pip install -r requirements.lock && python -m pip install --no-deps -e .; else python -m pip install -e '.[dev]'; fi
+      - name: Migration SQLite and PostgreSQL DDL
+        run: |
+          export MIMICUS_DATABASE_URL="sqlite:///$RUNNER_TEMP/migration.db"
+          mimicus db upgrade
+          python - <<'PY'
+          from mimicus.storage.postgres_compat import compile_postgres_schema
+          ddl = compile_postgres_schema()
+          assert len(ddl) >= 19
+          assert "CREATE TABLE runs" in ddl["runs"]
+          print("POSTGRESQL_SCHEMA_COMPILE=PASS")
+          PY
+      - name: Build and isolated wheel smoke
+        run: |
+          python -m build
+          python -m venv "$RUNNER_TEMP/wheel-smoke"
+          if [[ -f requirements.lock ]]; then "$RUNNER_TEMP/wheel-smoke/bin/python" -m pip install -r requirements.lock; fi
+          "$RUNNER_TEMP/wheel-smoke/bin/python" -m pip install dist/*.whl
+          "$RUNNER_TEMP/wheel-smoke/bin/mimicus" doctor --profile offline
+
+  k3-security-replay:
+    name: K3 compatibility / no dynamic code / replay tamper
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          if [[ -f requirements.lock ]]; then python -m pip install -r requirements.lock && python -m pip install --no-deps -e .; else python -m pip install -e '.[dev]'; fi
+      - run: python scripts/check_security.py
+      - run: python scripts/check_ledger.py
+      - run: pytest -q tests/unit/test_memory_germinal.py tests/unit/test_agents_coalition.py tests/unit/test_ledger_storage_security.py
+
+  e2e-mcp:
+    name: 12 process E2E / real MCP transport / no key
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          if [[ -f requirements.lock ]]; then python -m pip install -r requirements.lock && python -m pip install --no-deps -e .; else python -m pip install -e '.[dev]'; fi
+      - name: Process E2E
+        env:
+          OPENAI_API_KEY: ""
+        run: python -m mimicus.validation.e2e "$RUNNER_TEMP/E2E_RESULTS.json"
+      - name: Extract MCP evidence
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          report = json.loads(Path(os.environ["RUNNER_TEMP"] + "/E2E_RESULTS.json").read_text())
+          mcp = next(row for row in report["scenarios"] if row.get("scenario") == "12_mcp_transport")
+          assert mcp["pass"] and not mcp["openai_key_required"] and mcp["path"] == "/mcp"
+          Path(os.environ["RUNNER_TEMP"] + "/MCP_E2E.json").write_text(json.dumps(mcp, indent=2, sort_keys=True) + "\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: order002-e2e
+          path: |
+            ${{ runner.temp }}/E2E_RESULTS.json
+            ${{ runner.temp }}/MCP_E2E.json
+
+  benchmark-evidence:
+    name: benchmark 200 / committed evidence shape
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          if [[ -f requirements.lock ]]; then python -m pip install -r requirements.lock && python -m pip install --no-deps -e .; else python -m pip install -e '.[dev]'; fi
+      - name: Benchmark
+        run: mimicus benchmark --profile offline --episodes 200 --output-dir "$RUNNER_TEMP/benchmark"
+      - name: Assert benchmark dimensions
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          report = json.loads(Path(os.environ["RUNNER_TEMP"] + "/benchmark/BENCHMARK.json").read_text())
+          assert report["episodes_per_architecture"] >= 200
+          assert report["total_architecture_episodes"] >= 1000
+          assert set(report["metrics"]) == {"A", "B", "C", "D", "E"}
+          print("BENCHMARK_200=PASS")
+          PY
+      - name: Committed evidence validation
+        if: ${{ hashFiles('evidence/ORDER-002/MANIFEST.sha256') != '' }}
+        run: python scripts/verify_evidence.py

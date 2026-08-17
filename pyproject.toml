@@ -1,0 +1,69 @@
+[build-system]
+requires = ["setuptools==82.0.1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mimicus-swarm"
+version = "0.1.0"
+description = "Auditable agentic immune swarm with deterministic falsification, memory gates, replay, and MCP."
+readme = "README.md"
+requires-python = ">=3.12,<3.15"
+license = "MIT"
+authors = [{name = "MiMicus contributors"}]
+dependencies = [
+  "alembic==1.18.4",
+  "mcp==2.0.0",
+  "openai-agents==0.21.1",
+  "pydantic==2.13.4",
+  "SQLAlchemy==2.0.50",
+]
+
+[project.optional-dependencies]
+dev = [
+  "build==1.5.0",
+  "mypy==2.3.0",
+  "pytest==9.0.2",
+  "pytest-cov==7.0.0",
+  "ruff==0.16.3",
+]
+
+[project.scripts]
+mimicus = "mimicus.interfaces.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = ["live: requires external credentials"]
+
+[tool.coverage.run]
+branch = true
+source = ["mimicus"]
+omit = ["src/mimicus/__init__.py"]
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
+skip_covered = true
+exclude_also = ["if TYPE_CHECKING:"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 180
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src/mimicus"]
+ignore_missing_imports = true
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+check_untyped_defs = true
+no_implicit_optional = true
+show_error_codes = true
