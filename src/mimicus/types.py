@@ -29,3 +29,4 @@ class MemoryStatus(StrEnum):
 class BankruptcyState(StrEnum):
     ACTIVE = "ACTIVE"
     BANKRUPT = "BANKRUPT"
+    PROBATION = "PROBATION"
