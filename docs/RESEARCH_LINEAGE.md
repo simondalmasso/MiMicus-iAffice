@@ -1,33 +1,48 @@
 # Research lineage
 
-MiMicus owns its orchestration semantics. The references below are conceptual lineage; no cited framework is used as a second orchestration control plane and no paper text is source code.
+MiMicus V0.2 keeps one native orchestration control plane. ORDER-003 reviewed external projects for concepts and implemented the adopted mechanisms clean-room in this repository; no source code from the projects below was copied into MiMicus.
 
-## Framework patterns
+## ORDER-003 concept lineage
 
-- OpenAI Agents SDK — model-facing agents, structured outputs, hooks/guardrails, tracing and bounded model execution. Runtime dependency: `openai-agents`; MiMicus retains coalition/trust/memory/falsification/mutation authority. Primary: https://github.com/openai/openai-agents-python
-- DeepSeek Harness — capability/plugin composition, ordered bundles, typed services/events and reversible registrations. Pattern only; no DeepSeek Harness/Cordis/Node runtime or copied source. Primary: https://github.com/deepseek-ai/deepseek-harness
-- Microsoft Agent Framework / Magentic-One — task/progress ledgers, explicit workflows, stagnation/replanning and replay concepts. Pattern only. Primary: https://github.com/microsoft/agent-framework
-- LangGraph / Deep Agents — durable state/checkpoint and isolated subagent context concepts. Pattern only. Primary: https://github.com/langchain-ai/langgraph
-- Google ADK — deterministic workflow boundaries, routing and fan-out/fan-in concepts. Pattern only. Primary: https://github.com/google/adk-python
-- CrewAI — autonomy/control split. Pattern only. Primary: https://github.com/crewAIInc/crewAI
-- Swarms — independent mixture/dynamic routing/topology concepts. Pattern only. Primary: https://github.com/kyegomez/swarms
-- AgentScope — permissions/middleware/team-runtime separation and governed memory. Pattern only. Primary: https://github.com/agentscope-ai/agentscope
-- CAMEL — evolvability tied to verifiable evaluation rather than self-scoring. Pattern only. Primary: https://github.com/camel-ai/camel
-- MetaGPT — critical SOPs as executable/versioned policy rather than fixed role-play. Pattern only. Primary: https://github.com/FoundationAgents/MetaGPT
+### The Swarm Corporation / PARL
+Reference: `https://github.com/The-Swarm-Corporation/PARL`
 
-## 2025–2026 research concepts required by ORDER-002
+Adopted concept: parallel decomposition and critical-path/serial-collapse measurement. MiMicus implements execution-time `work_steps`, `critical_steps`, measured critical path, serial-work estimate, peak concurrency, finish rate, speedup/efficiency and avoidable-serialization telemetry. Not adopted: PARL training runtime, RL, PyTorch or `open-parl` dependency.
 
-- Skill-conditional trust / laundering: https://arxiv.org/abs/2606.14200
-- Dynamic trust-aware sparse communication: https://arxiv.org/abs/2606.01828
-- Removal-based agent attribution: https://arxiv.org/abs/2605.27621
-- Dynamic role assignment: https://arxiv.org/abs/2601.17152
-- Dynamic coalition formation / communication pricing: https://arxiv.org/abs/2608.07532
-- Canary tool-selection diagnosis: https://arxiv.org/abs/2608.04719
-- Correlated LLM errors: https://arxiv.org/abs/2506.07962
-- Agent continual-learning evaluation: https://arxiv.org/abs/2606.02461
-- Verified executable-evidence memory / error attribution: https://arxiv.org/abs/2604.17658
-- Memory lifecycle poisoning defenses: https://arxiv.org/abs/2608.00426
-- Systematic memory poisoning: https://arxiv.org/abs/2606.04329
-- Persistent memory threats: https://arxiv.org/abs/2607.14651
+### AdvancedResearch
+Reference: `https://github.com/The-Swarm-Corporation/AdvancedResearch`
 
-Implementation synthesis is direct-evidence domain calibration, verified falsifier persistence, declarative falsifier contracts, domain bankruptcy, mutation only after confirmed evasion, fossil-regressed germinal promotion, origin-bound memory authority, correlated-error penalties and task-dependent morphology.
+Adopted concept: real fan-out/fan-in. MiMicus represents it in its own executable Morphology DAG and bounded async executor. No `advanced-research` or `swarms` runtime dependency was added.
+
+### AI-CoScientist
+Reference: `https://github.com/The-Swarm-Corporation/AI-CoScientist`
+
+Adopted concept: proximity/diversity control. MiMicus uses deterministic token/claim-feature and provenance/evidence overlap, while preserving useful contradiction. Fixed scientific-role topologies and Elo-as-truth were not adopted.
+
+### Agent Bazaar
+Reference: `https://github.com/The-Swarm-Corporation/agent-bazaar-implementation`
+
+Adopted threat model: identity whitewashing. MiMicus separates exact fingerprints from declared/known lineages and puts a new fingerprint from a domain-bankrupt known lineage into PROBATION until recovery audition succeeds. Positive trust never transfers automatically.
+
+### swarm-models
+Reference: `https://github.com/The-Swarm-Corporation/swarm-models`
+
+Adopted concept: provider adapter normalization. The package itself was not added. MiMicus retains its own typed provider protocol and OpenAI Agents SDK adapter.
+
+### swarms-memory
+Reference: `https://github.com/The-Swarm-Corporation/swarms-memory`
+
+Adopted concept: backend replaceability only. Authority, provenance, retrieval and cross-agent gates remain MiMicus policy and are not delegated to a vector-memory package.
+
+### swarms-core
+Reference: `https://github.com/The-Swarm-Corporation/swarms-core`
+
+Decision: no Rust migration in V0.2. The Python executor/provider boundaries remain explicit so a later measured bottleneck could justify an alternate backend.
+
+## K3 lineage
+
+ORDER-002 K3 compatibility artifacts, contract hashes and fossil lineage remain preserved under `evidence/ORDER-002/` and the K3-specific documentation. ORDER-003 does not rewrite the trusted primitive model: mutation stays declarative and limited to trusted primitive parameters/metadata.
+
+## Evidence discipline
+
+Research references explain design inspiration, not benchmark results. Measured ORDER-003 properties come from repository tests, process E2E artifacts and the execution-derived benchmark under `evidence/ORDER-003/`.
