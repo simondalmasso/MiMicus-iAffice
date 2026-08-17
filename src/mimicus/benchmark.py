@@ -5,7 +5,7 @@ import random
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from statistics import mean
-from typing import Literal
+from typing import Any, Literal
 
 from mimicus.canonical import sha256_obj
 from mimicus.orchestration.attribution import removal_attribution
@@ -121,7 +121,7 @@ def _result(episode: Episode, architecture: Architecture) -> EpisodeResult:
     )
 
 
-def _metrics(rows: list[EpisodeResult]) -> dict[str, object]:
+def _metrics(rows: list[EpisodeResult]) -> dict[str, Any]:
     n = len(rows)
     errors = [0.0 if row.correct else 1.0 for row in rows]
     brier = mean((row.probability - (1.0 if row.correct else 0.0)) ** 2 for row in rows)
@@ -145,7 +145,7 @@ def _metrics(rows: list[EpisodeResult]) -> dict[str, object]:
     }
 
 
-def run_benchmark(count: int = 200, seed: int = 17082026) -> dict[str, object]:
+def run_benchmark(count: int = 200, seed: int = 17082026) -> dict[str, Any]:
     eps = episodes(count, seed)
     architectures: list[Architecture] = ["A", "B", "C", "D", "E"]
     rows = {arch: [_result(ep, arch) for ep in eps] for arch in architectures}
@@ -185,7 +185,7 @@ def run_benchmark(count: int = 200, seed: int = 17082026) -> dict[str, object]:
     return report
 
 
-def write_benchmark(output_json: Path, output_md: Path, count: int = 200) -> dict[str, object]:
+def write_benchmark(output_json: Path, output_md: Path, count: int = 200) -> dict[str, Any]:
     report = run_benchmark(count)
     output_json.parent.mkdir(parents=True, exist_ok=True)
     output_json.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")

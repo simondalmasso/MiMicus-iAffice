@@ -116,15 +116,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         if isinstance(payload, str):
             payload = {"task": payload}
         payload.update({"budget_usd": args.budget_usd, "max_agents": args.max_agents, "depth": args.depth, "learn": args.learn})
-        result = _engine(args.profile).run(RunRequest.model_validate(payload))
-        print(result.model_dump_json(indent=2))
+        run_result = _engine(args.profile).run(RunRequest.model_validate(payload))
+        print(run_result.model_dump_json(indent=2))
         return 0
     if args.command == "replay":
-        result = Repository(_database_url()).get_run(args.run_id)
-        if result is None:
+        replay_row = Repository(_database_url()).get_run(args.run_id)
+        if replay_row is None:
             print(json.dumps({"verified": False, "reason": "run not found", "run_id": args.run_id}))
             return 2
         full = MiMicusEngine(_database_url()).get_run(args.run_id)
+        if full is None:
+            print(json.dumps({"verified": False, "reason": "run disappeared", "run_id": args.run_id}))
+            return 2
         print(json.dumps(full["replay_state"], indent=2, sort_keys=True))
         return 0 if full["replay_state"]["verified"] else 1
     if args.command == "benchmark":

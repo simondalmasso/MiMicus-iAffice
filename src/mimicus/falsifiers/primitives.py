@@ -4,7 +4,7 @@ import math
 import re
 from collections.abc import Callable
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 from mimicus.canonical import sha256_obj
 from mimicus.falsifiers.spec import FalsifierExecution, FalsifierSpec
@@ -33,7 +33,7 @@ def numeric_invariant(spec: FalsifierSpec, context: dict[str, Any]) -> Falsifier
         users = float(context["users"])
         claimed = float(context["claimed"])
         period = str(context.get("price_period", "annual")).lower()
-        tolerance = float(spec.params.get("relative_tolerance", context.get("relative_tolerance", 0.05)))
+        tolerance = float(cast(Any, spec.params.get("relative_tolerance", context.get("relative_tolerance", 0.05))))
     except (TypeError, ValueError):
         return _result(spec, Verdict.INCONCLUSIVE, {}, "ambiguous numeric parse")
     if not 0.0 <= tolerance <= 0.25:
@@ -68,7 +68,7 @@ def freshness(spec: FalsifierSpec, context: dict[str, Any]) -> FalsifierExecutio
     if evidence_dt > as_of:
         return _result(spec, Verdict.FAIL, {"evidence_date": evidence_dt.isoformat(), "as_of": as_of.isoformat()}, "evidence is from the future relative to claim snapshot")
     try:
-        max_age = int(spec.params.get("max_age_days", context.get("max_age_days", 30)))
+        max_age = int(cast(Any, spec.params.get("max_age_days", context.get("max_age_days", 30))))
     except (TypeError, ValueError):
         return _result(spec, Verdict.INCONCLUSIVE, {}, "invalid freshness window")
     if max_age < 0:
@@ -92,7 +92,7 @@ def source_independence(spec: FalsifierSpec, context: dict[str, Any]) -> Falsifi
     clusters = context.get("clusters")
     if not isinstance(clusters, list) or len(clusters) < 2 or any(not str(c) for c in clusters):
         return _result(spec, Verdict.INCONCLUSIVE, {}, "insufficient provenance clusters")
-    required = int(spec.params.get("min_independent", 2))
+    required = int(cast(Any, spec.params.get("min_independent", 2)))
     unique = len(set(map(str, clusters)))
     texts = context.get("texts", [])
     max_similarity = 0.0

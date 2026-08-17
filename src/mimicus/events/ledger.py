@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
@@ -32,22 +33,36 @@ class EventLedger:
         return self.events[-1].event_hash if self.events else "0" * 64
 
     def append(self, event_type: str, payload: dict[str, Any] | None = None) -> LedgerEvent:
-        raw = {
-            "sequence": len(self.events),
-            "event_id": str(uuid4()),
+        sequence = len(self.events)
+        event_id = str(uuid4())
+        timestamp = datetime.now(UTC)
+        event_payload = payload or {}
+        prev_event_hash = self.head
+        raw: dict[str, Any] = {
+            "sequence": sequence,
+            "event_id": event_id,
             "run_id": self.run_id,
             "event_type": event_type,
-            "timestamp": datetime.now(UTC),
-            "payload": payload or {},
-            "prev_event_hash": self.head,
+            "timestamp": timestamp,
+            "payload": event_payload,
+            "prev_event_hash": prev_event_hash,
         }
-        digest = sha256_text(raw["prev_event_hash"] + canonical_json(raw))
-        event = LedgerEvent(**raw, event_hash=digest)
+        digest = sha256_text(prev_event_hash + canonical_json(raw))
+        event = LedgerEvent(
+            sequence=sequence,
+            event_id=event_id,
+            run_id=self.run_id,
+            event_type=event_type,
+            timestamp=timestamp,
+            payload=event_payload,
+            prev_event_hash=prev_event_hash,
+            event_hash=digest,
+        )
         self.events.append(event)
         return event
 
     @staticmethod
-    def verify(events: list[LedgerEvent | dict[str, Any]]) -> tuple[bool, str]:
+    def verify(events: Sequence[LedgerEvent | dict[str, Any]]) -> tuple[bool, str]:
         prev = "0" * 64
         for index, item in enumerate(events):
             event = item if isinstance(item, LedgerEvent) else LedgerEvent.model_validate(item)

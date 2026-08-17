@@ -51,7 +51,7 @@ def select_coalition(profile: ThreatProfile, candidates: list[AgentCandidate], m
         uncovered -= best.capabilities
     if not selected and available:
         selected.append(max(available, key=lambda c: c.audition_score + c.calibration_score))
-    rationale = {
+    rationale: dict[str, object] = {
         "required_capabilities": sorted(required),
         "covered_capabilities": sorted(required - uncovered),
         "uncovered_capabilities": sorted(uncovered),

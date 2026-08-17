@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from mimicus.falsifiers.builtins import builtin_specs
 from mimicus.falsifiers.primitives import execute_primitive
 
@@ -19,7 +21,7 @@ K3_CONTRACT_HASHES = {
 
 def compatibility_vectors() -> list[dict[str, object]]:
     specs = builtin_specs("compat")
-    vectors = [
+    vectors: list[tuple[str, str, dict[str, Any], str]] = [
         ("c1_tam_12x_mismatch", "F1", {"price": 10.0, "users": 100.0, "price_period": "monthly", "claimed": 1000.0}, "FAIL"),
         ("c1_missing_is_inconclusive", "F1", {"price": 10.0, "users": None, "claimed": 1000.0}, "INCONCLUSIVE"),
         ("c2_stale", "F2", {"evidence_date": "2025-01-01T00:00:00+00:00", "as_of": "2026-08-17T00:00:00+00:00"}, "FAIL"),

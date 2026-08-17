@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, insert, select
 from sqlalchemy.engine import Engine, make_url
 from sqlalchemy.pool import StaticPool
 
@@ -49,7 +49,7 @@ class Repository:
             if existing is not None:
                 raise ValueError(f"run already exists: {run_id}")
             connection.execute(
-                RunRow.__table__.insert().values(
+                insert(RunRow).values(
                     run_id=run_id,
                     task_hash=task_hash,
                     config_hash=config_hash,
@@ -61,7 +61,7 @@ class Repository:
             )
             for event in events:
                 connection.execute(
-                    EventRow.__table__.insert().values(
+                    insert(EventRow).values(
                         run_id=run_id,
                         sequence=event.sequence,
                         event_type=event.event_type,

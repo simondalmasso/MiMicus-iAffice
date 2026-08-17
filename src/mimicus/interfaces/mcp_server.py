@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import Any
+from typing import Any, Literal
 
 from mimicus.config import Settings
 from mimicus.orchestration.engine import MiMicusEngine, RunRequest
@@ -40,7 +40,7 @@ def create_mcp_server(profile: str = "offline") -> Any:
         domain: str | None = None,
         budget_usd: float = 0.0,
         max_agents: int = 4,
-        depth: str = "normal",
+        depth: Literal["fast", "normal", "deep"] = "normal",
         learn: bool = False,
     ) -> dict[str, Any]:
         """Run MiMicus with sealed independent first pass and evidence-gated learning."""

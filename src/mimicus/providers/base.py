@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import Any
 
 from mimicus.claims.models import Claim
 
@@ -12,7 +13,7 @@ class ProviderRequest:
     domain: str
     phenotype: str
     sealed_context_id: str
-    fixture: dict[str, object]
+    fixture: dict[str, Any]
 
 
 @dataclass(frozen=True)

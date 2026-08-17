@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any
 
 from mimicus.falsifiers.spec import FalsifierSpec
 
 
 def builtin_specs(domain: str = "general") -> dict[str, FalsifierSpec]:
-    common = {
+    common: dict[str, Any] = {
         "domain": domain,
         "expected_information_gain": 0.9,
         "estimated_cost": 0.0,

@@ -16,7 +16,7 @@ class Settings:
 
     @classmethod
     def from_env(cls, profile: str | None = None) -> Settings:
-        resolved = profile or os.getenv("MIMICUS_PROFILE", "offline")
+        resolved = profile or os.environ.get("MIMICUS_PROFILE") or "offline"
         return cls(
             profile=resolved,
             database_url=os.getenv("DATABASE_URL", "sqlite:///./mimicus.db"),

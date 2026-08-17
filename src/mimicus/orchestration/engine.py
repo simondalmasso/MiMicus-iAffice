@@ -220,11 +220,13 @@ class MiMicusEngine:
         category = canary_for.get(target_cap, "semantic_decoy")
         for candidate in candidates:
             passed_answer = expected_answer[category] if target_cap in candidate.capabilities or "synthesize" in candidate.capabilities else "wrong"
-            result = audition(candidate.fingerprint, domain, category, passed_answer)
+            audition_result = audition(candidate.fingerprint, domain, category, passed_answer)
             calibration = self.calibration.get(candidate.fingerprint, domain)
-            calibration.update(predicted_probability=0.8, outcome=result.passed, canary=True)
-            ledger.append("agent_auditioned", {"fingerprint": candidate.fingerprint, "domain": domain, "category": category, "passed": result.passed, "score": result.score})
-            audited.append(AgentCandidate(**{**candidate.__dict__, "audition_score": result.score, "calibration_score": calibration.trust}))
+            calibration.update(predicted_probability=0.8, outcome=audition_result.passed, canary=True)
+            ledger.append(
+                "agent_auditioned", {"fingerprint": candidate.fingerprint, "domain": domain, "category": category, "passed": audition_result.passed, "score": audition_result.score}
+            )
+            audited.append(AgentCandidate(**{**candidate.__dict__, "audition_score": audition_result.score, "calibration_score": calibration.trust}))
         progress.advance("AUDITION_CANDIDATES", 0.72)
 
         selected, rationale = select_coalition(profile, audited, request.max_agents)
