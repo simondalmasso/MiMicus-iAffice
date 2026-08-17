@@ -1,38 +1,31 @@
-# MiMicus V0.1 architecture
+# MiMicus V0.2 architecture
 
-## Boundary
+MiMicus V0.2 is a persistent agentic immune swarm runtime. The normal engine is assembled through the plugin kernel into typed functional services for storage, model/provider access, agent factories, falsifiers, memory, coalition selection, sparse communication, sandbox policy and telemetry.
 
-MiMicus is the orchestration layer. External model SDKs are providers, not the source of authority for routing, promotion, memory, budget enforcement, hashing, or mutation.
+## Runtime control plane
 
-The deterministic state flow is:
+There is one orchestration control plane: `MiMicusEngine`. External swarm frameworks are not nested inside it. `build_runtime_services()` resolves functional built-ins through `PluginKernel`; the engine consumes the resulting `RuntimeServices`. Provider replacement is an adapter concern and does not require changing orchestration logic.
 
-`INIT → PROFILE_TASK → LOAD_VERIFIED_MEMORY → AUDITION_CANDIDATES → SELECT_COALITION → SEALED_FIRST_PASS → BUILD_CLAIM_GRAPH → SCORE_FALSIFIER_MARKET → EXECUTE_FALSIFIERS → SPARSE_CHALLENGE → SYNTHESIZE_OR_REFUSE → ATTRIBUTE_CONTRIBUTIONS → LEARN_VERIFIED_ONLY → COMMIT_LEDGER`.
+The canonical execution plan is a hashable Morphology DAG. Supported node kinds are `PROFILE`, `MEMORY_RETRIEVE`, `AUDITION`, `AGENT_TASK`, `FALSIFIER`, `CHALLENGE`, `JOIN`, `SYNTHESIS`, `LEARN` and `GERMINAL`. The compiler chooses the smallest sufficient plan from task threat profile, selected agents, available falsifiers, complexity, budget and concurrency constraints. It can emit `solo`, `parallel_fanout`, `paired_verify`, `sparse_graph` and justified `hierarchical_fanout_fanin` plans.
 
-Each stage emits a hash-chained event. Replanning is driven by the progress ledger when uncertainty does not fall for two steps; it is not implemented as unconstrained extra debate.
+Dependencies are executable: `DagExecutor` schedules only ready nodes and runs independent ready work concurrently up to `max_concurrency`. Plan hashes, node input/output hashes, scheduling evidence and critical-path measurements are included in run provenance.
 
-## Package boundaries
+## Persistent immune state
 
-- `plugins`: local capability kernel, immutable manifests, dependency ordering, reversible mount/unmount, explicit hash-checked out-of-tree path verification.
-- `events`: typed in-process event bus plus canonical hash-chain ledger.
-- `storage`: SQLAlchemy portable schema, SQLite repository, Alembic migrations, PostgreSQL DDL compatibility check.
-- `providers`: scripted deterministic provider and OpenAI Agents SDK adapter.
-- `agents`: fingerprints, task phenotypes, hidden micro-auditions, domain calibration, bankruptcy/recovery.
-- `claims`: structured claim/evidence models and claim graph.
-- `falsifiers`: validated DSL, five trusted primitives, immutable registry, utility-per-cost market, K3 compatibility vectors.
-- `memory`: origin-bound authority plus WRITE/RETRIEVAL/PROMOTION/CROSS-AGENT gates.
-- `coalition`: threat profile, dynamic coalition selection, correlated-error penalty, sparse communication topology.
-- `germinal`: frozen fossil corpus, constrained parameter mutation, deterministic regression gate.
-- `orchestration`: task/progress ledgers, engine, replay and removal attribution.
-- `interfaces`: CLI and Streamable HTTP MCP server.
+SQLite and PostgreSQL-compatible storage includes runs/events plus authority-bearing calibration, bankruptcy/probation, exact fingerprints, lineages, coalition plans, communications, claims, evidence, falsifier versions/executions/performance, evasion events, fossils, mutation candidates, memory items/links/transitions, task ledgers and progress ledgers.
 
-## Dynamic morphology
+A run retrieves persisted verified memory and promoted falsifiers before execution. Memory still passes MiMicus RETRIEVAL and CROSS-AGENT gates before injection. Persisted state is policy input, not automatic authority.
 
-No fixed six-role debate exists. Candidate phenotypes are capabilities, not permanent seats. The selector greedily covers the threat profile with the smallest useful set while penalizing correlated provider/model/prompt/tool lineage. Simple numeric tasks select one numerical verifier; mixed source/freshness/numeric tasks require complementary members.
+## Sparse communication
 
-## Sealed independence
+Communication edges are not descriptive metadata. A selected edge creates a structured `ChallengeRequest`, invokes the provider challenge adapter, receives a `ChallengeResponse`, revises the target claim and records round, reason, provider call ID and input/output hashes. Raw hidden chain-of-thought is never exchanged.
 
-Every selected member receives a unique `sealed_context_id`; the engine records the first-pass claim before any sparse communication edge can open. Communications are value-ranked and only open under residual disagreement, bounded by `k` peers and three rounds.
+## Germinal learning
 
-## Deterministic authority
+Only a confirmed evasion with pinned ground truth can enter the germinal path. Declarative mutation candidates remain derived from trusted primitives, run frozen fossils and receive a deterministic PROMOTE/REJECT/QUARANTINE decision. Promotion and provenance are persisted transactionally; the parent remains immutable and replayable. Later processes can retrieve a promoted falsifier.
 
-LLMs may propose claims. They cannot directly promote a memory item, mutate executable source, change a ledger hash, bypass a budget, or mark a falsifier as verified. Those transitions live in deterministic application code and are covered by security tests.
+## Determinism and replay
+
+Semantic identities, plan hashes, claim/falsifier hashes and the event chain are deterministic inputs to replay verification. Monotonic duration and wall timing are preserved as evidence but are not treated as semantic truth. No arbitrary generated code execution path is introduced by V0.2.
+
+ORDER-002 evidence remains historical. ORDER-003 supersedes its architecture-scripted benchmark methodology with execution-derived runners and a common post-run grader.
