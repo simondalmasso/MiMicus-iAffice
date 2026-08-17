@@ -1,0 +1,209 @@
+name: ORDER-002 one-shot evidence materializer
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  evidence:
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'order-002-mimicus-v01' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: order-002-mimicus-v01
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install locked environment
+        run: |
+          set -euo pipefail
+          python -m pip install -r requirements.lock
+          python -m pip install --no-deps -e .
+          python -m pip check
+      - name: Materialize ORDER-002 evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          EVIDENCE=evidence/ORDER-002
+          mkdir -p "$EVIDENCE"
+          SOURCE_HEAD="$(git rev-parse HEAD)"
+          git fetch origin main --no-tags
+          MAIN_SHA="$(git rev-parse origin/main)"
+          LOCK_SHA="$(sha256sum requirements.lock | awk '{print $1}')"
+
+          cat > "$EVIDENCE/REMOTE_TRUTH.md" <<EOF
+          # ORDER-002 remote truth
+
+          - Repository: simonkey888/MiMicus-swarm
+          - Order: ORDER-002
+          - Supersedes: ORDER-001 (closed; not executed)
+          - Audited base/main SHA: \`2d50fd91f4346618acfa87928987e131f54159c7\`
+          - Observed origin/main during evidence generation: \`$MAIN_SHA\`
+          - Evidence source HEAD: \`$SOURCE_HEAD\`
+          - Branch: \`order-002-mimicus-v01\`
+          - Pull request: \`#3\` against \`main\`
+          - Merge performed: NO
+          - Direct write to main: NO
+          - K3 ZIP SHA-256: \`f170207468c60b25b0d9ec50ddfcf27366609d5e37773138ca76eb9124eb1478\`
+          - K3 Python SHA-256: \`81b2fd83a313d9910f450ac54a4a1e48cd783dc1cde6bfc1d5bcfd37e6c38f2f\`
+          - K3 SQL SHA-256: \`d596a293e8b3c3543e1ceaae1468c8a937f43428de5ddc60120cb77a39e204a4\`
+
+          This bundle is generated from the locked repository environment. A later exact-head PR CI reruns the gates after this evidence commit and after removal of this one-shot workflow.
+          EOF
+
+          {
+            echo '# ORDER-002 environment'
+            echo
+            echo '- Source HEAD: `'$SOURCE_HEAD'`'
+            echo '- requirements.lock SHA-256: `'$LOCK_SHA'`'
+            echo '- Runner OS: `'
+            uname -a
+            echo '`'
+            echo '- Python: `'
+            python -VV
+            echo '`'
+            echo '- pip: `'
+            python -m pip --version
+            echo '`'
+            echo
+            echo '## Direct pinned versions'
+            python - <<'PY'
+          from importlib.metadata import version
+          for package in ["mcp", "openai-agents", "pydantic", "SQLAlchemy", "alembic", "ruff", "mypy", "pytest", "pytest-cov"]:
+              print(f"- {package}: `{version(package)}`")
+          PY
+          } > "$EVIDENCE/ENVIRONMENT.md"
+
+          cat > "$EVIDENCE/COMMANDS.md" <<'EOF'
+          # ORDER-002 validation commands
+
+          ```bash
+          python -m pip install -r requirements.lock
+          python -m pip install --no-deps -e .
+          python -m pip check
+          ruff format --check .
+          ruff check .
+          mypy src/mimicus
+          pytest tests/unit tests/integration --cov=mimicus --cov-report=term-missing --cov-fail-under=90
+          python scripts/check_security.py
+          python scripts/check_ledger.py
+          python -m mimicus.validation.e2e evidence/ORDER-002/E2E_RESULTS.json
+          mimicus benchmark --profile offline --episodes 200 --output-dir evidence/ORDER-002
+          mimicus db upgrade
+          python -m build
+          python scripts/verify_evidence.py
+          ```
+          EOF
+
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from mimicus.falsifiers.k3_compat import K3_ARTIFACT_HASHES, K3_CONTRACT_HASHES, compatibility_vectors
+
+          vectors = compatibility_vectors()
+          report = {
+              "passed": all(bool(row["pass"]) for row in vectors),
+              "artifact_hashes": K3_ARTIFACT_HASHES,
+              "contract_hashes": K3_CONTRACT_HASHES,
+              "vectors": vectors,
+          }
+          Path("evidence/ORDER-002/K3_COMPATIBILITY.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+          PY
+
+          {
+            echo 'ORDER_002_TEST_RESULTS'
+            echo '== ruff format =='
+            ruff format --check .
+            echo '== ruff lint =='
+            ruff check .
+            echo '== mypy =='
+            mypy src/mimicus
+            echo '== pytest coverage =='
+            pytest tests/unit tests/integration --cov=mimicus --cov-report=term-missing --cov-fail-under=90
+            echo '== security =='
+            python scripts/check_security.py
+          } > "$EVIDENCE/TEST_RESULTS.txt" 2>&1
+
+          python -m mimicus.validation.e2e "$EVIDENCE/E2E_RESULTS.json"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path("evidence/ORDER-002/E2E_RESULTS.json").read_text())
+          mcp = next(row for row in report["scenarios"] if row.get("scenario") == "12_mcp_transport")
+          assert mcp["pass"] is True
+          assert mcp["openai_key_required"] is False
+          assert mcp["transport"] == "streamable-http"
+          assert mcp["path"] == "/mcp"
+          Path("evidence/ORDER-002/MCP_E2E.json").write_text(json.dumps(mcp, indent=2, sort_keys=True) + "\n")
+          PY
+
+          mimicus benchmark --profile offline --episodes 200 --output-dir "$EVIDENCE"
+          python scripts/check_ledger.py > "$EVIDENCE/LEDGER_VERIFY.json"
+
+          {
+            echo 'ORDER_002_MIGRATION_VERIFY'
+            export MIMICUS_DATABASE_URL="sqlite:///$RUNNER_TEMP/order002-migration.db"
+            mimicus db upgrade
+            python - <<'PY'
+          from mimicus.storage.postgres_compat import compile_postgres_schema
+          ddl = compile_postgres_schema()
+          assert len(ddl) >= 19
+          assert "CREATE TABLE runs" in ddl["runs"]
+          print(f"POSTGRESQL_SCHEMA_COMPILE=PASS tables={len(ddl)}")
+          PY
+          } > "$EVIDENCE/MIGRATION_VERIFY.txt" 2>&1
+
+          {
+            echo 'ORDER_002_PACKAGE_VERIFY'
+            rm -rf dist build
+            python -m build
+            python -m venv "$RUNNER_TEMP/order002-wheel"
+            "$RUNNER_TEMP/order002-wheel/bin/python" -m pip install -r requirements.lock
+            "$RUNNER_TEMP/order002-wheel/bin/python" -m pip install --no-deps dist/*.whl
+            MIMICUS_DATABASE_URL="sqlite:///$RUNNER_TEMP/order002-wheel.db" "$RUNNER_TEMP/order002-wheel/bin/mimicus" doctor --profile offline
+          } > "$EVIDENCE/PACKAGE_VERIFY.txt" 2>&1
+
+          python - <<'PY'
+          import json
+          import tempfile
+          from pathlib import Path
+          from mimicus.orchestration.engine import MiMicusEngine, RunRequest
+
+          with tempfile.TemporaryDirectory(prefix="order002-trace-") as directory:
+              engine = MiMicusEngine(f"sqlite:///{directory}/trace.db", plugin_hashes=["evidence-exact-head"])
+              result = engine.run(RunRequest(task="K3 TAM 12x mismatch", domain="finance", learn=True))
+              trace = engine.get_run(result.run_id)
+              assert trace is not None
+              assert trace["replay_state"]["verified"] is True
+              assert result.falsifiers[0]["verdict"] == "FAIL"
+              Path("evidence/ORDER-002/FULL_RUN_TRACE.json").write_text(json.dumps(trace, indent=2, sort_keys=True) + "\n")
+          PY
+
+          if [[ -n "${OPENAI_API_KEY:-}" ]]; then
+            echo 'OPENAI_LIVE_SMOKE=NOT_RUN_BY_ORDER_EVIDENCE_JOB_CREDENTIAL_PRESENT_BUT_LIVE_OPTIONAL' > "$EVIDENCE/OPENAI_LIVE_SMOKE.txt"
+          else
+            echo 'OPENAI_LIVE_SMOKE=NOT_RUN_NO_CREDENTIAL' > "$EVIDENCE/OPENAI_LIVE_SMOKE.txt"
+          fi
+
+          (
+            cd "$EVIDENCE"
+            : > MANIFEST.sha256
+            while IFS= read -r file; do
+              sha256sum "$file" >> MANIFEST.sha256
+            done < <(find . -maxdepth 1 -type f ! -name MANIFEST.sha256 -printf '%f\n' | sort)
+          )
+          python scripts/verify_evidence.py
+          git diff --check
+      - name: Commit evidence bundle
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add evidence/ORDER-002
+          git commit -m 'ORDER-002: materialize auditable evidence bundle'
+          git push origin HEAD:order-002-mimicus-v01
