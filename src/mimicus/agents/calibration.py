@@ -2,6 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from mimicus.storage.repository import Repository
 
 
 @dataclass
@@ -38,14 +42,42 @@ class CalibrationRecord:
 
 
 class CalibrationLedger:
-    def __init__(self) -> None:
+    def __init__(self, repository: Repository | None = None) -> None:
+        self.repository = repository
         self._records: dict[tuple[str, str], CalibrationRecord] = {}
 
     def get(self, fingerprint: str, domain: str) -> CalibrationRecord:
         key = (fingerprint, domain)
+        if self.repository is not None:
+            row = self.repository.calibration(fingerprint, domain)
+            last = datetime.fromisoformat(str(row["last_verified_at"])) if row["last_verified_at"] else None
+            return CalibrationRecord(
+                fingerprint=fingerprint,
+                domain=domain,
+                attempts=int(row["attempts"]),
+                successes=int(row["successes"]),
+                failures=int(row["failures"]),
+                brier_sum=float(row["brier_sum"]),
+                canary_failure_streak=int(row["canary_failure_streak"]),
+                last_verified_at=last,
+            )
         if key not in self._records:
             self._records[key] = CalibrationRecord(fingerprint, domain)
         return self._records[key]
+
+    def record_verified(self, fingerprint: str, domain: str, *, predicted_probability: float, outcome: bool, canary: bool = False) -> CalibrationRecord:
+        if self.repository is None:
+            record = self.get(fingerprint, domain)
+            record.update(predicted_probability=predicted_probability, outcome=outcome, canary=canary)
+            return record
+        self.repository.record_calibration(
+            fingerprint,
+            domain,
+            predicted_probability=predicted_probability,
+            outcome=outcome,
+            canary=canary,
+        )
+        return self.get(fingerprint, domain)
 
     def direct_trust(self, fingerprint: str, domain: str) -> float:
         return self.get(fingerprint, domain).trust
