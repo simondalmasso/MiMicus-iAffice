@@ -81,6 +81,7 @@ def freshness(spec: FalsifierSpec, context: dict[str, Any]) -> FalsifierExecutio
 def _jaccard(a: str, b: str) -> float:
     def tok(text):
         return set(re.findall(r"[a-z0-9]+", text.lower()))
+
     left, right = tok(a), tok(b)
     if not left and not right:
         return 1.0
