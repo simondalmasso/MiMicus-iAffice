@@ -22,7 +22,7 @@ jobs:
       - run: |
           python -m pip install -r requirements.lock
           python -m pip install --no-deps -e .
-      - name: Apply compatibility repairs
+      - name: Apply compatibility and typing repairs
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -39,6 +39,11 @@ jobs:
               '''            row = connection.execute(\n                select(AgentDomainCalibrationRow).where(AgentDomainCalibrationRow.fingerprint == fingerprint, AgentDomainCalibrationRow.domain == domain)\n            ).scalar_one_or_none()''',
               '''            row = connection.execute(\n                select(\n                    AgentDomainCalibrationRow.fingerprint,\n                    AgentDomainCalibrationRow.domain,\n                    AgentDomainCalibrationRow.attempts,\n                    AgentDomainCalibrationRow.successes,\n                    AgentDomainCalibrationRow.failures,\n                    AgentDomainCalibrationRow.brier_sum,\n                    AgentDomainCalibrationRow.canary_failure_streak,\n                    AgentDomainCalibrationRow.last_verified_at,\n                ).where(AgentDomainCalibrationRow.fingerprint == fingerprint, AgentDomainCalibrationRow.domain == domain)\n            ).one_or_none()''',
           )
+          replace(
+              "src/mimicus/storage/repository.py",
+              '''            communications = []\n            if run_id is not None:\n                communications = connection.execute(select(CommunicationRow.payload_json).where(CommunicationRow.run_id == run_id)).scalars().all()''',
+              '''            communications: list[str] = []\n            if run_id is not None:\n                communication_rows = connection.execute(select(CommunicationRow.payload_json).where(CommunicationRow.run_id == run_id)).scalars().all()\n                communications = [str(row) for row in communication_rows if row is not None]''',
+          )
 
           replace(
               "src/mimicus/interfaces/mcp_server.py",
@@ -46,6 +51,16 @@ jobs:
               '''        max_agents: int = 4,\n        depth: Literal["fast", "normal", "deep"] = "normal",\n        learn: bool = False,\n        max_concurrency: int = 4,''',
           )
 
+          replace(
+              "src/mimicus/benchmark.py",
+              '''from typing import Any, Literal, Protocol''',
+              '''from typing import Any, Literal, Protocol, cast''',
+          )
+          replace(
+              "src/mimicus/benchmark.py",
+              '''            cost=float(result.budget.get("spent_usd", 0.0)),''',
+              '''            cost=float(cast(Any, result.budget.get("spent_usd", 0.0))),''',
+          )
           replace(
               "src/mimicus/benchmark.py",
               '''        "metrics": metrics,\n        "anti_rigging": anti,''',
@@ -61,6 +76,64 @@ jobs:
               "src/mimicus/interfaces/cli.py",
               '''            task_hash=__import__("mimicus.canonical", fromlist=["sha256_obj"]).sha256_obj({"task": request.task, "domain": domain}),''',
               '''            task_hash=sha256_obj({"task": request.task, "domain": domain}),''',
+          )
+
+          replace(
+              "src/mimicus/plugins/profiles.py",
+              '''    db_url = database_url or os.getenv("MIMICUS_DATABASE_URL", "sqlite:///mimicus.db")''',
+              '''    db_url = database_url or os.environ.get("MIMICUS_DATABASE_URL") or "sqlite:///mimicus.db"''',
+          )
+
+          replace(
+              "src/mimicus/orchestration/engine.py",
+              '''from mimicus.plugins.profiles import build_runtime_services\nfrom mimicus.plugins.services import BuiltinAgentFactory, RuntimeServices''',
+              '''from mimicus.plugins.profiles import build_runtime_services\nfrom mimicus.plugins.registry import PluginKernel\nfrom mimicus.plugins.services import BuiltinAgentFactory, RuntimeServices''',
+          )
+          replace(
+              "src/mimicus/orchestration/engine.py",
+              '''    ) -> None:\n        if services is None:''',
+              '''    ) -> None:\n        self._kernel: PluginKernel | None\n        if services is None:''',
+          )
+          replace(
+              "src/mimicus/orchestration/engine.py",
+              '''        precompleted: dict[str, object] = {}\n        for node in plan.nodes:''',
+              '''        precompleted: dict[str, object] = {}\n        value: dict[str, Any]\n        for node in plan.nodes:''',
+          )
+          replace(
+              "src/mimicus/orchestration/engine.py",
+              '''                        response = await self.provider.challenge_async(challenge_request)\n                        provider_call_count += 1\n                        revised = target.model_copy(update={"probability": response.revised_probability, "status": response.revised_status})''',
+              '''                        challenge_response = await self.provider.challenge_async(challenge_request)\n                        provider_call_count += 1\n                        revised = target.model_copy(update={"probability": challenge_response.revised_probability, "status": challenge_response.revised_status})''',
+          )
+          for old, new in [
+              ('"output_hash": response.hash', '"output_hash": challenge_response.hash'),
+              ('"provider_call_id": response.provider_call_id', '"provider_call_id": challenge_response.provider_call_id'),
+              ('"disposition": response.disposition', '"disposition": challenge_response.disposition'),
+              ('"revised_probability": response.revised_probability', '"revised_probability": challenge_response.revised_probability'),
+              ('"revised_status": response.revised_status.value', '"revised_status": challenge_response.revised_status.value'),
+              ('"output_hash": response.hash, "provider_call_id": response.provider_call_id', '"output_hash": challenge_response.hash, "provider_call_id": challenge_response.provider_call_id'),
+          ]:
+              p = Path("src/mimicus/orchestration/engine.py")
+              text = p.read_text()
+              p.write_text(text.replace(old, new))
+          replace(
+              "src/mimicus/orchestration/engine.py",
+              '''                decision = decide(parent, mutation, fossils)\n                metrics = {''',
+              '''                decision = decide(parent, mutation, fossils)\n                germinal_metrics = {''',
+          )
+          replace(
+              "src/mimicus/orchestration/engine.py",
+              '''                    metrics=metrics,\n                    domain=domain,''',
+              '''                    metrics=germinal_metrics,\n                    domain=domain,''',
+          )
+          replace(
+              "src/mimicus/orchestration/engine.py",
+              '''                    "metrics": metrics,\n                }\n                germinal_changes.append(change)''',
+              '''                    "metrics": germinal_metrics,\n                }\n                germinal_changes.append(change)''',
+          )
+          replace(
+              "src/mimicus/orchestration/engine.py",
+              '''        metrics = dag_execution.metrics.as_dict()''',
+              '''        metrics: dict[str, float | int] = dag_execution.metrics.as_dict()''',
           )
           PY
       - name: Format and validate
