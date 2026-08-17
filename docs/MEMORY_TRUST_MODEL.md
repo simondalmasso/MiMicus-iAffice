@@ -1,22 +1,11 @@
-# Memory and trust model
+# Persistent immune memory trust model
 
-## Origin-bound authority
+MiMicus memory authority is policy state, not a vector-search score. V0.2 persists memory items, status transitions and derivation links, then reapplies gates after process restart.
 
-Authority belongs to evidence lineage, not to fluent restatement. A paraphrase or peer repetition inherits at most the minimum authority of its parents. It cannot reset provenance or create a new independent source cluster.
+Lifecycle states are `candidate`, `quarantined`, `private_verified`, `shared_verified`, `rejected` and `expired`. WRITE determines whether a candidate has enough deterministic verification and provenance to leave quarantine. PROMOTION determines whether it can become shared verified memory. RETRIEVAL is checked at run start. CROSS-AGENT is checked again before verified material is injected into another agent's sealed task context.
 
-## Four gates
+Only `private_verified` and `shared_verified` items are repository-eligible, and eligibility alone is not sufficient: domain/retrieval and cross-agent policy are evaluated at use time. A high-authority paraphrase with an unverified origin does not become trusted by being rewritten or restarted. Derivation links preserve the authority ancestry needed to prevent laundering.
 
-1. **WRITE** — new content becomes `private_verified` only after deterministic verification; otherwise it is quarantined.
-2. **RETRIEVAL** — only non-expired, same-domain private/shared verified items are eligible.
-3. **PROMOTION** — shared authority requires deterministic verification or at least two verified independent provenance clusters. Repetition of one cluster does not count.
-4. **CROSS-AGENT** — private verified memory is visible only to its owner; peers receive only shared verified memory.
+The normal engine persists transitions with transition hashes and emits linked event-ledger records. A later engine process opening the same database can reuse an eligible verified memory item; a quarantined negative fixture remains blocked after the same restart. ORDER-003 process evidence records both behaviors.
 
-States are explicit: `candidate → quarantined | private_verified → shared_verified`, with terminal/restrictive `rejected` and `expired` states.
-
-## Calibration
-
-Calibration is keyed by `agent_fingerprint × domain` and updated only from direct verified outcomes. Cross-domain reputation starts neutral and cannot be laundered into another domain. Three consecutive verified domain canary failures trigger epistemic bankruptcy. Re-entry requires a fresh recovery audition.
-
-## Correlated-error penalty
-
-Provider, model, system-prompt hash and tool-manifest hash define lineage similarity; empirical co-failure can add to it. Correlated agents have lower marginal voting/selection value. A clone is therefore not treated as independent corroboration.
+Storage technology is replaceable through the memory/storage service boundary, but provenance, authority and gate semantics remain MiMicus policy. External vector databases are not delegated authority decisions.
