@@ -1,31 +1,40 @@
 from __future__ import annotations
 
+import asyncio
+from dataclasses import asdict, replace
 from typing import Any, Literal
 from uuid import NAMESPACE_URL, uuid4, uuid5
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from mimicus.agents.auditions import audition
+from mimicus.agents.bankruptcy import BankruptcyRecord, evaluate_bankruptcy, recover
 from mimicus.agents.calibration import CalibrationLedger
+from mimicus.agents.identity import make_identity
 from mimicus.canonical import sha256_obj, sha256_text
 from mimicus.claims.models import Claim
-from mimicus.coalition.selector import AgentCandidate, select_coalition
-from mimicus.coalition.sparse_comm import sparse_edges
+from mimicus.coalition.selector import AgentCandidate, correlation
 from mimicus.coalition.threat_profile import profile_task
-from mimicus.coalition.topology import topology_for_size
 from mimicus.events.ledger import EventLedger
-from mimicus.falsifiers.builtins import builtin_specs
 from mimicus.falsifiers.market import FalsifierMarket
-from mimicus.falsifiers.primitives import execute_primitive
+from mimicus.falsifiers.spec import FalsifierExecution, FalsifierSpec
+from mimicus.germinal.fossils import seed_fossils
+from mimicus.germinal.mutate import mutate_params
+from mimicus.germinal.promote import decide
 from mimicus.memory.gates import promotion_gate, write_gate
 from mimicus.memory.models import MemoryItem
+from mimicus.orchestration.communication import ChallengeRequest, CommunicationCandidate
+from mimicus.orchestration.dag_executor import DagExecution, DagExecutor
+from mimicus.orchestration.morphology import DagNode, NodeKind, compile_morphology
 from mimicus.orchestration.progress_ledger import ProgressLedger
+from mimicus.orchestration.proximity import SemanticSignature, semantic_proximity
 from mimicus.orchestration.replay import verify_replay
 from mimicus.orchestration.task_ledger import TaskLedger
-from mimicus.providers.base import Provider, ProviderRequest
-from mimicus.providers.scripted import ScriptedProvider
+from mimicus.plugins.profiles import build_runtime_services
+from mimicus.plugins.services import BuiltinAgentFactory, RuntimeServices
+from mimicus.providers.base import Provider, ProviderRequest, ProviderResponse
 from mimicus.storage.repository import Repository
-from mimicus.types import ClaimStatus, Verdict
+from mimicus.types import BankruptcyState, ClaimStatus, Verdict
 
 
 class RunRequest(BaseModel):
@@ -34,6 +43,7 @@ class RunRequest(BaseModel):
     domain: str | None = None
     budget_usd: float = Field(default=0.0, ge=0.0)
     max_agents: int = Field(default=4, ge=1, le=8)
+    max_concurrency: int = Field(default=4, ge=1, le=8)
     depth: Literal["fast", "normal", "deep"] = "normal"
     learn: bool = False
     scenario: str | None = None
@@ -58,41 +68,32 @@ class RunResult(BaseModel):
     replay_verified: bool
     event_types: list[str]
     plugin_hashes: list[str]
+    plan_hash: str
+    morphology: str
+    provider_call_count: int
+    challenge_edge_count: int
+    concurrency_summary: dict[str, Any]
+    critical_path_summary: dict[str, Any]
+    persistent_memory_reused: list[str]
+    persistent_falsifiers_reused: list[str]
+    lineage_exclusions: dict[str, list[str]]
 
 
-def _fingerprint(name: str, provider: str = "scripted", model: str = "fixture-v1", prompt: str | None = None, tool: str | None = None) -> str:
+def _fingerprint(name: str, provider: str = "scripted", model: str = "fixture-v2", prompt: str | None = None, tool: str | None = None) -> str:
     return sha256_obj(
         {
             "provider": provider,
             "model": model,
-            "version": "1",
+            "version": "2",
             "system_prompt_hash": sha256_text(prompt or name),
             "tool_manifest_hash": sha256_text(tool or f"tools:{name}"),
-            "policy_hash": sha256_text("mimicus-v0.1"),
+            "policy_hash": sha256_text("mimicus-v0.2"),
         }
     )
 
 
 def default_candidates() -> list[AgentCandidate]:
-    rows = [
-        ("numeric-1", {"numeric", "synthesize"}, "provider-a", "math-v1"),
-        ("source-1", {"source", "freshness", "independence"}, "provider-b", "research-v1"),
-        ("counterexample-1", {"counterexample", "source"}, "provider-c", "hunt-v1"),
-        ("critic-1", {"critic", "entailment"}, "provider-d", "critic-v1"),
-        ("synth-1", {"synthesize"}, "provider-e", "synth-v1"),
-    ]
-    return [
-        AgentCandidate(
-            fingerprint=_fingerprint(name, provider, model),
-            name=name,
-            capabilities=frozenset(caps),
-            provider=provider,
-            model=model,
-            prompt_hash=sha256_text(name),
-            tool_hash=sha256_text(f"tools:{name}"),
-        )
-        for name, caps, provider, model in rows
-    ]
+    return BuiltinAgentFactory().candidates()
 
 
 def scenario_fixture(request: RunRequest) -> tuple[str, dict[str, Any]]:
@@ -166,39 +167,80 @@ def _spec_keys(profile_caps: tuple[str, ...], scenario: str) -> list[str]:
     return keys
 
 
+def _trust_from_row(row: dict[str, Any]) -> float:
+    attempts = int(row["attempts"])
+    return 0.5 if attempts < 3 else int(row["successes"]) / max(1, attempts)
+
+
 class MiMicusEngine:
-    def __init__(self, database_url: str = "sqlite:///:memory:", *, plugin_hashes: list[str] | None = None, provider: Provider | None = None) -> None:
-        self.repository = Repository(database_url)
-        self.calibration = CalibrationLedger()
-        self.provider = provider or ScriptedProvider()
-        self.plugin_hashes = plugin_hashes or []
+    def __init__(
+        self,
+        database_url: str = "sqlite:///:memory:",
+        *,
+        plugin_hashes: list[str] | None = None,
+        provider: Provider | None = None,
+        services: RuntimeServices | None = None,
+        profile: str = "offline",
+    ) -> None:
+        if services is None:
+            built, hashes, kernel = build_runtime_services(profile, database_url, provider_override=provider)
+            self.services = built
+            self._kernel = kernel
+            self.plugin_hashes = plugin_hashes or hashes
+        else:
+            self.services = services
+            self._kernel = None
+            self.plugin_hashes = plugin_hashes or []
+        self.repository: Repository = self.services.repository
+        self.provider = self.services.provider
+        self.calibration = CalibrationLedger(self.repository)
 
     def run(self, request: RunRequest) -> RunResult:
+        return asyncio.run(self.run_async(request))
+
+    async def run_async(self, request: RunRequest) -> RunResult:
         run_id = str(uuid4())
         domain = request.domain or "general"
         scenario, fixture = scenario_fixture(request)
         ledger = EventLedger(run_id)
         progress = ProgressLedger()
+        progress_rows: list[dict[str, Any]] = []
         task_hash = sha256_obj({"task": request.task, "domain": domain, "fixture": fixture})
-        config_hash = sha256_obj({"budget_usd": request.budget_usd, "max_agents": request.max_agents, "depth": request.depth, "learn": request.learn})
-        ledger.append("run_started", {"task_hash": task_hash, "config_hash": config_hash, "plugin_hashes": self.plugin_hashes})
-        task_ledger = TaskLedger(
-            task=request.task,
-            domain=domain,
-            budget_usd=request.budget_usd,
-            constraints={"max_agents": request.max_agents, "depth": request.depth},
-            plan=["profile", "audition", "coalition", "sealed-first-pass", "falsify", "synthesize", "learn", "replay"],
+        config_hash = sha256_obj(
+            {
+                "budget_usd": request.budget_usd,
+                "max_agents": request.max_agents,
+                "max_concurrency": request.max_concurrency,
+                "depth": request.depth,
+                "learn": request.learn,
+            }
         )
-        progress.advance("INIT", 1.0)
+        ledger.append("run_started", {"task_hash": task_hash, "config_hash": config_hash, "plugin_hashes": self.plugin_hashes})
 
+        def advance(step: str, uncertainty: float) -> None:
+            progress.advance(step, uncertainty)
+            progress_rows.append(progress.model_dump(mode="json"))
+
+        advance("INIT", 1.0)
         profile = profile_task(request.task, domain, scenario)
         ledger.append("threat_profiled", profile.model_dump(mode="json"))
-        progress.advance("PROFILE_TASK", 0.9)
-        ledger.append("verified_memory_loaded", {"domain": domain, "count": 0})
-        progress.advance("LOAD_VERIFIED_MEMORY", 0.85)
+        advance("PROFILE_TASK", 0.90)
 
-        candidates = default_candidates()
+        retrieved_memory = self.services.memory.retrieve(domain)
+        ledger.append(
+            "verified_memory_loaded",
+            {
+                "domain": domain,
+                "count": len(retrieved_memory),
+                "memory_ids": [item.memory_id for item in retrieved_memory],
+                "gate": "RETRIEVAL",
+            },
+        )
+        advance("LOAD_VERIFIED_MEMORY", 0.82)
+
+        candidates = self.services.agent_factory.candidates()
         audited: list[AgentCandidate] = []
+        lineage_exclusions: dict[str, list[str]] = {"bankrupt": [], "probation": []}
         canary_for = {
             "numeric": "parameter_trap",
             "freshness": "temporal_decoy",
@@ -218,84 +260,372 @@ class MiMicusEngine:
         }
         target_cap = profile.required_capabilities[0]
         category = canary_for.get(target_cap, "semantic_decoy")
-        for candidate in candidates:
-            passed_answer = expected_answer[category] if target_cap in candidate.capabilities or "synthesize" in candidate.capabilities else "wrong"
+        failures = {str(value) for value in fixture.get("audition_fail_fingerprints", [])} | {str(value) for value in fixture.get("audition_fail_names", [])}
+        recovery = {str(value) for value in fixture.get("recovery_fingerprints", [])} | {str(value) for value in fixture.get("recovery_names", [])}
+        revisions = fixture.get("identity_revisions", {})
+        for base_candidate in candidates:
+            candidate = base_candidate
+            identity = self.services.agent_factory.identity_for(candidate)
+            if isinstance(revisions, dict) and isinstance(revisions.get(candidate.name), dict):
+                revision = revisions[candidate.name]
+                revised_fp = str(revision.get("fingerprint") or _fingerprint(candidate.name, candidate.provider, candidate.model, prompt=str(revision.get("prompt_revision", "revision"))))
+                identity = make_identity(
+                    fingerprint=revised_fp,
+                    provider=candidate.provider,
+                    model_family=candidate.model,
+                    phenotype=candidate.name,
+                    tool_policy_hash=candidate.tool_hash,
+                    parent_fingerprint=str(revision.get("parent_fingerprint")) if revision.get("parent_fingerprint") else None,
+                    declared_lineage_id=str(revision.get("lineage_id")) if revision.get("lineage_id") else identity.lineage_id,
+                    revision_provenance=str(revision.get("provenance", "declared ORDER-003 revision")),
+                )
+                candidate = replace(candidate, fingerprint=revised_fp)
+            self.repository.register_identity(identity)
+            candidate = replace(candidate, lineage_id=identity.lineage_id)
+            previous_state = self.repository.bankruptcy_state(candidate.fingerprint, domain)
+            known_negative_lineage = self.repository.lineage_has_bankrupt_predecessor(identity.lineage_id, domain, exclude_fingerprint=candidate.fingerprint)
+            if known_negative_lineage and previous_state == "ACTIVE":
+                self.repository.set_bankruptcy_state(candidate.fingerprint, domain, "PROBATION", "known lineage has unresolved domain bankruptcy")
+                previous_state = "PROBATION"
+                ledger.append("bankruptcy_changed", {"fingerprint": candidate.fingerprint, "domain": domain, "state": "PROBATION", "reason": "known-lineage whitewashing defense"})
+            forced_fail = candidate.fingerprint in failures or candidate.name in failures
+            passed_answer = "wrong" if forced_fail else (expected_answer[category] if target_cap in candidate.capabilities or "synthesize" in candidate.capabilities else "wrong")
             audition_result = audition(candidate.fingerprint, domain, category, passed_answer)
-            calibration = self.calibration.get(candidate.fingerprint, domain)
-            calibration.update(predicted_probability=0.8, outcome=audition_result.passed, canary=True)
+            calibration = self.calibration.record_verified(candidate.fingerprint, domain, predicted_probability=0.8, outcome=audition_result.passed, canary=True)
+            evaluated = evaluate_bankruptcy(calibration)
+            current_state = self.repository.bankruptcy_state(candidate.fingerprint, domain)
+            recovery_requested = candidate.fingerprint in recovery or candidate.name in recovery
+            if recovery_requested:
+                recovered = recover(
+                    BankruptcyRecord(candidate.fingerprint, domain, BankruptcyState(current_state), "recovery path"),
+                    recovery_audition_passed=audition_result.passed,
+                )
+                next_state = recovered.state.value
+                reason = recovered.reason or "recovery audition"
+            elif evaluated.state == BankruptcyState.BANKRUPT:
+                next_state = "BANKRUPT"
+                reason = evaluated.reason or "verified audition bankruptcy"
+            else:
+                next_state = current_state
+                reason = "direct verified calibration"
+            if next_state != current_state:
+                self.repository.set_bankruptcy_state(candidate.fingerprint, domain, next_state, reason)
+                ledger.append("bankruptcy_changed", {"fingerprint": candidate.fingerprint, "domain": domain, "state": next_state, "reason": reason})
+            state = self.repository.bankruptcy_state(candidate.fingerprint, domain)
+            if state == "BANKRUPT":
+                lineage_exclusions["bankrupt"].append(candidate.fingerprint)
+            elif state == "PROBATION":
+                lineage_exclusions["probation"].append(candidate.fingerprint)
             ledger.append(
-                "agent_auditioned", {"fingerprint": candidate.fingerprint, "domain": domain, "category": category, "passed": audition_result.passed, "score": audition_result.score}
-            )
-            audited.append(AgentCandidate(**{**candidate.__dict__, "audition_score": audition_result.score, "calibration_score": calibration.trust}))
-        progress.advance("AUDITION_CANDIDATES", 0.72)
-
-        selected, rationale = select_coalition(profile, audited, request.max_agents)
-        topology = topology_for_size(len(selected), profile.complexity)
-        ledger.append("coalition_selected", {"members": [member.fingerprint for member in selected], "topology": topology, "rationale": rationale})
-        progress.advance("SELECT_COALITION", 0.62)
-
-        claims: list[Claim] = []
-        for member in selected:
-            sealed_context_id = str(uuid5(NAMESPACE_URL, f"{run_id}:{member.fingerprint}:sealed"))
-            response = self.provider.generate(ProviderRequest(request.task, domain, member.name, sealed_context_id, fixture))
-            claims.append(response.claim)
-            ledger.append(
-                "claim_proposed",
+                "agent_auditioned",
                 {
-                    "claim_hash": response.claim.hash,
-                    "fingerprint": member.fingerprint,
-                    "sealed_context_id": sealed_context_id,
-                    "probability": response.claim.probability,
-                    "provider_trace_id": response.trace_id,
+                    "fingerprint": candidate.fingerprint,
+                    "lineage_id": identity.lineage_id,
+                    "domain": domain,
+                    "category": category,
+                    "passed": audition_result.passed,
+                    "score": audition_result.score,
+                    "direct_attempts": calibration.attempts,
+                    "direct_brier": calibration.brier_score,
+                    "routing_state": state,
                 },
             )
-        progress.advance("SEALED_FIRST_PASS", 0.55)
-        ledger.append("claim_graph_built", {"claims": [claim.hash for claim in claims], "edges": 0})
+            audited.append(
+                replace(
+                    candidate,
+                    audition_score=audition_result.score,
+                    calibration_score=calibration.trust,
+                    bankrupt=state == "BANKRUPT",
+                    probation=state == "PROBATION",
+                )
+            )
+        advance("AUDITION_CANDIDATES", 0.70)
 
-        all_specs = builtin_specs(domain)
-        candidate_specs = [all_specs[key] for key in _spec_keys(profile.required_capabilities, scenario)]
+        selected, rationale = self.services.coalition.select(profile, audited, request.max_agents)
+        ledger.append("coalition_selected", {"members": [member.fingerprint for member in selected], "rationale": rationale})
+        advance("SELECT_COALITION", 0.60)
+
+        injected_by_agent: dict[str, list[dict[str, Any]]] = {}
+        persistent_memory_reused: set[str] = set()
+        for member in selected:
+            injected: list[dict[str, Any]] = []
+            for item in retrieved_memory:
+                allowed = self.services.memory.injectable(item, member.fingerprint, domain)
+                ledger.append(
+                    "memory_cross_agent_gate",
+                    {
+                        "memory_id": item.memory_id,
+                        "target_fingerprint": member.fingerprint,
+                        "allowed": allowed,
+                        "gate": "CROSS_AGENT",
+                    },
+                )
+                if allowed:
+                    injected.append(item.model_dump(mode="json"))
+                    persistent_memory_reused.add(item.memory_id)
+            injected_by_agent[member.fingerprint] = injected
+
+        builtins = self.services.falsifiers.specs(domain)
+        base_specs = [builtins[key] for key in _spec_keys(profile.required_capabilities, scenario)]
+        promoted = self.repository.promoted_falsifiers(domain)
+        promoted_by_primitive: dict[str, FalsifierSpec] = {}
+        for spec in promoted:
+            promoted_by_primitive[spec.primitive] = max(spec, promoted_by_primitive.get(spec.primitive, spec), key=lambda row: row.version)
+        candidate_specs: list[FalsifierSpec] = []
+        persistent_falsifiers_reused: list[str] = []
+        for spec in base_specs:
+            replacement = promoted_by_primitive.get(spec.primitive)
+            if replacement is not None:
+                candidate_specs.append(replacement)
+                persistent_falsifiers_reused.append(replacement.hash)
+            else:
+                candidate_specs.append(spec)
+        for spec in promoted:
+            if spec.hash not in {row.hash for row in candidate_specs} and (not base_specs or spec.primitive in {row.primitive for row in base_specs}):
+                candidate_specs.append(spec)
+                persistent_falsifiers_reused.append(spec.hash)
         for spec in candidate_specs:
-            ledger.append("falsifier_proposed", {"spec_hash": spec.hash, "id": spec.id, "primitive": spec.primitive})
+            ledger.append(
+                "falsifier_proposed",
+                {
+                    "spec_hash": spec.hash,
+                    "id": spec.id,
+                    "primitive": spec.primitive,
+                    "persistent_reuse": spec.hash in persistent_falsifiers_reused,
+                },
+            )
         max_tests = {"fast": 1, "normal": 3, "deep": 5}[request.depth]
         selected_specs, scores = FalsifierMarket().select(candidate_specs, budget_usd=request.budget_usd, max_tests=max_tests, information_floor=0.05)
-        ledger.append("falsifier_market_scored", {"scores": [score.__dict__ for score in scores], "budget_usd": request.budget_usd, "max_tests": max_tests})
+        ledger.append("falsifier_market_scored", {"scores": [asdict(score) for score in scores], "budget_usd": request.budget_usd, "max_tests": max_tests})
         if candidate_specs and not selected_specs:
             ledger.append("budget_exhausted", {"reason": "no candidate fits budget/information threshold"})
         for spec in selected_specs:
-            ledger.append("falsifier_selected", {"spec_hash": spec.hash, "primitive": spec.primitive})
+            ledger.append("falsifier_selected", {"spec_hash": spec.hash, "primitive": spec.primitive, "persistent_reuse": spec.hash in persistent_falsifiers_reused})
 
-        executions = []
-        for spec in selected_specs:
-            execution = execute_primitive(spec, fixture)
-            executions.append(execution)
-            ledger.append("falsifier_executed", execution.model_dump(mode="json"))
-        progress.advance("EXECUTE_FALSIFIERS", 0.25 if executions else 0.55)
+        force_sparse = bool(fixture.get("force_sparse", False))
+        hierarchical = bool(fixture.get("hierarchical", False) or any(token in request.task.lower() for token in ("decompose", "mixed evidence", "hierarchical")))
+        plan = compile_morphology(
+            task_hash=task_hash,
+            selected_fingerprints=[member.fingerprint for member in selected],
+            falsifier_hashes=[spec.hash for spec in selected_specs],
+            complexity=profile.complexity,
+            required_capabilities=profile.required_capabilities,
+            max_concurrency=request.max_concurrency,
+            learn=request.learn,
+            force_sparse=force_sparse,
+            hierarchical=hierarchical,
+        )
+        ledger.append("morphology_compiled", {"plan_hash": plan.plan_hash, "morphology": plan.name.value, "nodes": len(plan.nodes), "edges": len(plan.edges)})
 
-        if not claims:
+        precompleted: dict[str, object] = {}
+        for node in plan.nodes:
+            if node.kind == NodeKind.PROFILE:
+                node.status = "COMPLETED"
+                node.output_hash = sha256_obj(profile.model_dump(mode="json"))
+                precompleted[node.node_id] = profile.model_dump(mode="json")
+            elif node.kind == NodeKind.MEMORY_RETRIEVE:
+                node.status = "COMPLETED"
+                value = {"memory_ids": [item.memory_id for item in retrieved_memory]}
+                node.output_hash = sha256_obj(value)
+                precompleted[node.node_id] = value
+            elif node.kind == NodeKind.AUDITION:
+                node.status = "COMPLETED"
+                value = {"audited": [member.fingerprint for member in audited], "excluded": lineage_exclusions}
+                node.output_hash = sha256_obj(value)
+                precompleted[node.node_id] = value
+
+        selected_by_fp = {member.fingerprint: member for member in selected}
+        specs_by_hash = {spec.hash: spec for spec in selected_specs}
+        claims_by_fp: dict[str, Claim] = {}
+        claim_trace_ids: dict[str, str | None] = {}
+        executions: list[FalsifierExecution] = []
+        communications: list[dict[str, Any]] = []
+        provider_call_count = 0
+        reserved_cost = 0.0
+        budget_lock = asyncio.Lock()
+        communication_stagnated = False
+
+        async def reserve(cost: float) -> bool:
+            nonlocal reserved_cost
+            async with budget_lock:
+                if reserved_cost + cost > request.budget_usd + 1e-12:
+                    return False
+                reserved_cost += cost
+                return True
+
+        async def handle(node: DagNode) -> object:
+            nonlocal provider_call_count, communication_stagnated
+            ledger.append("dag_node_started", {"node_id": node.node_id, "kind": node.kind.value, "input_hash": node.input_hash})
+            if node.kind == NodeKind.AGENT_TASK:
+                if node.identity is None or node.identity not in selected_by_fp:
+                    raise RuntimeError("agent DAG node missing selected identity")
+                member = selected_by_fp[node.identity]
+                estimated = float(fixture.get("agent_cost", 0.0))
+                if not await reserve(estimated):
+                    ledger.append("budget_exhausted", {"node_id": node.node_id, "kind": node.kind.value})
+                    return {"budget_exhausted": True}
+                sealed_context_id = str(uuid5(NAMESPACE_URL, f"{run_id}:{member.fingerprint}:sealed"))
+                provider_request = ProviderRequest(
+                    request.task,
+                    domain,
+                    member.name,
+                    sealed_context_id,
+                    fixture,
+                    tuple(injected_by_agent.get(member.fingerprint, [])),
+                )
+                response: ProviderResponse = await self.provider.generate_request_async(provider_request)
+                provider_call_count += 1
+                claims_by_fp[member.fingerprint] = response.claim
+                claim_trace_ids[member.fingerprint] = response.trace_id
+                ledger.append(
+                    "claim_proposed",
+                    {
+                        "claim_hash": response.claim.hash,
+                        "fingerprint": member.fingerprint,
+                        "sealed_context_id": sealed_context_id,
+                        "probability": response.claim.probability,
+                        "provider_trace_id": response.trace_id,
+                        "verified_memory_ids": [item["memory_id"] for item in injected_by_agent.get(member.fingerprint, [])],
+                    },
+                )
+                return {
+                    "claim": response.claim.model_dump(mode="json"),
+                    "trace_id": response.trace_id,
+                    "cost": response.cost,
+                    "latency_ms": response.latency_ms,
+                    "usage": response.usage,
+                }
+            if node.kind == NodeKind.FALSIFIER:
+                if node.identity is None or node.identity not in specs_by_hash:
+                    raise RuntimeError("falsifier DAG node missing selected spec")
+                spec = specs_by_hash[node.identity]
+                if not self.services.sandbox.permits(spec.primitive):
+                    raise RuntimeError(f"sandbox rejected primitive {spec.primitive}")
+                execution = self.services.falsifiers.run(spec, fixture)
+                executions.append(execution)
+                ledger.append("falsifier_executed", execution.model_dump(mode="json"))
+                return execution.model_dump(mode="json")
+            if node.kind == NodeKind.CHALLENGE:
+                if len(claims_by_fp) < 2:
+                    return {"opened": 0, "reason": "fewer than two live claims"}
+                stagnation = 0
+                previous_semantic_hash = sha256_obj({fp: claim.model_dump(mode="json") for fp, claim in sorted(claims_by_fp.items())})
+                max_rounds = min(3, max(1, int(fixture.get("challenge_rounds", 3))))
+                for round_no in range(1, max_rounds + 1):
+                    fps = sorted(claims_by_fp)
+                    candidates_for_edges: list[CommunicationCandidate] = []
+                    for i, left_fp in enumerate(fps):
+                        for right_fp in fps[i + 1 :]:
+                            left, right = claims_by_fp[left_fp], claims_by_fp[right_fp]
+                            disagreement = abs(left.probability - right.probability)
+                            if bool(fixture.get("force_challenge", False)):
+                                disagreement = max(0.35, disagreement)
+                            left_member, right_member = selected_by_fp[left_fp], selected_by_fp[right_fp]
+                            proximity = semantic_proximity(
+                                SemanticSignature(left.statement, domain=left.domain, claim_type=left.claim_type, evidence_clusters=tuple(left.evidence_refs)),
+                                SemanticSignature(right.statement, domain=right.domain, claim_type=right.claim_type, evidence_clusters=tuple(right.evidence_refs)),
+                            )
+                            candidates_for_edges.append(
+                                CommunicationCandidate(
+                                    challenger=left_fp,
+                                    target=right_fp,
+                                    residual_disagreement=disagreement,
+                                    verified_reliability=self.calibration.direct_trust(left_fp, domain),
+                                    task_relevance=1.0,
+                                    capability_complementarity=1.0 if left_member.capabilities != right_member.capabilities else 0.4,
+                                    correlation=correlation(left_member, right_member),
+                                    semantic_proximity=proximity.score,
+                                    expected_information_gain=max(0.2, disagreement),
+                                )
+                            )
+                    chosen = self.services.communication.select(candidates_for_edges, k=2)
+                    if not chosen:
+                        stagnation += 1
+                    for edge in chosen:
+                        target = claims_by_fp[edge.target]
+                        challenge_request = ChallengeRequest(
+                            challenger_fingerprint=edge.challenger,
+                            target_fingerprint=edge.target,
+                            target_claim_hash=target.hash,
+                            target_statement_summary=target.statement[:500],
+                            evidence_refs=list(target.evidence_refs),
+                            falsifier_observations=[execution.model_dump(mode="json") for execution in executions],
+                            challenge_reason=f"residual disagreement/information score={edge.score:.4f}",
+                            round=round_no,
+                        )
+                        response = await self.provider.challenge_async(challenge_request)
+                        provider_call_count += 1
+                        revised = target.model_copy(update={"probability": response.revised_probability, "status": response.revised_status})
+                        claims_by_fp[edge.target] = revised
+                        row = {
+                            "round": round_no,
+                            "source_fp": edge.challenger,
+                            "target_fp": edge.target,
+                            "reason": challenge_request.challenge_reason,
+                            "score": edge.score,
+                            "input_hash": challenge_request.hash,
+                            "output_hash": response.hash,
+                            "provider_call_id": response.provider_call_id,
+                            "disposition": response.disposition,
+                            "revised_probability": response.revised_probability,
+                            "revised_status": response.revised_status.value,
+                        }
+                        communications.append(row)
+                        ledger.append("communication_edge_opened", row)
+                        ledger.append("challenge_completed", {"input_hash": challenge_request.hash, "output_hash": response.hash, "provider_call_id": response.provider_call_id})
+                    current_semantic_hash = sha256_obj({fp: claim.model_dump(mode="json") for fp, claim in sorted(claims_by_fp.items())})
+                    if current_semantic_hash == previous_semantic_hash:
+                        stagnation += 1
+                    else:
+                        stagnation = 0
+                    previous_semantic_hash = current_semantic_hash
+                    probabilities = [claim.probability for claim in claims_by_fp.values()]
+                    if probabilities and max(probabilities) - min(probabilities) <= 0.05:
+                        break
+                    if stagnation >= 2:
+                        communication_stagnated = True
+                        progress.replan_reasons.append("sparse challenge stagnated for two checks")
+                        break
+                return {"opened": len(communications), "stagnated": communication_stagnated}
+            if node.kind == NodeKind.JOIN:
+                return {"claims": sorted(claims_by_fp), "falsifiers": sorted(execution.spec_hash for execution in executions), "communications": len(communications)}
+            if node.kind == NodeKind.SYNTHESIS:
+                return {"claim_count": len(claims_by_fp), "falsifier_count": len(executions)}
+            if node.kind == NodeKind.LEARN:
+                return {"eligible": request.learn}
+            if node.kind == NodeKind.GERMINAL:
+                return {"eligible": request.learn and bool(fixture.get("confirmed_evasion", False))}
+            return {"kind": node.kind.value}
+
+        executor = DagExecutor(request.max_concurrency)
+        dag_execution: DagExecution = await executor.execute(plan, handle, precompleted=precompleted)
+        ledger.append("dag_execution_completed", {"plan_hash": plan.plan_hash, "metrics": dag_execution.metrics.as_dict(), "schedule_hash": sha256_obj(dag_execution.schedule)})
+        advance("EXECUTE_DAG", 0.22 if executions else 0.48)
+
+        ordered_claims = [claims_by_fp[key] for key in sorted(claims_by_fp)]
+        ordered_executions = sorted(executions, key=lambda row: row.spec_hash)
+        if not ordered_claims:
             final_status = ClaimStatus.INCONCLUSIVE
-        elif any(execution.verdict == Verdict.FAIL for execution in executions):
+        elif any(execution.verdict == Verdict.FAIL for execution in ordered_executions):
             final_status = ClaimStatus.FALSIFIED
-        elif executions and all(execution.verdict == Verdict.PASS for execution in executions):
+        elif ordered_executions and all(execution.verdict == Verdict.PASS for execution in ordered_executions):
             final_status = ClaimStatus.SUPPORTED
         else:
             final_status = ClaimStatus.INCONCLUSIVE
-        for claim in claims:
+        if communication_stagnated and not ordered_executions:
+            final_status = ClaimStatus.INCONCLUSIVE
+        for claim in ordered_claims:
             claim.status = final_status
             ledger.append("claim_updated", {"claim_id": claim.claim_id, "claim_hash": claim.hash, "status": claim.status.value})
 
-        disagreement = 0.0
-        if len(claims) > 1:
-            probs = [claim.probability for claim in claims]
-            disagreement = max(probs) - min(probs)
-        edges = sparse_edges([member.fingerprint for member in selected], disagreement, k=2, round_index=0)
-        for edge in edges:
-            ledger.append("communication_edge_opened", edge.__dict__)
-        ledger.append("consensus_stabilized", {"disagreement": disagreement, "edges": len(edges), "stagnation_count": progress.stagnation_count})
-        progress.advance("SPARSE_CHALLENGE", 0.18 if executions else 0.52)
+        probabilities = [claim.probability for claim in ordered_claims]
+        disagreement = max(probabilities) - min(probabilities) if len(probabilities) > 1 else 0.0
+        ledger.append("consensus_stabilized", {"disagreement": disagreement, "challenge_edges": len(communications), "stagnation_count": progress.stagnation_count})
 
         if final_status == ClaimStatus.FALSIFIED:
-            failed = next(execution for execution in executions if execution.verdict == Verdict.FAIL)
-            answer = f"Claim falsified by {next(spec.primitive for spec in selected_specs if spec.hash == failed.spec_hash)}."
+            failed = next(execution for execution in ordered_executions if execution.verdict == Verdict.FAIL)
+            failed_spec = next(spec for spec in selected_specs if spec.hash == failed.spec_hash)
+            answer = f"Claim falsified by {failed_spec.primitive}."
             confidence = 0.98
             status: Literal["answered", "inconclusive", "failed"] = "answered"
         elif final_status == ClaimStatus.SUPPORTED:
@@ -309,65 +639,197 @@ class MiMicusEngine:
         ledger.append("final_verified", {"status": final_status.value, "answer_hash": sha256_text(answer), "confidence": confidence})
 
         memory_changes: list[dict[str, Any]] = []
-        if request.learn and executions:
-            decisive = next((execution for execution in executions if execution.verdict in {Verdict.FAIL, Verdict.PASS}), None)
-            if decisive is not None and claims:
-                item = MemoryItem(
-                    claim_hash=claims[0].hash,
+        if request.learn and ordered_executions and ordered_claims:
+            decisive = next((execution for execution in ordered_executions if execution.verdict in {Verdict.FAIL, Verdict.PASS}), None)
+            if decisive is not None:
+                owner = selected[0].fingerprint if selected else "system"
+                candidate_memory = MemoryItem(
+                    claim_hash=ordered_claims[0].hash,
                     content=f"Verified falsifier {decisive.spec_hash} produced {decisive.verdict.value} for scenario {scenario}",
-                    owner_fingerprint=selected[0].fingerprint if selected else "system",
+                    owner_fingerprint=owner,
                     domain=domain,
                     origin_clusters=[decisive.execution_snapshot_hash],
                     authority=0.9,
                     deterministic_verification=True,
                     verified_clusters=[decisive.execution_snapshot_hash],
                 )
-                ledger.append("memory_candidate_written", {"memory_id": item.memory_id, "claim_hash": item.claim_hash, "authority": item.authority})
-                written = write_gate(item)
-                promoted = promotion_gate(written)
-                ledger.append("memory_promoted", {"memory_id": promoted.memory_id, "status": promoted.status.value, "authority": promoted.authority})
-                memory_changes.append(promoted.model_dump(mode="json"))
-        progress.advance("LEARN_VERIFIED_ONLY", 0.08)
+                written = write_gate(candidate_memory)
+                self.repository.save_memory_transition(written, reason="WRITE gate deterministic verification", from_status="candidate")
+                ledger.append("memory_candidate_written", {"memory_id": written.memory_id, "claim_hash": written.claim_hash, "authority": written.authority, "status": written.status.value})
+                promoted_memory = promotion_gate(written)
+                self.repository.save_memory_transition(promoted_memory, reason="PROMOTION gate", from_status=written.status.value)
+                ledger.append("memory_promoted", {"memory_id": promoted_memory.memory_id, "status": promoted_memory.status.value, "authority": promoted_memory.authority})
+                memory_changes.append(promoted_memory.model_dump(mode="json"))
+        advance("LEARN_VERIFIED_ONLY", 0.09)
 
-        ledger.append("run_completed", {"status": status, "task_ledger_hash": sha256_obj(task_ledger), "progress_ledger_hash": sha256_obj(progress)})
+        germinal_changes: list[dict[str, Any]] = []
+        if request.learn and bool(fixture.get("confirmed_evasion", False)):
+            parent = next((spec for spec in selected_specs if spec.primitive == str(fixture.get("evasion_primitive", "numeric_invariant"))), None)
+            if parent is None and "F1" in self.services.falsifiers.specs(domain):
+                parent = self.services.falsifiers.specs(domain)["F1"]
+            if parent is not None:
+                parent_execution = self.services.falsifiers.run(parent, fixture)
+                ground_truth_hash = str(fixture.get("ground_truth_hash") or sha256_obj({"expected": fixture.get("ground_truth_verdict", "FAIL"), "fixture": fixture}))
+                evasion_hash = sha256_obj({"parent": parent.hash, "ground_truth": ground_truth_hash, "snapshot": parent_execution.execution_snapshot_hash})
+                params = dict(parent.params)
+                if parent.primitive == "numeric_invariant":
+                    params["relative_tolerance"] = float(fixture.get("mutation_relative_tolerance", 0.02))
+                candidate_probe = parent.model_copy(update={"version": f"2.0.{evasion_hash[:8]}", "params": params, "parent_hash": parent.hash})
+                candidate_execution = self.services.falsifiers.run(candidate_probe, fixture)
+                expected_fail = str(fixture.get("ground_truth_verdict", "FAIL")) == "FAIL"
+                catches = candidate_execution.verdict == Verdict.FAIL if expected_fail else candidate_execution.verdict == Verdict.PASS
+                mutation = mutate_params(
+                    parent,
+                    new_version=candidate_probe.version,
+                    params=params,
+                    triggering_snapshot_hash=parent_execution.execution_snapshot_hash,
+                    catches_triggering_evasion=catches,
+                )
+                fossils = [fossil for fossil in seed_fossils() if fossil.primitive == parent.primitive]
+                for fossil in fossils:
+                    self.repository.seed_fossil(fossil.snapshot_hash, fossil.primitive, fossil.expected.value, asdict(fossil))
+                decision = decide(parent, mutation, fossils)
+                metrics = {
+                    "reason": decision.reason,
+                    "parent": asdict(decision.parent_metrics),
+                    "candidate": asdict(decision.candidate_metrics),
+                    "catches_triggering_evasion": catches,
+                    "fossils_tested": decision.candidate_metrics.tested,
+                }
+                self.repository.persist_germinal_decision(
+                    evasion_hash=evasion_hash,
+                    parent_spec_hash=parent.hash,
+                    ground_truth_hash=ground_truth_hash,
+                    evasion_payload={"fixture_hash": sha256_obj(fixture), "parent_execution": parent_execution.model_dump(mode="json")},
+                    candidate_hash=mutation.candidate.hash,
+                    candidate_spec=mutation.candidate,
+                    status=decision.status,
+                    metrics=metrics,
+                    domain=domain,
+                )
+                change = {
+                    "evasion_hash": evasion_hash,
+                    "parent_hash": parent.hash,
+                    "candidate_hash": mutation.candidate.hash,
+                    "status": decision.status,
+                    "metrics": metrics,
+                }
+                germinal_changes.append(change)
+                ledger.append("evasion_confirmed", {"evasion_hash": evasion_hash, "ground_truth_hash": ground_truth_hash, "parent_hash": parent.hash})
+                ledger.append("mutation_candidate_written", {"candidate_hash": mutation.candidate.hash, "parent_hash": parent.hash, "state": "GERMINAL_QUARANTINE"})
+                ledger.append("germinal_decision", change)
+                if decision.status == "PROMOTE":
+                    ledger.append("falsifier_promoted", {"spec_hash": mutation.candidate.hash, "version": mutation.candidate.version, "parent_hash": parent.hash})
+        advance("GERMINAL", 0.05)
+
+        task_ledger = TaskLedger(
+            task=request.task,
+            domain=domain,
+            budget_usd=request.budget_usd,
+            constraints={"max_agents": request.max_agents, "max_concurrency": request.max_concurrency, "depth": request.depth},
+            plan=[node.kind.value for node in plan.nodes],
+        )
+        ledger.append(
+            "run_completed",
+            {
+                "status": status,
+                "task_ledger_hash": sha256_obj(task_ledger),
+                "progress_ledger_hash": sha256_obj(progress),
+                "plan_hash": plan.plan_hash,
+                "execution_metrics_hash": sha256_obj(dag_execution.metrics.as_dict()),
+            },
+        )
         replay = verify_replay(ledger.events, ledger.head)
+
+        falsifier_rows = [
+            execution.model_dump(mode="json")
+            | {
+                "id": next(spec.id for spec in selected_specs if spec.hash == execution.spec_hash),
+                "primitive": next(spec.primitive for spec in selected_specs if spec.hash == execution.spec_hash),
+                "persistent_reuse": execution.spec_hash in persistent_falsifiers_reused,
+            }
+            for execution in ordered_executions
+        ]
+        final_claims = [claim.model_dump(mode="json") | {"claim_hash": claim.hash, "provider_trace_id": claim_trace_ids.get(fp)} for fp, claim in sorted(claims_by_fp.items())]
+        metrics = dag_execution.metrics.as_dict()
+        coalition = {
+            "members": [member.fingerprint for member in selected],
+            "names": [member.name for member in selected],
+            "topology": plan.name.value,
+            "morphology": plan.name.value,
+            "rationale": rationale,
+            "plan_hash": plan.plan_hash,
+        }
         result = RunResult(
             run_id=run_id,
             status=status,
             answer=answer,
             confidence=confidence,
-            final_claims=[claim.model_dump(mode="json") | {"claim_hash": claim.hash} for claim in claims],
+            final_claims=final_claims,
             disagreements=[] if disagreement <= 0.05 else [{"probability_span": disagreement}],
-            falsifiers=[
-                execution.model_dump(mode="json")
-                | {
-                    "id": next(spec.id for spec in selected_specs if spec.hash == execution.spec_hash),
-                    "primitive": next(spec.primitive for spec in selected_specs if spec.hash == execution.spec_hash),
-                }
-                for execution in executions
-            ],
+            falsifiers=falsifier_rows,
             evidence_provenance={
                 "scenario": scenario,
                 "fixture_hash": sha256_obj(fixture),
                 "source_clusters": fixture.get("clusters", []),
                 "pinned_registry_hash": fixture.get("registry_snapshot_hash"),
+                "plan_hash": plan.plan_hash,
+                "provider": self.provider.capabilities.__dict__,
             },
-            coalition={"members": [member.fingerprint for member in selected], "names": [member.name for member in selected], "topology": topology, "rationale": rationale},
+            coalition=coalition,
             budget={
                 "limit_usd": request.budget_usd,
-                "spent_usd": sum(execution.cost for execution in executions),
-                "latency_ms": sum(execution.latency_ms for execution in executions),
+                "reserved_usd": reserved_cost,
+                "spent_usd": sum(execution.cost for execution in ordered_executions) + float(fixture.get("agent_cost", 0.0)) * len(ordered_claims),
+                "latency_ms": sum(execution.latency_ms for execution in ordered_executions),
                 "max_tests": max_tests,
+                "max_concurrency": request.max_concurrency,
             },
             ledger_head=ledger.head,
             memory_changes=memory_changes,
-            germinal_changes=[],
+            germinal_changes=germinal_changes,
             replay_verified=bool(replay["verified"]),
             event_types=[event.event_type for event in ledger.events],
             plugin_hashes=self.plugin_hashes,
+            plan_hash=plan.plan_hash,
+            morphology=plan.name.value,
+            provider_call_count=provider_call_count,
+            challenge_edge_count=len(communications),
+            concurrency_summary={
+                "peak_concurrency": metrics["peak_concurrency"],
+                "parallel_speedup_estimate": metrics["parallel_speedup_estimate"],
+                "parallel_efficiency": metrics["parallel_efficiency"],
+                "avoidable_serialization_count": metrics["avoidable_serialization_count"],
+                "subtask_finish_rate": metrics["subtask_finish_rate"],
+            },
+            critical_path_summary={
+                "work_steps": metrics["work_steps"],
+                "critical_steps": metrics["critical_steps"],
+                "critical_path_ms": metrics["critical_path_ms"],
+                "observed_wall_ms": metrics["observed_wall_ms"],
+                "serial_work_ms": metrics["serial_work_ms"],
+            },
+            persistent_memory_reused=sorted(persistent_memory_reused),
+            persistent_falsifiers_reused=sorted(set(persistent_falsifiers_reused)),
+            lineage_exclusions={key: sorted(value) for key, value in lineage_exclusions.items()},
         )
-        self.repository.save_run(
-            run_id=run_id, task_hash=task_hash, config_hash=config_hash, status=status, ledger_head=ledger.head, result=result.model_dump(mode="json"), events=ledger.events
+        self.repository.save_run_bundle(
+            run_id=run_id,
+            task_hash=task_hash,
+            config_hash=config_hash,
+            status=status,
+            ledger_head=ledger.head,
+            result=result.model_dump(mode="json"),
+            events=ledger.events,
+            task_ledger=task_ledger.model_dump(mode="json"),
+            progress_rows=progress_rows,
+            coalition=coalition,
+            plan_hash=plan.plan_hash,
+            plan=plan.as_dict(),
+            communications=communications,
+            claims=final_claims,
+            evidence=[],
+            executions=ordered_executions,
         )
         return result
 
@@ -377,4 +839,4 @@ class MiMicusEngine:
             return None
         events = self.repository.get_events(run_id)
         replay = verify_replay(events, str(result["ledger_head"]))
-        return result | {"replay_state": replay, "events": events}
+        return result | {"replay_state": replay, "events": events, "persistent_state": self.repository.inspect_state(run_id)}
