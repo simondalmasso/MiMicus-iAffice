@@ -32,7 +32,7 @@ jobs:
       - name: Normalize source and lock
         run: |
           ruff format .
-          ruff check --fix .
+          ruff check --fix --unsafe-fixes .
           python -m pip freeze --exclude-editable > requirements.lock
           grep -q '^mcp==2.0.0$' requirements.lock
           grep -q '^openai-agents==0.21.1$' requirements.lock
