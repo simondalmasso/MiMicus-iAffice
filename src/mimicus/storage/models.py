@@ -55,6 +55,27 @@ class AgentFingerprintRow(Base):
     manifest_json: Mapped[str] = mapped_column(Text, nullable=False)
 
 
+class AgentLineageRow(Base):
+    __tablename__ = "agent_lineages"
+    lineage_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    provider: Mapped[str] = mapped_column(String(64), nullable=False)
+    model_family: Mapped[str] = mapped_column(String(128), nullable=False)
+    phenotype: Mapped[str] = mapped_column(String(128), nullable=False)
+    tool_policy_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    provenance: Mapped[str] = mapped_column(Text, nullable=False)
+    manifest_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[str] = mapped_column(String(64), nullable=False)
+
+
+class AgentLineageMemberRow(Base):
+    __tablename__ = "agent_lineage_members"
+    fingerprint: Mapped[str] = mapped_column(ForeignKey("agent_fingerprints.fingerprint"), primary_key=True)
+    lineage_id: Mapped[str] = mapped_column(ForeignKey("agent_lineages.lineage_id"), nullable=False, index=True)
+    parent_fingerprint: Mapped[str | None] = mapped_column(String(64))
+    revision_provenance: Mapped[str] = mapped_column(Text, nullable=False)
+    identity_manifest_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+
+
 class AgentDomainCalibrationRow(Base):
     __tablename__ = "agent_domain_calibration"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -65,6 +86,7 @@ class AgentDomainCalibrationRow(Base):
     failures: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     brier_sum: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     canary_failure_streak: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_verified_at: Mapped[str | None] = mapped_column(String(64))
     __table_args__ = (UniqueConstraint("fingerprint", "domain", name="uq_calibration_fp_domain"),)
 
 
@@ -75,6 +97,7 @@ class AgentBankruptcyRow(Base):
     domain: Mapped[str] = mapped_column(String(128), nullable=False)
     state: Mapped[str] = mapped_column(String(32), nullable=False)
     reason: Mapped[str | None] = mapped_column(Text)
+    updated_at: Mapped[str | None] = mapped_column(String(64))
     __table_args__ = (UniqueConstraint("fingerprint", "domain", name="uq_bankruptcy_fp_domain"),)
 
 
@@ -85,6 +108,8 @@ class CoalitionRow(Base):
     topology: Mapped[str] = mapped_column(String(64), nullable=False)
     members_json: Mapped[str] = mapped_column(Text, nullable=False)
     rationale_json: Mapped[str] = mapped_column(Text, nullable=False)
+    plan_hash: Mapped[str | None] = mapped_column(String(64))
+    plan_json: Mapped[str | None] = mapped_column(Text)
 
 
 class CommunicationRow(Base):
@@ -95,6 +120,10 @@ class CommunicationRow(Base):
     source_fp: Mapped[str] = mapped_column(String(64), nullable=False)
     target_fp: Mapped[str] = mapped_column(String(64), nullable=False)
     reason: Mapped[str] = mapped_column(Text, nullable=False)
+    provider_call_id: Mapped[str | None] = mapped_column(String(128))
+    input_hash: Mapped[str | None] = mapped_column(String(64))
+    output_hash: Mapped[str | None] = mapped_column(String(64))
+    payload_json: Mapped[str | None] = mapped_column(Text)
 
 
 class ClaimRow(Base):
@@ -119,6 +148,7 @@ class FalsifierSpecRow(Base):
     spec_id: Mapped[str] = mapped_column(String(128), nullable=False)
     version: Mapped[str] = mapped_column(String(32), nullable=False)
     primitive: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    domain: Mapped[str | None] = mapped_column(String(128), index=True)
     parent_hash: Mapped[str | None] = mapped_column(String(64))
     payload_json: Mapped[str] = mapped_column(Text, nullable=False)
     __table_args__ = (UniqueConstraint("spec_id", "version", name="uq_falsifier_id_version"),)
@@ -130,6 +160,19 @@ class FalsifierVersionRow(Base):
     spec_hash: Mapped[str] = mapped_column(ForeignKey("falsifier_specs.spec_hash"), nullable=False)
     lifecycle_state: Mapped[str] = mapped_column(String(32), nullable=False)
     decision_json: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[str | None] = mapped_column(String(64))
+
+
+class FalsifierPerformanceRow(Base):
+    __tablename__ = "falsifier_performance"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    spec_hash: Mapped[str] = mapped_column(ForeignKey("falsifier_specs.spec_hash"), nullable=False)
+    domain: Mapped[str] = mapped_column(String(128), nullable=False)
+    executions: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    decisive: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    false_positive: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    false_negative: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    __table_args__ = (UniqueConstraint("spec_hash", "domain", name="uq_falsifier_perf_spec_domain"),)
 
 
 class FalsifierExecutionRow(Base):
@@ -165,6 +208,8 @@ class MutationCandidateRow(Base):
     parent_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False)
     metrics_json: Mapped[str] = mapped_column(Text, nullable=False)
+    spec_json: Mapped[str | None] = mapped_column(Text)
+    evasion_hash: Mapped[str | None] = mapped_column(String(64))
 
 
 class MemoryItemRow(Base):
@@ -175,6 +220,18 @@ class MemoryItemRow(Base):
     status: Mapped[str] = mapped_column(String(32), nullable=False)
     authority: Mapped[float] = mapped_column(Float, nullable=False)
     payload_json: Mapped[str] = mapped_column(Text, nullable=False)
+    updated_at: Mapped[str | None] = mapped_column(String(64))
+
+
+class MemoryTransitionRow(Base):
+    __tablename__ = "memory_transitions"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    memory_id: Mapped[str] = mapped_column(ForeignKey("memory_items.memory_id"), nullable=False, index=True)
+    from_status: Mapped[str | None] = mapped_column(String(32))
+    to_status: Mapped[str] = mapped_column(String(32), nullable=False)
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    transition_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    created_at: Mapped[str] = mapped_column(String(64), nullable=False)
 
 
 class MemoryLinkRow(Base):
@@ -187,3 +244,4 @@ class MemoryLinkRow(Base):
 
 
 Index("ix_falsifier_execution_run_verdict", FalsifierExecutionRow.run_id, FalsifierExecutionRow.verdict)
+Index("ix_lineage_domain_state", AgentBankruptcyRow.domain, AgentBankruptcyRow.state)
