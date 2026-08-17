@@ -1,17 +1,19 @@
-# Benchmark
+# ORDER-003 execution-derived benchmark
 
-`mimicus benchmark --profile offline --episodes 200` runs a deterministic sequential fixture stream against five architectures with the same episode information:
+The V0.2 benchmark replaces the historical ORDER-002 architecture-scripted outcome generator. ORDER-002 benchmark files remain provenance evidence, but they are not evidence that MiMicus outperformed alternative architectures.
 
-- A — single scripted agent.
-- B — static multi-agent majority/debate baseline.
-- C — domain calibration/reputation routing only.
-- D — falsifier market without germinal/memory immune controls.
-- E — full MiMicus policy.
+ORDER-003 executes five actual runner implementations against the same ordered deterministic public fixture stream:
 
-The report records verified final accuracy, inconclusive and repeated-error rates, falsifier reuse, false-positive/false-negative rates, false mutation promotion, evasion-farming resistance, memory-poison propagation, average agents/communication edges, simulated cost/latency, calibration/Brier behavior, fingerprint replacement transfer, and removal-style attribution where applicable.
+- A: one provider agent.
+- B: static three-agent majority.
+- C: direct-calibration router.
+- D: provider agent plus the safe falsifier market, without persistent immune/germinal controls.
+- E: the full MiMicus V0.2 runtime.
 
-The harness is not allowed to alter ground truth or give MiMicus extra fixture facts unavailable to a baseline. Results are evidence about this deterministic fixture distribution, not a claim of universal model superiority.
+Ground truth is stored separately from public provider input. A single `common_grade(fixture, actual_runner_output)` function grades every architecture only after the runner returns. The grader has no architecture argument. Agent counts, provider calls, communication edges, falsifier executions, state transitions, work/critical steps, concurrency, cost, replay state and latency come from the actual run output or measured execution rather than architecture-name formulas.
 
-The kill question is explicit: after replacing every scripted fingerprint/model identity, does verified falsifier/fossil/provenance knowledge still reduce repeated errors? The JSON report includes before/after transfer metrics and a machine-readable answer.
+The required exact-head run executes at least 200 fixtures for each architecture, at least 1,000 architecture-runs total, and commits `BENCHMARK_RAW.jsonl` plus aggregate JSON/Markdown.
 
-The latest audited report is committed as `evidence/ORDER-002/BENCHMARK.json` with a Markdown rendering beside it. Exact-head CI reruns at least 200 episodes per architecture.
+Anti-rigging evidence intentionally degrades E's provider on a fixture and verifies the common metric falls, then improves a baseline provider and verifies that baseline metric rises. This is a structural check against a benchmark that simply assigns a predetermined winner.
+
+Default provider accounting is deterministic/simulated unless a live provider is explicitly substituted. Timing from CI is measured runtime evidence and may vary between machines. The report does not claim that E must dominate every metric.
