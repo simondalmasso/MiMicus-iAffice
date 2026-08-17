@@ -26,8 +26,8 @@ def evaluate_bankruptcy(calibration: CalibrationRecord, trust_floor: float = 0.3
 
 
 def recover(record: BankruptcyRecord, *, recovery_audition_passed: bool) -> BankruptcyRecord:
-    if record.state != BankruptcyState.BANKRUPT:
+    if record.state == BankruptcyState.ACTIVE:
         return record
     if not recovery_audition_passed:
-        return BankruptcyRecord(record.fingerprint, record.domain, BankruptcyState.BANKRUPT, "recovery audition required")
+        return BankruptcyRecord(record.fingerprint, record.domain, record.state, "recovery audition required")
     return BankruptcyRecord(record.fingerprint, record.domain, BankruptcyState.ACTIVE, "recovery audition passed")
