@@ -31,6 +31,7 @@ from mimicus.orchestration.proximity import SemanticSignature, semantic_proximit
 from mimicus.orchestration.replay import verify_replay
 from mimicus.orchestration.task_ledger import TaskLedger
 from mimicus.plugins.profiles import build_runtime_services
+from mimicus.plugins.registry import PluginKernel
 from mimicus.plugins.services import BuiltinAgentFactory, RuntimeServices
 from mimicus.providers.base import Provider, ProviderRequest, ProviderResponse
 from mimicus.storage.repository import Repository
@@ -182,6 +183,7 @@ class MiMicusEngine:
         services: RuntimeServices | None = None,
         profile: str = "offline",
     ) -> None:
+        self._kernel: PluginKernel | None
         if services is None:
             built, hashes, kernel = build_runtime_services(profile, database_url, provider_override=provider)
             self.services = built
@@ -268,7 +270,9 @@ class MiMicusEngine:
             identity = self.services.agent_factory.identity_for(candidate)
             if isinstance(revisions, dict) and isinstance(revisions.get(candidate.name), dict):
                 revision = revisions[candidate.name]
-                revised_fp = str(revision.get("fingerprint") or _fingerprint(candidate.name, candidate.provider, candidate.model, prompt=str(revision.get("prompt_revision", "revision"))))
+                revised_fp = str(
+                    revision.get("fingerprint") or _fingerprint(candidate.name, candidate.provider, candidate.model, prompt=str(revision.get("prompt_revision", "revision")))
+                )
                 identity = make_identity(
                     fingerprint=revised_fp,
                     provider=candidate.provider,
@@ -418,6 +422,7 @@ class MiMicusEngine:
         ledger.append("morphology_compiled", {"plan_hash": plan.plan_hash, "morphology": plan.name.value, "nodes": len(plan.nodes), "edges": len(plan.edges)})
 
         precompleted: dict[str, object] = {}
+        value: dict[str, Any]
         for node in plan.nodes:
             if node.kind == NodeKind.PROFILE:
                 node.status = "COMPLETED"
@@ -553,9 +558,9 @@ class MiMicusEngine:
                             challenge_reason=f"residual disagreement/information score={edge.score:.4f}",
                             round=round_no,
                         )
-                        response = await self.provider.challenge_async(challenge_request)
+                        challenge_response = await self.provider.challenge_async(challenge_request)
                         provider_call_count += 1
-                        revised = target.model_copy(update={"probability": response.revised_probability, "status": response.revised_status})
+                        revised = target.model_copy(update={"probability": challenge_response.revised_probability, "status": challenge_response.revised_status})
                         claims_by_fp[edge.target] = revised
                         row = {
                             "round": round_no,
@@ -564,15 +569,18 @@ class MiMicusEngine:
                             "reason": challenge_request.challenge_reason,
                             "score": edge.score,
                             "input_hash": challenge_request.hash,
-                            "output_hash": response.hash,
-                            "provider_call_id": response.provider_call_id,
-                            "disposition": response.disposition,
-                            "revised_probability": response.revised_probability,
-                            "revised_status": response.revised_status.value,
+                            "output_hash": challenge_response.hash,
+                            "provider_call_id": challenge_response.provider_call_id,
+                            "disposition": challenge_response.disposition,
+                            "revised_probability": challenge_response.revised_probability,
+                            "revised_status": challenge_response.revised_status.value,
                         }
                         communications.append(row)
                         ledger.append("communication_edge_opened", row)
-                        ledger.append("challenge_completed", {"input_hash": challenge_request.hash, "output_hash": response.hash, "provider_call_id": response.provider_call_id})
+                        ledger.append(
+                            "challenge_completed",
+                            {"input_hash": challenge_request.hash, "output_hash": challenge_response.hash, "provider_call_id": challenge_response.provider_call_id},
+                        )
                     current_semantic_hash = sha256_obj({fp: claim.model_dump(mode="json") for fp, claim in sorted(claims_by_fp.items())})
                     if current_semantic_hash == previous_semantic_hash:
                         stagnation += 1
@@ -655,7 +663,9 @@ class MiMicusEngine:
                 )
                 written = write_gate(candidate_memory)
                 self.repository.save_memory_transition(written, reason="WRITE gate deterministic verification", from_status="candidate")
-                ledger.append("memory_candidate_written", {"memory_id": written.memory_id, "claim_hash": written.claim_hash, "authority": written.authority, "status": written.status.value})
+                ledger.append(
+                    "memory_candidate_written", {"memory_id": written.memory_id, "claim_hash": written.claim_hash, "authority": written.authority, "status": written.status.value}
+                )
                 promoted_memory = promotion_gate(written)
                 self.repository.save_memory_transition(promoted_memory, reason="PROMOTION gate", from_status=written.status.value)
                 ledger.append("memory_promoted", {"memory_id": promoted_memory.memory_id, "status": promoted_memory.status.value, "authority": promoted_memory.authority})
@@ -689,7 +699,7 @@ class MiMicusEngine:
                 for fossil in fossils:
                     self.repository.seed_fossil(fossil.snapshot_hash, fossil.primitive, fossil.expected.value, asdict(fossil))
                 decision = decide(parent, mutation, fossils)
-                metrics = {
+                germinal_metrics = {
                     "reason": decision.reason,
                     "parent": asdict(decision.parent_metrics),
                     "candidate": asdict(decision.candidate_metrics),
@@ -704,7 +714,7 @@ class MiMicusEngine:
                     candidate_hash=mutation.candidate.hash,
                     candidate_spec=mutation.candidate,
                     status=decision.status,
-                    metrics=metrics,
+                    metrics=germinal_metrics,
                     domain=domain,
                 )
                 change = {
@@ -712,7 +722,7 @@ class MiMicusEngine:
                     "parent_hash": parent.hash,
                     "candidate_hash": mutation.candidate.hash,
                     "status": decision.status,
-                    "metrics": metrics,
+                    "metrics": germinal_metrics,
                 }
                 germinal_changes.append(change)
                 ledger.append("evasion_confirmed", {"evasion_hash": evasion_hash, "ground_truth_hash": ground_truth_hash, "parent_hash": parent.hash})
@@ -751,7 +761,7 @@ class MiMicusEngine:
             for execution in ordered_executions
         ]
         final_claims = [claim.model_dump(mode="json") | {"claim_hash": claim.hash, "provider_trace_id": claim_trace_ids.get(fp)} for fp, claim in sorted(claims_by_fp.items())]
-        metrics = dag_execution.metrics.as_dict()
+        metrics: dict[str, float | int] = dag_execution.metrics.as_dict()
         coalition = {
             "members": [member.fingerprint for member in selected],
             "names": [member.name for member in selected],

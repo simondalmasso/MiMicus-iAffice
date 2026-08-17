@@ -28,7 +28,6 @@ from mimicus.storage.models import (
     EventRow,
     EvidenceRow,
     FalsifierExecutionRow,
-    FalsifierPerformanceRow,
     FalsifierSpecRow,
     FalsifierVersionRow,
     FossilClaimRow,
@@ -148,8 +147,17 @@ class Repository:
     def calibration(self, fingerprint: str, domain: str) -> dict[str, Any]:
         with self.engine.connect() as connection:
             row = connection.execute(
-                select(AgentDomainCalibrationRow).where(AgentDomainCalibrationRow.fingerprint == fingerprint, AgentDomainCalibrationRow.domain == domain)
-            ).scalar_one_or_none()
+                select(
+                    AgentDomainCalibrationRow.fingerprint,
+                    AgentDomainCalibrationRow.domain,
+                    AgentDomainCalibrationRow.attempts,
+                    AgentDomainCalibrationRow.successes,
+                    AgentDomainCalibrationRow.failures,
+                    AgentDomainCalibrationRow.brier_sum,
+                    AgentDomainCalibrationRow.canary_failure_streak,
+                    AgentDomainCalibrationRow.last_verified_at,
+                ).where(AgentDomainCalibrationRow.fingerprint == fingerprint, AgentDomainCalibrationRow.domain == domain)
+            ).one_or_none()
         if row is None:
             return {
                 "fingerprint": fingerprint,
@@ -263,12 +271,16 @@ class Repository:
 
     def eligible_memory(self, domain: str) -> list[MemoryItem]:
         with self.engine.connect() as connection:
-            rows = connection.execute(
-                select(MemoryItemRow.payload_json).where(
-                    MemoryItemRow.domain == domain,
-                    MemoryItemRow.status.in_(["private_verified", "shared_verified"]),
+            rows = (
+                connection.execute(
+                    select(MemoryItemRow.payload_json).where(
+                        MemoryItemRow.domain == domain,
+                        MemoryItemRow.status.in_(["private_verified", "shared_verified"]),
+                    )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
         return [MemoryItem.model_validate(json.loads(payload)) for payload in rows]
 
     def persist_falsifier(self, spec: FalsifierSpec, *, lifecycle_state: str, domain: str, decision: dict[str, Any] | None = None) -> None:
@@ -305,11 +317,15 @@ class Repository:
 
     def promoted_falsifiers(self, domain: str) -> list[FalsifierSpec]:
         with self.engine.connect() as connection:
-            rows = connection.execute(
-                select(FalsifierSpecRow.payload_json)
-                .join(FalsifierVersionRow, FalsifierVersionRow.spec_hash == FalsifierSpecRow.spec_hash)
-                .where(FalsifierSpecRow.domain == domain, FalsifierVersionRow.lifecycle_state == "PROMOTE")
-            ).scalars().all()
+            rows = (
+                connection.execute(
+                    select(FalsifierSpecRow.payload_json)
+                    .join(FalsifierVersionRow, FalsifierVersionRow.spec_hash == FalsifierSpecRow.spec_hash)
+                    .where(FalsifierSpecRow.domain == domain, FalsifierVersionRow.lifecycle_state == "PROMOTE")
+                )
+                .scalars()
+                .all()
+            )
         unique: dict[str, FalsifierSpec] = {}
         for payload in rows:
             spec = FalsifierSpec.model_validate(json.loads(payload))
@@ -465,7 +481,10 @@ class Repository:
                         )
                     )
             for execution in executions or []:
-                if connection.execute(select(FalsifierExecutionRow.id).where(FalsifierExecutionRow.snapshot_hash == execution.execution_snapshot_hash)).scalar_one_or_none() is None:
+                if (
+                    connection.execute(select(FalsifierExecutionRow.id).where(FalsifierExecutionRow.snapshot_hash == execution.execution_snapshot_hash)).scalar_one_or_none()
+                    is None
+                ):
                     connection.execute(
                         insert(FalsifierExecutionRow).values(
                             run_id=run_id,
@@ -504,9 +523,10 @@ class Repository:
             specs = connection.execute(select(FalsifierSpecRow.spec_hash, FalsifierSpecRow.version, FalsifierSpecRow.domain)).all()
             bankruptcies = connection.execute(select(AgentBankruptcyRow.fingerprint, AgentBankruptcyRow.domain, AgentBankruptcyRow.state)).all()
             lineages = connection.execute(select(AgentLineageMemberRow.fingerprint, AgentLineageMemberRow.lineage_id)).all()
-            communications = []
+            communications: list[str] = []
             if run_id is not None:
-                communications = connection.execute(select(CommunicationRow.payload_json).where(CommunicationRow.run_id == run_id)).scalars().all()
+                communication_rows = connection.execute(select(CommunicationRow.payload_json).where(CommunicationRow.run_id == run_id)).scalars().all()
+                communications = [str(row) for row in communication_rows if row is not None]
         return {
             "run_count": len(runs),
             "memory": [{"memory_id": a, "status": b, "domain": c} for a, b, c in memories],

@@ -71,10 +71,7 @@ class OpenAIAgentsProvider(Provider):
 
         agent = Agent(
             name="mimicus-structured-challenger",
-            instructions=(
-                "Evaluate only the supplied structured claim/evidence/falsifier summary. "
-                "Return a concise ChallengeResponse. Never expose hidden chain-of-thought."
-            ),
+            instructions=("Evaluate only the supplied structured claim/evidence/falsifier summary. Return a concise ChallengeResponse. Never expose hidden chain-of-thought."),
             model=self.model,
             output_type=ChallengeResponse,
         )

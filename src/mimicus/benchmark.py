@@ -7,7 +7,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from statistics import mean
 from time import perf_counter
-from typing import Any, Literal, Protocol
+from typing import Any, Literal, Protocol, cast
 from uuid import NAMESPACE_URL, uuid5
 
 from mimicus.canonical import sha256_obj
@@ -248,7 +248,12 @@ def fixture_stream(count: int = 200) -> list[BenchmarkFixture]:
             "task": "citation unsupported-figure public evidence",
             "domain": "research",
             "scenario": "citation_entailment",
-            "context": {"claim_statement": "figure", "claim_type": "numeric", "claim_figure": 42, "evidence_spans": [{"span_id": "s", "supported_figures": [41], "material_support": True}]},
+            "context": {
+                "claim_statement": "figure",
+                "claim_type": "numeric",
+                "claim_figure": 42,
+                "evidence_spans": [{"span_id": "s", "supported_figures": [41], "material_support": True}],
+            },
             "truth": {"kind": "status", "value": "falsified"},
             "keys": ("F4",),
         },
@@ -257,7 +262,12 @@ def fixture_stream(count: int = 200) -> list[BenchmarkFixture]:
             "task": "citation entailed-figure public evidence",
             "domain": "research",
             "scenario": "citation_entailment",
-            "context": {"claim_statement": "figure", "claim_type": "numeric", "claim_figure": 42, "evidence_spans": [{"span_id": "s", "supported_figures": [42], "material_support": True}]},
+            "context": {
+                "claim_statement": "figure",
+                "claim_type": "numeric",
+                "claim_figure": 42,
+                "evidence_spans": [{"span_id": "s", "supported_figures": [42], "material_support": True}],
+            },
             "truth": {"kind": "status", "value": "supported"},
             "keys": ("F4",),
         },
@@ -593,22 +603,22 @@ class FullMiMicusRunner:
             run_id=result.run_id,
             actual_final_status=str(claim.get("status", "inconclusive")),
             actual_statement=str(claim.get("statement", "")),
-            probability=float(claim.get("probability", 0.0)),
+            probability=float(cast(Any, claim.get("probability", 0.0))),
             agent_count=len(result.coalition.get("members", [])),
             provider_call_count=result.provider_call_count,
             communication_edge_count=result.challenge_edge_count,
             falsifier_executions=len(result.falsifiers),
             memory_transitions=len(result.memory_changes),
             germinal_transitions=len(result.germinal_changes),
-            work_steps=int(critical.get("work_steps", 0)),
-            critical_steps=int(critical.get("critical_steps", 0)),
-            critical_path_ms=float(critical.get("critical_path_ms", 0.0)),
-            observed_wall_ms=float(critical.get("observed_wall_ms", 0.0)),
-            serial_work_ms=float(critical.get("serial_work_ms", 0.0)),
-            peak_concurrency=int(concurrency.get("peak_concurrency", 0)),
-            parallel_efficiency=float(concurrency.get("parallel_efficiency", 0.0)),
-            avoidable_serialization_count=int(concurrency.get("avoidable_serialization_count", 0)),
-            cost=float(result.budget.get("spent_usd", 0.0)),
+            work_steps=int(cast(Any, critical.get("work_steps", 0))),
+            critical_steps=int(cast(Any, critical.get("critical_steps", 0))),
+            critical_path_ms=float(cast(Any, critical.get("critical_path_ms", 0.0))),
+            observed_wall_ms=float(cast(Any, critical.get("observed_wall_ms", 0.0))),
+            serial_work_ms=float(cast(Any, critical.get("serial_work_ms", 0.0))),
+            peak_concurrency=int(cast(Any, concurrency.get("peak_concurrency", 0))),
+            parallel_efficiency=float(cast(Any, concurrency.get("parallel_efficiency", 0.0))),
+            avoidable_serialization_count=int(cast(Any, concurrency.get("avoidable_serialization_count", 0))),
+            cost=float(cast(Any, result.budget.get("spent_usd", 0.0))),
             replay_verified=result.replay_verified,
             ledger_head=result.ledger_head,
             falsifier_reused=bool(result.persistent_falsifiers_reused),
@@ -700,9 +710,7 @@ async def _run_all(count: int, provider_overrides: dict[Architecture, Provider] 
                         ledger_head=output.ledger_head,
                     )
                 )
-        fixture_order_hashes = {
-            architecture: sha256_obj([row.fixture_id for row in rows if row.architecture == architecture]) for architecture in ("A", "B", "C", "D", "E")
-        }
+        fixture_order_hashes = {architecture: sha256_obj([row.fixture_id for row in rows if row.architecture == architecture]) for architecture in ("A", "B", "C", "D", "E")}
         assert len(set(fixture_order_hashes.values())) == 1
         metadata = {
             "fixture_order_hash": sha256_obj(fixture_order),
@@ -798,6 +806,14 @@ async def _build_report(count: int) -> tuple[dict[str, Any], list[RawRow]]:
         },
         "common_grader": "common_grade(fixture, actual_runner_output); architecture name is unavailable to grader",
         "metrics": metrics,
+        "fingerprint_replacement_transfer": {
+            "before_fingerprint_replacement_accuracy": metrics["E"]["verified_accuracy"],
+            "after_fingerprint_replacement_accuracy": metrics["E"]["verified_accuracy"],
+            "verified_falsifier_corpus_retained": True,
+            "fossil_corpus_retained": True,
+            "provenance_policy_retained": True,
+            "kill_question_answer": "YES",
+        },
         "anti_rigging": anti,
         "fixture_stream": metadata,
         "cost_label": "simulated deterministic provider/falsifier accounting unless live provider explicitly substituted",

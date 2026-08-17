@@ -41,11 +41,9 @@ PROFILES = {
 def build_kernel(profile_name: str, database_url: str | None = None, *, provider_override: Provider | None = None) -> PluginKernel:
     if profile_name not in PROFILES:
         raise ValueError(f"unknown profile: {profile_name}")
-    db_url = database_url or os.getenv("MIMICUS_DATABASE_URL", "sqlite:///mimicus.db")
+    db_url = database_url or os.environ.get("MIMICUS_DATABASE_URL") or "sqlite:///mimicus.db"
     repository = Repository(db_url)
-    provider: Provider = provider_override or (
-        ScriptedProvider() if profile_name != "openai" else OpenAIAgentsProvider(os.getenv("MIMICUS_OPENAI_MODEL", "gpt-5-mini"))
-    )
+    provider: Provider = provider_override or (ScriptedProvider() if profile_name != "openai" else OpenAIAgentsProvider(os.getenv("MIMICUS_OPENAI_MODEL", "gpt-5-mini")))
     storage = RepositoryStorage(repository)
     plugins = [
         BuiltinPlugin(builtin_manifest("storage.sqlite", "storage_backend", ("storage",)), storage),

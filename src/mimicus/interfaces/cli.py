@@ -8,6 +8,7 @@ from pathlib import Path
 
 from mimicus import __version__
 from mimicus.benchmark import write_benchmark
+from mimicus.canonical import sha256_obj
 from mimicus.config import Settings
 from mimicus.orchestration.engine import MiMicusEngine, RunRequest, _spec_keys, scenario_fixture
 from mimicus.orchestration.morphology import compile_morphology
@@ -127,7 +128,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
     if args.command == "plugin":
         kernel = build_kernel(args.profile, _database_url())
-        print(json.dumps([plugin.manifest.model_dump(mode="json") | {"manifest_hash": plugin.manifest.manifest_hash} for plugin in kernel.plugins.values()], indent=2, sort_keys=True))
+        print(
+            json.dumps([plugin.manifest.model_dump(mode="json") | {"manifest_hash": plugin.manifest.manifest_hash} for plugin in kernel.plugins.values()], indent=2, sort_keys=True)
+        )
         return 0
     if args.command == "run":
         payload = _load_task(args.task_file)
@@ -156,7 +159,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         specs = engine.services.falsifiers.specs(domain)
         keys = _spec_keys(threat.required_capabilities, scenario)
         plan = compile_morphology(
-            task_hash=__import__("mimicus.canonical", fromlist=["sha256_obj"]).sha256_obj({"task": request.task, "domain": domain}),
+            task_hash=sha256_obj({"task": request.task, "domain": domain}),
             selected_fingerprints=[row.fingerprint for row in candidates if row.capabilities & set(threat.required_capabilities)][: request.max_agents],
             falsifier_hashes=[specs[key].hash for key in keys],
             complexity=threat.complexity,
@@ -185,7 +188,16 @@ def main(argv: Sequence[str] | None = None) -> int:
             raise SystemExit("ORDER-003 reference benchmark is offline only")
         out = Path(args.output_dir)
         report = write_benchmark(out / "BENCHMARK.json", out / "BENCHMARK.md", args.episodes)
-        print(json.dumps({"episodes": report["episodes_per_architecture"], "total_runs": report["total_architecture_episodes"], "output": str(out), "anti_rigging": report["anti_rigging"]["passed"]}))
+        print(
+            json.dumps(
+                {
+                    "episodes": report["episodes_per_architecture"],
+                    "total_runs": report["total_architecture_episodes"],
+                    "output": str(out),
+                    "anti_rigging": report["anti_rigging"]["passed"],
+                }
+            )
+        )
         return 0
     if args.command == "serve":
         from mimicus.interfaces.mcp_server import serve

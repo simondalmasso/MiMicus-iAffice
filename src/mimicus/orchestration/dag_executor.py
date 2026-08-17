@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from time import perf_counter
-from typing import Awaitable, Callable
 
 from mimicus.canonical import sha256_obj
 from mimicus.orchestration.morphology import DagNode, MorphologyPlan, NodeKind
@@ -98,11 +98,7 @@ class DagExecutor:
             return value, duration_ms, node.output_hash
 
         while pending:
-            ready = sorted(
-                node_id
-                for node_id in pending
-                if all(parent in outputs for parent in nodes[node_id].prerequisites)
-            )
+            ready = sorted(node_id for node_id in pending if all(parent in outputs for parent in nodes[node_id].prerequisites))
             if not ready:
                 raise RuntimeError("DAG execution stalled: no ready nodes")
             if len(ready) > 1 and self.max_concurrency > 1:

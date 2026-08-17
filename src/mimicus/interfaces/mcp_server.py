@@ -35,9 +35,9 @@ def create_mcp_server(profile: str = "offline") -> Any:
         domain: str | None = None,
         budget_usd: float = 0.0,
         max_agents: int = 4,
-        max_concurrency: int = 4,
         depth: Literal["fast", "normal", "deep"] = "normal",
         learn: bool = False,
+        max_concurrency: int = 4,
     ) -> dict[str, Any]:
         """Run MiMicus with persistent immune state, a hashed execution DAG and bounded concurrency."""
         request = RunRequest(
