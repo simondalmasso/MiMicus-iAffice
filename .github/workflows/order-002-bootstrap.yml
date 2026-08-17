@@ -1,0 +1,51 @@
+name: ORDER-002 bootstrap normalize
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: order-002-bootstrap-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  normalize:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'order-002-mimicus-v01') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: order-002-mimicus-v01
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Resolve pinned environment
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e '.[dev]'
+          python -m pip check
+      - name: Normalize source and lock
+        run: |
+          ruff format .
+          ruff check --fix .
+          python -m pip freeze --exclude-editable > requirements.lock
+          grep -q '^mcp==2.0.0$' requirements.lock
+          grep -q '^openai-agents==0.21.1$' requirements.lock
+          git diff --check
+      - name: Commit normalized exact environment
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo 'NORMALIZE_NO_CHANGE=YES'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'ORDER-002: normalize format and lock dependencies'
+          git push origin HEAD:order-002-mimicus-v01
