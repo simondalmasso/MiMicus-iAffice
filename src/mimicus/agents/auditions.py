@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-
 CANARY_BANK: dict[str, tuple[str, str]] = {
     "semantic_decoy": ("Choose relevant evidence, ignore topical decoy.", "relevant"),
     "parameter_trap": ("Use the supplied annualization parameter exactly.", "parameter"),

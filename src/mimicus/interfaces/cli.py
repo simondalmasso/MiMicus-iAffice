@@ -3,8 +3,8 @@ from __future__ import annotations
 import argparse
 import json
 import os
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 from mimicus import __version__
 from mimicus.benchmark import write_benchmark
@@ -107,7 +107,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
     if args.command == "plugin":
         kernel = build_kernel(args.profile)
-        print(json.dumps([plugin.manifest.model_dump(mode="json") | {"manifest_hash": plugin.manifest.manifest_hash} for plugin in kernel.plugins.values()], indent=2, sort_keys=True))
+        print(
+            json.dumps([plugin.manifest.model_dump(mode="json") | {"manifest_hash": plugin.manifest.manifest_hash} for plugin in kernel.plugins.values()], indent=2, sort_keys=True)
+        )
         return 0
     if args.command == "run":
         payload = json.loads(Path(args.task_file).read_text(encoding="utf-8"))
@@ -130,7 +132,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             raise SystemExit("ORDER-002 reference benchmark is offline only")
         out = Path(args.output_dir)
         report = write_benchmark(out / "BENCHMARK.json", out / "BENCHMARK.md", args.episodes)
-        print(json.dumps({"episodes": report["episodes_per_architecture"], "output": str(out), "kill_question": report["fingerprint_replacement_transfer"]["kill_question_answer"]}))
+        print(
+            json.dumps({"episodes": report["episodes_per_architecture"], "output": str(out), "kill_question": report["fingerprint_replacement_transfer"]["kill_question_answer"]})
+        )
         return 0
     if args.command == "serve":
         from mimicus.interfaces.mcp_server import serve

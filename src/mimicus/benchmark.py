@@ -45,12 +45,9 @@ class EpisodeResult:
 def episodes(count: int = 200, seed: int = 17082026) -> list[Episode]:
     if count < 200:
         raise ValueError("ORDER-002 benchmark requires at least 200 episodes")
-    rng = random.Random(seed)
+    random.Random(seed)
     kinds = ["numeric", "freshness", "echo", "entailment", "absence"]
-    return [
-        Episode(i, kinds[i % len(kinds)], adversarial=(i % 4 == 0), repeated=(i % 7 in {5, 6}), fingerprint_epoch=0 if i < count // 2 else 1)
-        for i in range(count)
-    ]
+    return [Episode(i, kinds[i % len(kinds)], adversarial=(i % 4 == 0), repeated=(i % 7 in {5, 6}), fingerprint_epoch=0 if i < count // 2 else 1) for i in range(count)]
 
 
 def _result(episode: Episode, architecture: Architecture) -> EpisodeResult:
@@ -163,13 +160,22 @@ def run_benchmark(count: int = 200, seed: int = 17082026) -> dict[str, object]:
         "provenance_policy_retained": True,
         "kill_question_answer": "YES" if _metrics(after)["repeated_error_rate"] <= _metrics(before)["repeated_error_rate"] + 0.05 else "NO",
     }
-    attribution = [asdict(row) for row in removal_attribution(["numeric", "source", "critic"], {"numeric": 1.0, "source": 0.8, "critic": 0.7}, {"numeric": 0.001, "source": 0.001, "critic": 0.001})]
+    attribution = [
+        asdict(row)
+        for row in removal_attribution(["numeric", "source", "critic"], {"numeric": 1.0, "source": 0.8, "critic": 0.7}, {"numeric": 0.001, "source": 0.001, "critic": 0.001})
+    ]
     report = {
         "benchmark_version": "ORDER-002-v0.1",
         "seed": seed,
         "episodes_per_architecture": count,
         "total_architecture_episodes": count * len(architectures),
-        "architectures": {"A": "single agent", "B": "static majority/debate", "C": "domain calibration router only", "D": "falsifier market without immune controls", "E": "full MiMicus"},
+        "architectures": {
+            "A": "single agent",
+            "B": "static majority/debate",
+            "C": "domain calibration router only",
+            "D": "falsifier market without immune controls",
+            "E": "full MiMicus",
+        },
         "metrics": metrics,
         "fingerprint_replacement_transfer": transfer,
         "removal_attribution_example": attribution,
@@ -184,10 +190,26 @@ def write_benchmark(output_json: Path, output_md: Path, count: int = 200) -> dic
     output_json.parent.mkdir(parents=True, exist_ok=True)
     output_json.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     metrics = report["metrics"]
-    lines = ["# MiMicus ORDER-002 benchmark", "", f"Episodes per architecture: {count}", "", "| Arch | Accuracy | Inconclusive | Repeated error | Avg agents | Avg edges |", "|---|---:|---:|---:|---:|---:|"]
+    lines = [
+        "# MiMicus ORDER-002 benchmark",
+        "",
+        f"Episodes per architecture: {count}",
+        "",
+        "| Arch | Accuracy | Inconclusive | Repeated error | Avg agents | Avg edges |",
+        "|---|---:|---:|---:|---:|---:|",
+    ]
     for arch in ["A", "B", "C", "D", "E"]:
         row = metrics[arch]
-        lines.append(f"| {arch} | {row['verified_accuracy']:.3f} | {row['inconclusive_rate']:.3f} | {row['repeated_error_rate']:.3f} | {row['avg_agents']:.2f} | {row['avg_communication_edges']:.2f} |")
-    lines.extend(["", "The benchmark is deterministic and evidence-disciplined; MiMicus is not claimed to dominate every metric.", "", f"Fingerprint replacement kill question: **{report['fingerprint_replacement_transfer']['kill_question_answer']}**."])
+        lines.append(
+            f"| {arch} | {row['verified_accuracy']:.3f} | {row['inconclusive_rate']:.3f} | {row['repeated_error_rate']:.3f} | {row['avg_agents']:.2f} | {row['avg_communication_edges']:.2f} |"
+        )
+    lines.extend(
+        [
+            "",
+            "The benchmark is deterministic and evidence-disciplined; MiMicus is not claimed to dominate every metric.",
+            "",
+            f"Fingerprint replacement kill question: **{report['fingerprint_replacement_transfer']['kill_question_answer']}**.",
+        ]
+    )
     output_md.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return report

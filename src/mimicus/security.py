@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import ast
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 from pydantic import ValidationError
 
 from mimicus.falsifiers.spec import FalsifierSpec
-
 
 FORBIDDEN_DYNAMIC_CALLS = {"exec", "eval", "compile"}
 

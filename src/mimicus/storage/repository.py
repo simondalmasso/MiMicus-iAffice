@@ -78,7 +78,5 @@ class Repository:
 
     def get_events(self, run_id: str) -> list[dict[str, Any]]:
         with self.engine.connect() as connection:
-            rows = connection.execute(
-                select(EventRow.event_json).where(EventRow.run_id == run_id).order_by(EventRow.sequence)
-            ).scalars().all()
+            rows = connection.execute(select(EventRow.event_json).where(EventRow.run_id == run_id).order_by(EventRow.sequence)).scalars().all()
         return [json.loads(row) for row in rows]

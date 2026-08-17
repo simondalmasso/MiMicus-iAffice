@@ -8,6 +8,7 @@ A plugin implements `mount(context)` and `unmount(context)`. Mounting registers 
 from mimicus.plugins.api import Plugin, PluginContext
 from mimicus.plugins.manifests import PluginManifest
 
+
 class ExamplePlugin(Plugin):
     manifest = PluginManifest(
         id="example.telemetry",

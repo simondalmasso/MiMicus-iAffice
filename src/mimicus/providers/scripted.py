@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from uuid import uuid5, NAMESPACE_URL
+from uuid import NAMESPACE_URL, uuid5
 
 from mimicus.claims.models import Claim
 from mimicus.providers.base import Provider, ProviderRequest, ProviderResponse

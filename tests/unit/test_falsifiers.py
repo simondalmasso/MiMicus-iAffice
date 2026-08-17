@@ -68,12 +68,8 @@ def test_registry_market_and_expiry_fields() -> None:
     digest = registry.add(specs["F1"])
     assert registry.get(digest) == specs["F1"]
     assert len(registry.values()) == 1
-    selected, scores = FalsifierMarket().select(
-        [specs["F1"], specs["F2"]], budget_usd=0.0, max_tests=1, information_floor=0.1
-    )
+    selected, scores = FalsifierMarket().select([specs["F1"], specs["F2"]], budget_usd=0.0, max_tests=1, information_floor=0.1)
     assert len(selected) == 1
     assert len(scores) == 2
-    costly = specs["F1"].model_copy(
-        update={"estimated_cost": 1.0, "valid_from": datetime(2026, 8, 17, tzinfo=UTC)}
-    )
+    costly = specs["F1"].model_copy(update={"estimated_cost": 1.0, "valid_from": datetime(2026, 8, 17, tzinfo=UTC)})
     assert FalsifierMarket().select([costly], budget_usd=0.0, max_tests=1)[0] == []

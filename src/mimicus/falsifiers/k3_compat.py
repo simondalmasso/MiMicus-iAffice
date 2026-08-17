@@ -34,13 +34,15 @@ def compatibility_vectors() -> list[dict[str, object]]:
     results: list[dict[str, object]] = []
     for vector_id, key, context, expected in vectors:
         execution = execute_primitive(specs[key], context)
-        results.append({
-            "vector_id": vector_id,
-            "safe_spec_hash": specs[key].hash,
-            "primitive": specs[key].primitive,
-            "expected": expected,
-            "actual": execution.verdict.value,
-            "pass": execution.verdict.value == expected,
-            "execution_snapshot_hash": execution.execution_snapshot_hash,
-        })
+        results.append(
+            {
+                "vector_id": vector_id,
+                "safe_spec_hash": specs[key].hash,
+                "primitive": specs[key].primitive,
+                "expected": expected,
+                "actual": execution.verdict.value,
+                "pass": execution.verdict.value == expected,
+                "execution_snapshot_hash": execution.execution_snapshot_hash,
+            }
+        )
     return results

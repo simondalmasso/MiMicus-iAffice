@@ -15,7 +15,6 @@ class OpenAIAgentsProvider(Provider):
     max_turns: int = 3
     timeout_seconds: float = 30.0
 
-
     def generate(self, request: ProviderRequest) -> ProviderResponse:
         started = perf_counter()
         claim, metadata = asyncio.run(self.generate_async(request.task, request.phenotype, request.domain))

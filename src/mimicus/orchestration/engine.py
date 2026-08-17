@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from typing import Any, Literal
 from uuid import NAMESPACE_URL, uuid4, uuid5
 
@@ -62,14 +61,16 @@ class RunResult(BaseModel):
 
 
 def _fingerprint(name: str, provider: str = "scripted", model: str = "fixture-v1", prompt: str | None = None, tool: str | None = None) -> str:
-    return sha256_obj({
-        "provider": provider,
-        "model": model,
-        "version": "1",
-        "system_prompt_hash": sha256_text(prompt or name),
-        "tool_manifest_hash": sha256_text(tool or f"tools:{name}"),
-        "policy_hash": sha256_text("mimicus-v0.1"),
-    })
+    return sha256_obj(
+        {
+            "provider": provider,
+            "model": model,
+            "version": "1",
+            "system_prompt_hash": sha256_text(prompt or name),
+            "tool_manifest_hash": sha256_text(tool or f"tools:{name}"),
+            "policy_hash": sha256_text("mimicus-v0.1"),
+        }
+    )
 
 
 def default_candidates() -> list[AgentCandidate]:
@@ -100,15 +101,48 @@ def scenario_fixture(request: RunRequest) -> tuple[str, dict[str, Any]]:
     if fixture:
         return request.scenario or "custom", fixture
     if any(token in text for token in ("tam", "12x", "12×")):
-        return "tam_12x", {"claim_statement": "TAM is 1,000 annual units", "claim_type": "numeric", "probability": 0.94, "price": 10.0, "users": 100.0, "price_period": "monthly", "claimed": 1000.0}
+        return "tam_12x", {
+            "claim_statement": "TAM is 1,000 annual units",
+            "claim_type": "numeric",
+            "probability": 0.94,
+            "price": 10.0,
+            "users": 100.0,
+            "price_period": "monthly",
+            "claimed": 1000.0,
+        }
     if "echo" in text or "same origin" in text:
-        return "echo_chamber", {"claim_statement": "Three independent sources corroborate the claim", "claim_type": "factual", "probability": 0.9, "clusters": ["origin-wire", "origin-wire", "origin-wire"], "texts": ["same syndicated report"] * 3}
+        return "echo_chamber", {
+            "claim_statement": "Three independent sources corroborate the claim",
+            "claim_type": "factual",
+            "probability": 0.9,
+            "clusters": ["origin-wire", "origin-wire", "origin-wire"],
+            "texts": ["same syndicated report"] * 3,
+        }
     if "fresh" in text or "stale" in text:
-        return "freshness", {"claim_statement": "The evidence is current", "claim_type": "temporal", "probability": 0.85, "evidence_date": "2025-01-01T00:00:00+00:00", "as_of": "2026-08-17T00:00:00+00:00"}
+        return "freshness", {
+            "claim_statement": "The evidence is current",
+            "claim_type": "temporal",
+            "probability": 0.85,
+            "evidence_date": "2025-01-01T00:00:00+00:00",
+            "as_of": "2026-08-17T00:00:00+00:00",
+        }
     if "entail" in text or "citation" in text or "figure" in text:
-        return "citation_entailment", {"claim_statement": "The cited source supports figure 42", "claim_type": "numeric", "probability": 0.88, "claim_figure": 42, "evidence_spans": [{"span_id": "e1", "supported_figures": [41], "material_support": True}]}
+        return "citation_entailment", {
+            "claim_statement": "The cited source supports figure 42",
+            "claim_type": "numeric",
+            "probability": 0.88,
+            "claim_figure": 42,
+            "evidence_spans": [{"span_id": "e1", "supported_figures": [41], "material_support": True}],
+        }
     if "absence" in text or "counterexample" in text or "none exist" in text:
-        return "counterexample", {"claim_statement": "No target exists", "claim_type": "factual", "probability": 0.86, "absence_key": "target", "registry": {"target": {"id": "known-counterexample"}}, "registry_snapshot_hash": "b" * 64}
+        return "counterexample", {
+            "claim_statement": "No target exists",
+            "claim_type": "factual",
+            "probability": 0.86,
+            "absence_key": "target",
+            "registry": {"target": {"id": "known-counterexample"}},
+            "registry_snapshot_hash": "b" * 64,
+        }
     return "general", {"claim_statement": request.task, "claim_type": "other", "probability": 0.5}
 
 
@@ -148,7 +182,13 @@ class MiMicusEngine:
         task_hash = sha256_obj({"task": request.task, "domain": domain, "fixture": fixture})
         config_hash = sha256_obj({"budget_usd": request.budget_usd, "max_agents": request.max_agents, "depth": request.depth, "learn": request.learn})
         ledger.append("run_started", {"task_hash": task_hash, "config_hash": config_hash, "plugin_hashes": self.plugin_hashes})
-        task_ledger = TaskLedger(task=request.task, domain=domain, budget_usd=request.budget_usd, constraints={"max_agents": request.max_agents, "depth": request.depth}, plan=["profile", "audition", "coalition", "sealed-first-pass", "falsify", "synthesize", "learn", "replay"])
+        task_ledger = TaskLedger(
+            task=request.task,
+            domain=domain,
+            budget_usd=request.budget_usd,
+            constraints={"max_agents": request.max_agents, "depth": request.depth},
+            plan=["profile", "audition", "coalition", "sealed-first-pass", "falsify", "synthesize", "learn", "replay"],
+        )
         progress.advance("INIT", 1.0)
 
         profile = profile_task(request.task, domain, scenario)
@@ -159,8 +199,23 @@ class MiMicusEngine:
 
         candidates = default_candidates()
         audited: list[AgentCandidate] = []
-        canary_for = {"numeric": "parameter_trap", "freshness": "temporal_decoy", "independence": "semantic_decoy", "entailment": "granularity_trap", "counterexample": "prerequisite_blindness", "synthesize": "capability_mirage", "source": "semantic_decoy"}
-        expected_answer = {"parameter_trap": "parameter", "temporal_decoy": "fresh", "semantic_decoy": "relevant", "granularity_trap": "granular", "prerequisite_blindness": "missing", "capability_mirage": "reject"}
+        canary_for = {
+            "numeric": "parameter_trap",
+            "freshness": "temporal_decoy",
+            "independence": "semantic_decoy",
+            "entailment": "granularity_trap",
+            "counterexample": "prerequisite_blindness",
+            "synthesize": "capability_mirage",
+            "source": "semantic_decoy",
+        }
+        expected_answer = {
+            "parameter_trap": "parameter",
+            "temporal_decoy": "fresh",
+            "semantic_decoy": "relevant",
+            "granularity_trap": "granular",
+            "prerequisite_blindness": "missing",
+            "capability_mirage": "reject",
+        }
         target_cap = profile.required_capabilities[0]
         category = canary_for.get(target_cap, "semantic_decoy")
         for candidate in candidates:
@@ -182,7 +237,16 @@ class MiMicusEngine:
             sealed_context_id = str(uuid5(NAMESPACE_URL, f"{run_id}:{member.fingerprint}:sealed"))
             response = self.provider.generate(ProviderRequest(request.task, domain, member.name, sealed_context_id, fixture))
             claims.append(response.claim)
-            ledger.append("claim_proposed", {"claim_hash": response.claim.hash, "fingerprint": member.fingerprint, "sealed_context_id": sealed_context_id, "probability": response.claim.probability, "provider_trace_id": response.trace_id})
+            ledger.append(
+                "claim_proposed",
+                {
+                    "claim_hash": response.claim.hash,
+                    "fingerprint": member.fingerprint,
+                    "sealed_context_id": sealed_context_id,
+                    "probability": response.claim.probability,
+                    "provider_trace_id": response.trace_id,
+                },
+            )
         progress.advance("SEALED_FIRST_PASS", 0.55)
         ledger.append("claim_graph_built", {"claims": [claim.hash for claim in claims], "edges": 0})
 
@@ -274,12 +338,25 @@ class MiMicusEngine:
             disagreements=[] if disagreement <= 0.05 else [{"probability_span": disagreement}],
             falsifiers=[
                 execution.model_dump(mode="json")
-                | {"id": next(spec.id for spec in selected_specs if spec.hash == execution.spec_hash), "primitive": next(spec.primitive for spec in selected_specs if spec.hash == execution.spec_hash)}
+                | {
+                    "id": next(spec.id for spec in selected_specs if spec.hash == execution.spec_hash),
+                    "primitive": next(spec.primitive for spec in selected_specs if spec.hash == execution.spec_hash),
+                }
                 for execution in executions
             ],
-            evidence_provenance={"scenario": scenario, "fixture_hash": sha256_obj(fixture), "source_clusters": fixture.get("clusters", []), "pinned_registry_hash": fixture.get("registry_snapshot_hash")},
+            evidence_provenance={
+                "scenario": scenario,
+                "fixture_hash": sha256_obj(fixture),
+                "source_clusters": fixture.get("clusters", []),
+                "pinned_registry_hash": fixture.get("registry_snapshot_hash"),
+            },
             coalition={"members": [member.fingerprint for member in selected], "names": [member.name for member in selected], "topology": topology, "rationale": rationale},
-            budget={"limit_usd": request.budget_usd, "spent_usd": sum(execution.cost for execution in executions), "latency_ms": sum(execution.latency_ms for execution in executions), "max_tests": max_tests},
+            budget={
+                "limit_usd": request.budget_usd,
+                "spent_usd": sum(execution.cost for execution in executions),
+                "latency_ms": sum(execution.latency_ms for execution in executions),
+                "max_tests": max_tests,
+            },
             ledger_head=ledger.head,
             memory_changes=memory_changes,
             germinal_changes=[],
@@ -287,7 +364,9 @@ class MiMicusEngine:
             event_types=[event.event_type for event in ledger.events],
             plugin_hashes=self.plugin_hashes,
         )
-        self.repository.save_run(run_id=run_id, task_hash=task_hash, config_hash=config_hash, status=status, ledger_head=ledger.head, result=result.model_dump(mode="json"), events=ledger.events)
+        self.repository.save_run(
+            run_id=run_id, task_hash=task_hash, config_hash=config_hash, status=status, ledger_head=ledger.head, result=result.model_dump(mode="json"), events=ledger.events
+        )
         return result
 
     def get_run(self, run_id: str) -> dict[str, Any] | None:

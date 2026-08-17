@@ -8,7 +8,4 @@ from mimicus.storage.models import Base
 
 def compile_postgres_schema() -> dict[str, str]:
     dialect = postgresql.dialect()
-    return {
-        table.name: str(CreateTable(table).compile(dialect=dialect))
-        for table in sorted(Base.metadata.tables.values(), key=lambda item: item.name)
-    }
+    return {table.name: str(CreateTable(table).compile(dialect=dialect)) for table in sorted(Base.metadata.tables.values(), key=lambda item: item.name)}

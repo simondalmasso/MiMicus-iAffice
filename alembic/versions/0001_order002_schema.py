@@ -4,12 +4,12 @@ Revision ID: 0001_order002
 Revises:
 Create Date: 2026-08-17
 """
+
 from __future__ import annotations
 
-from typing import Sequence
+from collections.abc import Sequence
 
 from alembic import op
-
 from mimicus.storage.models import Base
 
 revision: str = "0001_order002"

@@ -56,10 +56,6 @@ def select_coalition(profile: ThreatProfile, candidates: list[AgentCandidate], m
         "covered_capabilities": sorted(required - uncovered),
         "uncovered_capabilities": sorted(uncovered),
         "selected": [c.fingerprint for c in selected],
-        "correlation_matrix": {
-            f"{a.fingerprint}:{b.fingerprint}": correlation(a, b)
-            for i, a in enumerate(selected)
-            for b in selected[i + 1 :]
-        },
+        "correlation_matrix": {f"{a.fingerprint}:{b.fingerprint}": correlation(a, b) for i, a in enumerate(selected) for b in selected[i + 1 :]},
     }
     return selected, rationale

@@ -6,7 +6,8 @@ import os
 import socket
 import subprocess
 import sys
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from mimicus.agents.bankruptcy import evaluate_bankruptcy, recover
 from mimicus.agents.calibration import CalibrationRecord

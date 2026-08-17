@@ -31,12 +31,8 @@ def create_mcp_server(profile: str = "offline") -> Any:
         version="0.1.0",
         description="Auditable agentic immune swarm with deterministic offline reference runtime.",
     )
-    run_annotations = ToolAnnotations.model_validate(
-        {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": profile == "openai"}
-    )
-    get_annotations = ToolAnnotations.model_validate(
-        {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
-    )
+    run_annotations = ToolAnnotations.model_validate({"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": profile == "openai"})
+    get_annotations = ToolAnnotations.model_validate({"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False})
 
     @server.tool(annotations=run_annotations)
     def run_mimicus(

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from mimicus.canonical import sha256_text
 from mimicus.plugins.api import Plugin, PluginContext
-from mimicus.plugins.manifests import PluginManifest, PluginKind
+from mimicus.plugins.manifests import PluginKind, PluginManifest
 
 
 @dataclass

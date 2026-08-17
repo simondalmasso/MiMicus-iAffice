@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import math
 import re
+from collections.abc import Callable
 from datetime import datetime
-from typing import Any, Callable
+from typing import Any
 
 from mimicus.canonical import sha256_obj
 from mimicus.falsifiers.spec import FalsifierExecution, FalsifierSpec
@@ -41,10 +42,7 @@ def numeric_invariant(spec: FalsifierSpec, context: dict[str, Any]) -> Falsifier
     if period not in factors or any(not math.isfinite(v) for v in (price, users, claimed)):
         return _result(spec, Verdict.INCONCLUSIVE, {"period": period}, "unsupported period or non-finite value")
     expected = price * factors[period] * users
-    if expected == 0:
-        rel_error = 0.0 if claimed == 0 else math.inf
-    else:
-        rel_error = abs(claimed - expected) / abs(expected)
+    rel_error = (0.0 if claimed == 0 else math.inf) if expected == 0 else abs(claimed - expected) / abs(expected)
     verdict = Verdict.PASS if rel_error <= tolerance else Verdict.FAIL
     return _result(spec, verdict, {"expected": expected, "claimed": claimed, "relative_error": rel_error, "tolerance": tolerance, "normalized_period": "annual"})
 
@@ -81,7 +79,8 @@ def freshness(spec: FalsifierSpec, context: dict[str, Any]) -> FalsifierExecutio
 
 
 def _jaccard(a: str, b: str) -> float:
-    tok = lambda text: set(re.findall(r"[a-z0-9]+", text.lower()))
+    def tok(text):
+        return set(re.findall(r"[a-z0-9]+", text.lower()))
     left, right = tok(a), tok(b)
     if not left and not right:
         return 1.0
@@ -102,7 +101,9 @@ def source_independence(spec: FalsifierSpec, context: dict[str, Any]) -> Falsifi
                 if isinstance(left, str) and isinstance(right, str):
                     max_similarity = max(max_similarity, _jaccard(left, right))
     verdict = Verdict.PASS if unique >= required else Verdict.FAIL
-    return _result(spec, verdict, {"observed_sources": len(clusters), "independent_clusters": unique, "required": required, "max_text_similarity": max_similarity, "provenance_primary": True})
+    return _result(
+        spec, verdict, {"observed_sources": len(clusters), "independent_clusters": unique, "required": required, "max_text_similarity": max_similarity, "provenance_primary": True}
+    )
 
 
 def citation_entailment(spec: FalsifierSpec, context: dict[str, Any]) -> FalsifierExecution:

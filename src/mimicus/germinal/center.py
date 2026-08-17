@@ -35,7 +35,8 @@ def germinal_demo() -> dict[str, object]:
         catches_triggering_evasion=execute_primitive(
             parent.model_copy(update={"version": "1.0.1", "params": {"relative_tolerance": 0.02}, "parent_hash": parent.hash}),
             valid_spec_context,
-        ).verdict == Verdict.FAIL,
+        ).verdict
+        == Verdict.FAIL,
     )
     fossils = seed_fossils()
     rejected = decide(parent, regressing, fossils)

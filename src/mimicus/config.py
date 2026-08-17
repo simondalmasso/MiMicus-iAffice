@@ -15,7 +15,7 @@ class Settings:
     openai_model: str = "gpt-5-mini"
 
     @classmethod
-    def from_env(cls, profile: str | None = None) -> "Settings":
+    def from_env(cls, profile: str | None = None) -> Settings:
         resolved = profile or os.getenv("MIMICUS_PROFILE", "offline")
         return cls(
             profile=resolved,
