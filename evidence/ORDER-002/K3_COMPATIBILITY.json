@@ -1,0 +1,107 @@
+{
+  "artifact_hashes": {
+    "python": "81b2fd83a313d9910f450ac54a4a1e48cd783dc1cde6bfc1d5bcfd37e6c38f2f",
+    "sql": "d596a293e8b3c3543e1ceaae1468c8a937f43428de5ddc60120cb77a39e204a4",
+    "zip": "f170207468c60b25b0d9ec50ddfcf27366609d5e37773138ca76eb9124eb1478"
+  },
+  "contract_hashes": {
+    "c1_tam_numerical_invariant": "29625d238477193e2f4f1d636c66d38ce8e68dd776ad35c55c8dfd3a89f42b37",
+    "c2_source_freshness": "7649c98ea2c00f7623ed28b550539e971cee7ff63a43d5d6a8e028b7cdf3cd4b",
+    "c3_source_independence": "7e3dede7c5db53fe332b8a475e8c38010dd2c35bae43821db2f0ce4911fe521d",
+    "c4_citation_numeric_entailment": "ff966c84029e43b8b71f5af3a39eb8fef875b79709aa7017458fc15bb8d0f501",
+    "c5_absence_counterexample_registry": "8bc04b55871b7f5ed4f1aa87c47d9d40e7e40e15080c871330bc0c09affacc15"
+  },
+  "passed": true,
+  "vectors": [
+    {
+      "actual": "FAIL",
+      "execution_snapshot_hash": "3bc89fac1da5d7facb44d1475fc4e5b6be3f37119c0c956e97998a2f013c617c",
+      "expected": "FAIL",
+      "pass": true,
+      "primitive": "numeric_invariant",
+      "safe_spec_hash": "78ca6dab55f1814b601858324d993c4ec9a79ee6fd8f8c0ce3b782745bbda98f",
+      "vector_id": "c1_tam_12x_mismatch"
+    },
+    {
+      "actual": "INCONCLUSIVE",
+      "execution_snapshot_hash": "dabe063ddd26396d83d2734649858b1aadbe2c96f75a00678011067451a96115",
+      "expected": "INCONCLUSIVE",
+      "pass": true,
+      "primitive": "numeric_invariant",
+      "safe_spec_hash": "78ca6dab55f1814b601858324d993c4ec9a79ee6fd8f8c0ce3b782745bbda98f",
+      "vector_id": "c1_missing_is_inconclusive"
+    },
+    {
+      "actual": "FAIL",
+      "execution_snapshot_hash": "1797fe5a8cb4c74b82ca4cefe9c25fbaf184a0a697bc19b06367db6248966804",
+      "expected": "FAIL",
+      "pass": true,
+      "primitive": "freshness",
+      "safe_spec_hash": "714ba6685d8135eca61b7dcdbe409c35a4555aedee592f1de82ce9c12ccf00cb",
+      "vector_id": "c2_stale"
+    },
+    {
+      "actual": "INCONCLUSIVE",
+      "execution_snapshot_hash": "cb9675d2beb47620c113214137a31a991c37f5df6f174e1347cea46d982da4b5",
+      "expected": "INCONCLUSIVE",
+      "pass": true,
+      "primitive": "freshness",
+      "safe_spec_hash": "714ba6685d8135eca61b7dcdbe409c35a4555aedee592f1de82ce9c12ccf00cb",
+      "vector_id": "c2_missing_date_is_inconclusive"
+    },
+    {
+      "actual": "FAIL",
+      "execution_snapshot_hash": "6e8d0055de58fb924262b8b7b611df6ef7d13628aa0445f83ff86ad61a7a7dd6",
+      "expected": "FAIL",
+      "pass": true,
+      "primitive": "source_independence",
+      "safe_spec_hash": "18427321d73d4032165e2cae13baf57edf5669121d51e308db0b8bdf6e61e3ec",
+      "vector_id": "c3_echo_chamber"
+    },
+    {
+      "actual": "INCONCLUSIVE",
+      "execution_snapshot_hash": "73fc8389b174596ed8fcc728fa502449d78b9250edc5835bc13c02eee4bf556e",
+      "expected": "INCONCLUSIVE",
+      "pass": true,
+      "primitive": "source_independence",
+      "safe_spec_hash": "18427321d73d4032165e2cae13baf57edf5669121d51e308db0b8bdf6e61e3ec",
+      "vector_id": "c3_missing_provenance_is_inconclusive"
+    },
+    {
+      "actual": "FAIL",
+      "execution_snapshot_hash": "d69431b6cfafbc9d3aceaf843f27575a735c59dbb4797d0e3b4688d486b56699",
+      "expected": "FAIL",
+      "pass": true,
+      "primitive": "citation_entailment",
+      "safe_spec_hash": "e01656df1d1d990413bbcae594049e701841b465a0c9e30aa73a3c3989d3ba0b",
+      "vector_id": "c4_false_entailment"
+    },
+    {
+      "actual": "INCONCLUSIVE",
+      "execution_snapshot_hash": "c27c81b4f1d1ff238a345a7b5b0bbf34284810814502f10b5f3e7922a6ae406c",
+      "expected": "INCONCLUSIVE",
+      "pass": true,
+      "primitive": "citation_entailment",
+      "safe_spec_hash": "e01656df1d1d990413bbcae594049e701841b465a0c9e30aa73a3c3989d3ba0b",
+      "vector_id": "c4_missing_span_is_inconclusive"
+    },
+    {
+      "actual": "FAIL",
+      "execution_snapshot_hash": "04b770a2e480cecb513327e0285b81762446f32ef7a8d986c2cae75fe568be26",
+      "expected": "FAIL",
+      "pass": true,
+      "primitive": "counterexample_search",
+      "safe_spec_hash": "997e3c2f859c47198d57f67bd3083a02a869d313370ca4820057f0cca7a03773",
+      "vector_id": "c5_counterexample"
+    },
+    {
+      "actual": "INCONCLUSIVE",
+      "execution_snapshot_hash": "4cfadf76bdc54cbd06ca8e628e1c04c8526bef6b71b87c9b2796d01b7ba7cdab",
+      "expected": "INCONCLUSIVE",
+      "pass": true,
+      "primitive": "counterexample_search",
+      "safe_spec_hash": "997e3c2f859c47198d57f67bd3083a02a869d313370ca4820057f0cca7a03773",
+      "vector_id": "c5_unpinned_registry_is_inconclusive"
+    }
+  ]
+}

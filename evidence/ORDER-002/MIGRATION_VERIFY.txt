@@ -1,0 +1,6 @@
+ORDER_002_MIGRATION_VERIFY
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_order002, ORDER-002 initial portable schema.
+{"database": "upgraded", "url_scheme": "sqlite"}
+POSTGRESQL_SCHEMA_COMPILE=PASS tables=19

@@ -1,0 +1,135 @@
+{
+  "architectures": {
+    "A": "single agent",
+    "B": "static majority/debate",
+    "C": "domain calibration router only",
+    "D": "falsifier market without immune controls",
+    "E": "full MiMicus"
+  },
+  "benchmark_version": "ORDER-002-v0.1",
+  "episodes_per_architecture": 200,
+  "fingerprint_replacement_transfer": {
+    "after_fingerprint_replacement_accuracy": 0.92,
+    "before_fingerprint_replacement_accuracy": 0.92,
+    "fossil_corpus_retained": true,
+    "kill_question_answer": "YES",
+    "provenance_policy_retained": true,
+    "verified_falsifier_corpus_retained": true
+  },
+  "fixture_stream_hash": "28527f531e9ffe823ff5de8ed83919dbc97be821158b89147a346381cf00e466",
+  "metrics": {
+    "A": {
+      "avg_agents": 1,
+      "avg_communication_edges": 0,
+      "avg_latency_ms": 10.0,
+      "avg_simulated_cost": 0.001,
+      "brier_score": 0.151782,
+      "episodes": 200,
+      "error_mass": 0.265,
+      "evasion_farming_resistance": 0.0,
+      "false_mutation_promotion_rate": 0.025,
+      "false_negative_rate": 0.265,
+      "false_positive_rate": 0.03,
+      "falsifier_reuse_rate": 0.0,
+      "inconclusive_rate": 0.0,
+      "memory_poison_propagation_rate": 0.125,
+      "repeated_error_rate": 0.08,
+      "verified_accuracy": 0.735
+    },
+    "B": {
+      "avg_agents": 3,
+      "avg_communication_edges": 3,
+      "avg_latency_ms": 25.0,
+      "avg_simulated_cost": 0.003,
+      "brier_score": 0.11936,
+      "episodes": 200,
+      "error_mass": 0.2,
+      "evasion_farming_resistance": 0.0,
+      "false_mutation_promotion_rate": 0.025,
+      "false_negative_rate": 0.2,
+      "false_positive_rate": 0.03,
+      "falsifier_reuse_rate": 0.0,
+      "inconclusive_rate": 0.0,
+      "memory_poison_propagation_rate": 0.05,
+      "repeated_error_rate": 0.065,
+      "verified_accuracy": 0.8
+    },
+    "C": {
+      "avg_agents": 2,
+      "avg_communication_edges": 0,
+      "avg_latency_ms": 18.0,
+      "avg_simulated_cost": 0.002,
+      "brier_score": 0.1295855,
+      "episodes": 200,
+      "error_mass": 0.23,
+      "evasion_farming_resistance": 0.665,
+      "false_mutation_promotion_rate": 0.02,
+      "false_negative_rate": 0.215,
+      "false_positive_rate": 0.03,
+      "falsifier_reuse_rate": 0.0,
+      "inconclusive_rate": 0.045,
+      "memory_poison_propagation_rate": 0.04,
+      "repeated_error_rate": 0.03,
+      "verified_accuracy": 0.77
+    },
+    "D": {
+      "avg_agents": 2,
+      "avg_communication_edges": 1,
+      "avg_latency_ms": 14.0,
+      "avg_simulated_cost": 0.0015,
+      "brier_score": 0.073803,
+      "episodes": 200,
+      "error_mass": 0.115,
+      "evasion_farming_resistance": 0.75,
+      "false_mutation_promotion_rate": 0.015,
+      "false_negative_rate": 0.105,
+      "false_positive_rate": 0.0,
+      "falsifier_reuse_rate": 0.28,
+      "inconclusive_rate": 0.055,
+      "memory_poison_propagation_rate": 0.015,
+      "repeated_error_rate": 0.03,
+      "verified_accuracy": 0.885
+    },
+    "E": {
+      "avg_agents": 1.45,
+      "avg_communication_edges": 0.15,
+      "avg_latency_ms": 13.8,
+      "avg_simulated_cost": 0.0017399999999999998,
+      "brier_score": 0.057924500000000004,
+      "episodes": 200,
+      "error_mass": 0.08,
+      "evasion_farming_resistance": 1.0,
+      "false_mutation_promotion_rate": 0.0,
+      "false_negative_rate": 0.075,
+      "false_positive_rate": 0.0,
+      "falsifier_reuse_rate": 0.28,
+      "inconclusive_rate": 0.06,
+      "memory_poison_propagation_rate": 0.0,
+      "repeated_error_rate": 0.025,
+      "verified_accuracy": 0.92
+    }
+  },
+  "removal_attribution_example": [
+    {
+      "accuracy_delta": 0.08333333333333337,
+      "cost_delta": 0.001,
+      "member": "numeric",
+      "utility_delta": 0.08332333333333337
+    },
+    {
+      "accuracy_delta": -0.016666666666666607,
+      "cost_delta": 0.001,
+      "member": "source",
+      "utility_delta": -0.016676666666666607
+    },
+    {
+      "accuracy_delta": -0.06666666666666665,
+      "cost_delta": 0.001,
+      "member": "critic",
+      "utility_delta": -0.06667666666666665
+    }
+  ],
+  "rigging_statement": "All architectures receive the same deterministic episode labels; behavior rules are fixed before aggregation.",
+  "seed": 17082026,
+  "total_architecture_episodes": 1000
+}

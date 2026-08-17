@@ -1,0 +1,477 @@
+{
+  "answer": "Claim falsified by numeric_invariant.",
+  "budget": {
+    "latency_ms": 1.0,
+    "limit_usd": 0.0,
+    "max_tests": 3,
+    "spent_usd": 0.0
+  },
+  "coalition": {
+    "members": [
+      "b575219f3a93c33d0d73b50bcea2a52ee82b3e3a247b41614c1113a05acd5b66"
+    ],
+    "names": [
+      "numeric-1"
+    ],
+    "rationale": {
+      "correlation_matrix": {},
+      "covered_capabilities": [
+        "numeric"
+      ],
+      "required_capabilities": [
+        "numeric"
+      ],
+      "selected": [
+        "b575219f3a93c33d0d73b50bcea2a52ee82b3e3a247b41614c1113a05acd5b66"
+      ],
+      "uncovered_capabilities": []
+    },
+    "topology": "solo"
+  },
+  "confidence": 0.98,
+  "disagreements": [],
+  "event_types": [
+    "run_started",
+    "threat_profiled",
+    "verified_memory_loaded",
+    "agent_auditioned",
+    "agent_auditioned",
+    "agent_auditioned",
+    "agent_auditioned",
+    "agent_auditioned",
+    "coalition_selected",
+    "claim_proposed",
+    "claim_graph_built",
+    "falsifier_proposed",
+    "falsifier_market_scored",
+    "falsifier_selected",
+    "falsifier_executed",
+    "claim_updated",
+    "consensus_stabilized",
+    "final_verified",
+    "memory_candidate_written",
+    "memory_promoted",
+    "run_completed"
+  ],
+  "events": [
+    {
+      "event_hash": "6306abac629daf79961a8dbe2977ba3f063b3b41a5a05ef4a90bc688ba2977e2",
+      "event_id": "b69f773a-6a9c-4501-b539-011a9fb0c959",
+      "event_type": "run_started",
+      "payload": {
+        "config_hash": "343eb9ce333fd6013b84330b9bcbae3ce08b024de268b1d17fb7785af318b819",
+        "plugin_hashes": [
+          "evidence-exact-head"
+        ],
+        "task_hash": "a642f05b4876c99d25deaa155c37f6a71f2e0cc16dba38525e82094f8d6a2a1e"
+      },
+      "prev_event_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "run_id": "04890b06-8ac7-4732-a1e1-2f5a0d244008",
+      "sequence": 0,
+      "timestamp": "2026-08-17T13:47:40.738435Z"
+    },
+    {
+      "event_hash": "d6d9fa50eb2d0462dfc2fc7c3cff46b8917a7bfffb555c4f8859a7a2d02bb3fc",
+      "event_id": "c58c77d5-cde5-4530-9609-28b7bcaa1d98",
+      "event_type": "threat_profiled",
+      "payload": {
+        "complexity": 0.38,
+        "domain": "finance",
+        "required_capabilities": [
+          "numeric"
+        ],
+        "threats": [
+          "numeric_inconsistency"
+        ]
+      },
+      "prev_event_hash": "6306abac629daf79961a8dbe2977ba3f063b3b41a5a05ef4a90bc688ba2977e2",
+      "run_id": "04890b06-8ac7-4732-a1e1-2f5a0d244008",
+      "sequence": 1,
+      "timestamp": "2026-08-17T13:47:40.738716Z"
+    },
+    {
+      "event_hash": "fc6f17e49a405f99c42083b94b3cdc4183b75f8c79717d6167534a967ee33dfa",
+      "event_id": "ed307406-cb8e-4791-bc05-59444218be9c",
+      "event_type": "verified_memory_loaded",
+      "payload": {
+        "count": 0,
+        "domain": "finance"
+      },
+      "prev_event_hash": "d6d9fa50eb2d0462dfc2fc7c3cff46b8917a7bfffb555c4f8859a7a2d02bb3fc",
+      "run_id": "04890b06-8ac7-4732-a1e1-2f5a0d244008",
+      "sequence": 2,
+      "timestamp": "2026-08-17T13:47:40.739050Z"
+    },
+    {
+      "event_hash": "c4a935501d491e9954f8fe40c74423362729d477dc6d4d08e35842978607137d",
+      "event_id": "7f7c91da-8fc9-46c8-8549-cb15e631679a",
+      "event_type": "agent_auditioned",
+      "payload": {
+        "category": "parameter_trap",
+        "domain": "finance",
+        "fingerprint": "b575219f3a93c33d0d73b50bcea2a52ee82b3e3a247b41614c1113a05acd5b66",
+        "passed": true,
+        "score": 1.0
+      },
+      "prev_event_hash": "fc6f17e49a405f99c42083b94b3cdc4183b75f8c79717d6167534a967ee33dfa",
+      "run_id": "04890b06-8ac7-4732-a1e1-2f5a0d244008",
+      "sequence": 3,
+      "timestamp": "2026-08-17T13:47:40.739455Z"
+    },
+    {
+      "event_hash": "9002810dbf7f7ee559e4ca545c956f9d97aa95a41db9aee5de13eb034115df5d",
+      "event_id": "ce64efd5-5831-405c-816d-e6a8ab914839",
+      "event_type": "agent_auditioned",
+      "payload": {
+        "category": "parameter_trap",
+        "domain": "finance",
+        "fingerprint": "05bf56435f61d17b0788769e6c3a7ec17436584ca852906e32cb62dbf7ac05ea",
+        "passed": false,
+        "score": 0.0
+      },
+      "prev_event_hash": "c4a935501d491e9954f8fe40c74423362729d477dc6d4d08e35842978607137d",
+      "run_id": "04890b06-8ac7-4732-a1e1-2f5a0d244008",
+      "sequence": 4,
+      "timestamp": "2026-08-17T13:47:40.739596Z"
+    },
+    {
+      "event_hash": "10c69013772852040e41735e26d47665c1179c3115f588eb11ce08ef8bb07f39",
+      "event_id": "0fdfa664-516e-483d-ba59-af9680363714",
+      "event_type": "agent_auditioned",
+      "payload": {
+        "category": "parameter_trap",
+        "domain": "finance",
+        "fingerprint": "5d02847af21749e75d6b26ad2a767ab7046fc8f7d232b0d47713111ee0c5765e",
+        "passed": false,
+        "score": 0.0
+      },
+      "prev_event_hash": "9002810dbf7f7ee559e4ca545c956f9d97aa95a41db9aee5de13eb034115df5d",
+      "run_id": "04890b06-8ac7-4732-a1e1-2f5a0d244008",
+      "sequence": 5,
+      "timestamp": "2026-08-17T13:47:40.739660Z"
+    },
+    {
+      "event_hash": "6f0470d57f8d2ab207c49d8e2ec6e200edea5fd68f84e139dc9bf636da8f9bb2",
+      "event_id": "446477fa-2244-4ebd-b6eb-0bd3a4bde380",
+      "event_type": "agent_auditioned",
+      "payload": {
+        "category": "parameter_trap",
+        "domain": "finance",
+        "fingerprint": "9a1346504902c74bd5195df6bfd98914bb2576c64d967e766e34499cfd850315",
+        "passed": false,
+        "score": 0.0
+      },
+      "prev_event_hash": "10c69013772852040e41735e26d47665c1179c3115f588eb11ce08ef8bb07f39",
+      "run_id": "04890b06-8ac7-4732-a1e1-2f5a0d244008",
+      "sequence": 6,
+      "timestamp": "2026-08-17T13:47:40.739769Z"
+    },
+    {
+      "event_hash": "c9c707ee0fa5dd7b7eb3b14e3e514e43ca24f37c30de2e5a5b337e03ed573fda",
+      "event_id": "0a600c48-c402-445d-8fd2-06cb25f6fc97",
+      "event_type": "agent_auditioned",
+      "payload": {
+        "category": "parameter_trap",
+        "domain": "finance",
+        "fingerprint": "636ef5e9ea622c516a19e57a06280423d26c965e6f05d2e837e1016ebc641289",
+        "passed": true,
+        "score": 1.0
+      },
+      "prev_event_hash": "6f0470d57f8d2ab207c49d8e2ec6e200edea5fd68f84e139dc9bf636da8f9bb2",
+      "run_id": "04890b06-8ac7-4732-a1e1-2f5a0d244008",
+      "sequence": 7,
+      "timestamp": "2026-08-17T13:47:40.739949Z"
+    },
+    {
+      "event_hash": "ad10087fec40cdb1db0d74175bd6915f5307386c9c023e816079a8686363bc0d",
+      "event_id": "0e02a569-124a-45f0-b8d3-8c2c3115879b",
+      "event_type": "coalition_selected",
+      "payload": {
+        "members": [
+          "b575219f3a93c33d0d73b50bcea2a52ee82b3e3a247b41614c1113a05acd5b66"
+        ],
+        "rationale": {
+          "correlation_matrix": {},
+          "covered_capabilities": [
+            "numeric"
+          ],
+          "required_capabilities": [
+            "numeric"
+          ],
+          "selected": [
+            "b575219f3a93c33d0d73b50bcea2a52ee82b3e3a247b41614c1113a05acd5b66"
+          ],
+          "uncovered_capabilities": []
+        },
+        "topology": "solo"
+      },
+      "prev_event_hash": "c9c707ee0fa5dd7b7eb3b14e3e514e43ca24f37c30de2e5a5b337e03ed573fda",
+      "run_id": "04890b06-8ac7-4732-a1e1-2f5a0d244008",
+      "sequence": 8,
+      "timestamp": "2026-08-17T13:47:40.740076Z"
+    },
+    {
+      "event_hash": "170c3f45de5d44c9b2fd1ac225311814df1cb36c3f1efd1ca6016bbad2c5796a",
+      "event_id": "59a3c822-e607-4c7f-9836-6cb97043500a",
+      "event_type": "claim_proposed",
+      "payload": {
+        "claim_hash": "22dc70aa524240de9cb96121edc214d5179c5756a400c2018177c8e792cc18cf",
+        "fingerprint": "b575219f3a93c33d0d73b50bcea2a52ee82b3e3a247b41614c1113a05acd5b66",
+        "probability": 0.94,
+        "provider_trace_id": "fc0ed487-9217-56c2-a8ed-9b09dfbd5d09",
+        "sealed_context_id": "561ae5f7-c03a-5f83-afb5-eac9355edfbb"
+      },
+      "prev_event_hash": "ad10087fec40cdb1db0d74175bd6915f5307386c9c023e816079a8686363bc0d",
+      "run_id": "04890b06-8ac7-4732-a1e1-2f5a0d244008",
+      "sequence": 9,
+      "timestamp": "2026-08-17T13:47:40.740352Z"
+    },
+    {
+      "event_hash": "f45f18c573b95b23df33ea967706cf31b774cc4ed6b6a96b36d6ee7b35a62947",
+      "event_id": "890db1ab-52bb-4f9d-987e-b2f5397b70c2",
+      "event_type": "claim_graph_built",
+      "payload": {
+        "claims": [
+          "22dc70aa524240de9cb96121edc214d5179c5756a400c2018177c8e792cc18cf"
+        ],
+        "edges": 0
+      },
+      "prev_event_hash": "170c3f45de5d44c9b2fd1ac225311814df1cb36c3f1efd1ca6016bbad2c5796a",
+      "run_id": "04890b06-8ac7-4732-a1e1-2f5a0d244008",
+      "sequence": 10,
+      "timestamp": "2026-08-17T13:47:40.740443Z"
+    },
+    {
+      "event_hash": "3f138d8564e095eab92c1ed62ac989dc69e9ceefba695d5d4293171cdc5f44ff",
+      "event_id": "6c913335-3cb7-4b22-b885-7dd13b9c2402",
+      "event_type": "falsifier_proposed",
+      "payload": {
+        "id": "F1.numeric_invariant",
+        "primitive": "numeric_invariant",
+        "spec_hash": "70723980fce09fad9eb891385d274cc1c7a088dc82689cff95a64edad380cfe4"
+      },
+      "prev_event_hash": "f45f18c573b95b23df33ea967706cf31b774cc4ed6b6a96b36d6ee7b35a62947",
+      "run_id": "04890b06-8ac7-4732-a1e1-2f5a0d244008",
+      "sequence": 11,
+      "timestamp": "2026-08-17T13:47:40.740710Z"
+    },
+    {
+      "event_hash": "c5d092cdbd614d108a3758a409ac15e9f60a6edf0db2aa690868d4c6fd8aa518",
+      "event_id": "080ac79d-61c0-499a-93e2-025199e8a344",
+      "event_type": "falsifier_market_scored",
+      "payload": {
+        "budget_usd": 0.0,
+        "max_tests": 3,
+        "scores": [
+          {
+            "applicability": 1.0,
+            "evidence_quality": 1.0,
+            "expected_information_gain": 0.9,
+            "latency_cost": 1e-05,
+            "monetary_cost": 0.0,
+            "risk_cost": 0.0,
+            "spec_hash": "70723980fce09fad9eb891385d274cc1c7a088dc82689cff95a64edad380cfe4",
+            "utility": 90000.0
+          }
+        ]
+      },
+      "prev_event_hash": "3f138d8564e095eab92c1ed62ac989dc69e9ceefba695d5d4293171cdc5f44ff",
+      "run_id": "04890b06-8ac7-4732-a1e1-2f5a0d244008",
+      "sequence": 12,
+      "timestamp": "2026-08-17T13:47:40.740928Z"
+    },
+    {
+      "event_hash": "375a474cfa0be60be556dec3f73ee7aaed63ab71908f4527644ecad74e9f387d",
+      "event_id": "d68ff56e-5902-4064-bb07-53a53e22fe9c",
+      "event_type": "falsifier_selected",
+      "payload": {
+        "primitive": "numeric_invariant",
+        "spec_hash": "70723980fce09fad9eb891385d274cc1c7a088dc82689cff95a64edad380cfe4"
+      },
+      "prev_event_hash": "c5d092cdbd614d108a3758a409ac15e9f60a6edf0db2aa690868d4c6fd8aa518",
+      "run_id": "04890b06-8ac7-4732-a1e1-2f5a0d244008",
+      "sequence": 13,
+      "timestamp": "2026-08-17T13:47:40.741032Z"
+    },
+    {
+      "event_hash": "a8d10a6899f41fafa5d5e648fa3839fab42638eceba412e0161904e4a8043e5b",
+      "event_id": "a7856705-22ec-4cf2-b12d-864698030ec2",
+      "event_type": "falsifier_executed",
+      "payload": {
+        "cost": 0.0,
+        "evidence": {
+          "claimed": 1000.0,
+          "expected": 12000.0,
+          "normalized_period": "annual",
+          "relative_error": 0.9166666666666666,
+          "tolerance": 0.05
+        },
+        "execution_snapshot_hash": "2c487fcf2872a11ca76d132cc1c85db3d0964d8c60257e373af710cc90b27d99",
+        "latency_ms": 1.0,
+        "reason": null,
+        "spec_hash": "70723980fce09fad9eb891385d274cc1c7a088dc82689cff95a64edad380cfe4",
+        "verdict": "FAIL"
+      },
+      "prev_event_hash": "375a474cfa0be60be556dec3f73ee7aaed63ab71908f4527644ecad74e9f387d",
+      "run_id": "04890b06-8ac7-4732-a1e1-2f5a0d244008",
+      "sequence": 14,
+      "timestamp": "2026-08-17T13:47:40.741249Z"
+    },
+    {
+      "event_hash": "0c1aca969d9f1be24eb8f8bd95e6cb38f7852a1346eb486d3a8eafd0a650ae7c",
+      "event_id": "9e10486a-e29e-43f8-a120-564a26e1e657",
+      "event_type": "claim_updated",
+      "payload": {
+        "claim_hash": "4d86b216cbdd40697d724e379dd20c6000c07bcee6a75f8a663e9c323397058e",
+        "claim_id": "05d17879-ac24-4e39-88b4-582456e352ed",
+        "status": "falsified"
+      },
+      "prev_event_hash": "a8d10a6899f41fafa5d5e648fa3839fab42638eceba412e0161904e4a8043e5b",
+      "run_id": "04890b06-8ac7-4732-a1e1-2f5a0d244008",
+      "sequence": 15,
+      "timestamp": "2026-08-17T13:47:40.741367Z"
+    },
+    {
+      "event_hash": "d161973040e3b7f3026a2a0c887ad90767f9e21bdffe3a2131add9a7e52d03a2",
+      "event_id": "d4eec2ef-07a7-4308-baaf-d1880182ab8e",
+      "event_type": "consensus_stabilized",
+      "payload": {
+        "disagreement": 0.0,
+        "edges": 0,
+        "stagnation_count": 0
+      },
+      "prev_event_hash": "0c1aca969d9f1be24eb8f8bd95e6cb38f7852a1346eb486d3a8eafd0a650ae7c",
+      "run_id": "04890b06-8ac7-4732-a1e1-2f5a0d244008",
+      "sequence": 16,
+      "timestamp": "2026-08-17T13:47:40.741411Z"
+    },
+    {
+      "event_hash": "91b874ada86019ca9ce754da65505e3e07c4a5bcccb1498cbcb619f803db3d67",
+      "event_id": "200094a0-8ce6-403e-ad33-dad69643bb5b",
+      "event_type": "final_verified",
+      "payload": {
+        "answer_hash": "765a645bcf2510c473812d3154ba2f66ce3ea1cc995f4a7b6d28b6d0d1d1dea4",
+        "confidence": 0.98,
+        "status": "falsified"
+      },
+      "prev_event_hash": "d161973040e3b7f3026a2a0c887ad90767f9e21bdffe3a2131add9a7e52d03a2",
+      "run_id": "04890b06-8ac7-4732-a1e1-2f5a0d244008",
+      "sequence": 17,
+      "timestamp": "2026-08-17T13:47:40.741511Z"
+    },
+    {
+      "event_hash": "25003d7e262e64f7d2df0ea51703936a52ed4f8957b29a9cc2dcd15ce2c475fb",
+      "event_id": "6c1bd343-aa3b-4531-820d-e6503bdfb7bb",
+      "event_type": "memory_candidate_written",
+      "payload": {
+        "authority": 0.9,
+        "claim_hash": "4d86b216cbdd40697d724e379dd20c6000c07bcee6a75f8a663e9c323397058e",
+        "memory_id": "7b291596-575c-4381-aaab-113bf2c7f7b3"
+      },
+      "prev_event_hash": "91b874ada86019ca9ce754da65505e3e07c4a5bcccb1498cbcb619f803db3d67",
+      "run_id": "04890b06-8ac7-4732-a1e1-2f5a0d244008",
+      "sequence": 18,
+      "timestamp": "2026-08-17T13:47:40.741613Z"
+    },
+    {
+      "event_hash": "f8fedb68c9f09135d4f6399bbcc97034d3f6cdfe253d990825fde3be8cd1df97",
+      "event_id": "30f430e4-c5ba-48be-be81-317e48b2c418",
+      "event_type": "memory_promoted",
+      "payload": {
+        "authority": 0.9,
+        "memory_id": "7b291596-575c-4381-aaab-113bf2c7f7b3",
+        "status": "shared_verified"
+      },
+      "prev_event_hash": "25003d7e262e64f7d2df0ea51703936a52ed4f8957b29a9cc2dcd15ce2c475fb",
+      "run_id": "04890b06-8ac7-4732-a1e1-2f5a0d244008",
+      "sequence": 19,
+      "timestamp": "2026-08-17T13:47:40.741691Z"
+    },
+    {
+      "event_hash": "d85f01927522496f7ede12250c01764d9b35ceb2350710c35274bfa557a05e1a",
+      "event_id": "1bd0e227-97d7-4e69-94bf-9d41c62a579d",
+      "event_type": "run_completed",
+      "payload": {
+        "progress_ledger_hash": "be3409358a1dd77a0d3d454c6d0ce260964b0f0e2c5d5cc9d63cceb415a5bbcb",
+        "status": "answered",
+        "task_ledger_hash": "0bfe3e5c410e09c5c2c3f8089c34bc5d93861511c9eb6958ff06c3f96e5043d5"
+      },
+      "prev_event_hash": "f8fedb68c9f09135d4f6399bbcc97034d3f6cdfe253d990825fde3be8cd1df97",
+      "run_id": "04890b06-8ac7-4732-a1e1-2f5a0d244008",
+      "sequence": 20,
+      "timestamp": "2026-08-17T13:47:40.741845Z"
+    }
+  ],
+  "evidence_provenance": {
+    "fixture_hash": "e9bdba2cd66601accef888bc63fe6f295e5e23641b6513ab0bf4e414b539acdd",
+    "pinned_registry_hash": null,
+    "scenario": "tam_12x",
+    "source_clusters": []
+  },
+  "falsifiers": [
+    {
+      "cost": 0.0,
+      "evidence": {
+        "claimed": 1000.0,
+        "expected": 12000.0,
+        "normalized_period": "annual",
+        "relative_error": 0.9166666666666666,
+        "tolerance": 0.05
+      },
+      "execution_snapshot_hash": "2c487fcf2872a11ca76d132cc1c85db3d0964d8c60257e373af710cc90b27d99",
+      "id": "F1.numeric_invariant",
+      "latency_ms": 1.0,
+      "primitive": "numeric_invariant",
+      "reason": null,
+      "spec_hash": "70723980fce09fad9eb891385d274cc1c7a088dc82689cff95a64edad380cfe4",
+      "verdict": "FAIL"
+    }
+  ],
+  "final_claims": [
+    {
+      "as_of": null,
+      "claim_hash": "4d86b216cbdd40697d724e379dd20c6000c07bcee6a75f8a663e9c323397058e",
+      "claim_id": "05d17879-ac24-4e39-88b4-582456e352ed",
+      "claim_type": "numeric",
+      "domain": "finance",
+      "evidence_refs": [],
+      "probability": 0.94,
+      "statement": "TAM is 1,000 annual units",
+      "status": "falsified",
+      "units": null
+    }
+  ],
+  "germinal_changes": [],
+  "ledger_head": "d85f01927522496f7ede12250c01764d9b35ceb2350710c35274bfa557a05e1a",
+  "memory_changes": [
+    {
+      "authority": 0.9,
+      "claim_hash": "4d86b216cbdd40697d724e379dd20c6000c07bcee6a75f8a663e9c323397058e",
+      "content": "Verified falsifier 70723980fce09fad9eb891385d274cc1c7a088dc82689cff95a64edad380cfe4 produced FAIL for scenario tam_12x",
+      "derived_from": [],
+      "deterministic_verification": true,
+      "domain": "finance",
+      "expires_at": null,
+      "memory_id": "7b291596-575c-4381-aaab-113bf2c7f7b3",
+      "origin_clusters": [
+        "2c487fcf2872a11ca76d132cc1c85db3d0964d8c60257e373af710cc90b27d99"
+      ],
+      "owner_fingerprint": "b575219f3a93c33d0d73b50bcea2a52ee82b3e3a247b41614c1113a05acd5b66",
+      "status": "shared_verified",
+      "verified_clusters": [
+        "2c487fcf2872a11ca76d132cc1c85db3d0964d8c60257e373af710cc90b27d99"
+      ]
+    }
+  ],
+  "plugin_hashes": [
+    "evidence-exact-head"
+  ],
+  "replay_state": {
+    "head": "d85f01927522496f7ede12250c01764d9b35ceb2350710c35274bfa557a05e1a",
+    "reason": null,
+    "verified": true
+  },
+  "replay_verified": true,
+  "run_id": "04890b06-8ac7-4732-a1e1-2f5a0d244008",
+  "status": "answered"
+}

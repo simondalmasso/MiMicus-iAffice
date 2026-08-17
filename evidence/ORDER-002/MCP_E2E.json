@@ -1,0 +1,9 @@
+{
+  "openai_key_required": false,
+  "pass": true,
+  "path": "/mcp",
+  "replay_verified": true,
+  "run_id": "52ec4f27-55c9-4b73-bdd0-65f40eddb56d",
+  "scenario": "12_mcp_transport",
+  "transport": "streamable-http"
+}
