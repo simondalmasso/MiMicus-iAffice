@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from mimicus.canonical import sha256_obj
@@ -24,7 +24,18 @@ class AgentIdentity:
 
     @property
     def manifest_hash(self) -> str:
-        return sha256_obj(asdict(self))
+        return sha256_obj(
+            {
+                "fingerprint": self.fingerprint,
+                "lineage_id": self.lineage_id,
+                "provider": self.provider,
+                "model_family": self.model_family,
+                "phenotype": self.phenotype,
+                "tool_policy_hash": self.tool_policy_hash,
+                "parent_fingerprint": self.parent_fingerprint,
+                "revision_provenance": self.revision_provenance,
+            }
+        )
 
 
 def lineage_id(*, provider: str, model_family: str, phenotype: str, tool_policy_hash: str) -> str:
