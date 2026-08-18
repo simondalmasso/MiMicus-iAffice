@@ -72,9 +72,13 @@ def _process_verified_evasion(host: Any, receipt: VerificationReceipt, run: dict
     parent = _find_spec(host, domain, str(row.get("spec_hash", "")))
     store = SwarmStateStore(host.repository.engine)
     if parent is None or parent.primitive != "numeric_invariant":
-        payload = {"receipt_hash": receipt.receipt_hash, "status": "NO_SAFE_MUTATION_AVAILABLE", "parent_spec_hash": None if parent is None else parent.hash}
-        store.record_germinal_outcome(receipt.receipt_hash, "NO_SAFE_MUTATION_AVAILABLE", payload)
-        return payload
+        no_safe_payload: dict[str, Any] = {
+            "receipt_hash": receipt.receipt_hash,
+            "status": "NO_SAFE_MUTATION_AVAILABLE",
+            "parent_spec_hash": None if parent is None else parent.hash,
+        }
+        store.record_germinal_outcome(receipt.receipt_hash, "NO_SAFE_MUTATION_AVAILABLE", no_safe_payload)
+        return no_safe_payload
     context = _falsifier_context(host, receipt.run_id)
     current_tolerance = float(cast(Any, parent.params.get("relative_tolerance", 0.05)))
     params = dict(parent.params)
@@ -124,7 +128,7 @@ def _process_verified_evasion(host: Any, receipt: VerificationReceipt, run: dict
         metrics=metrics,
         domain=domain,
     )
-    payload: dict[str, Any] = {
+    germinal_payload: dict[str, Any] = {
         "receipt_hash": receipt.receipt_hash,
         "evasion_hash": evasion_hash,
         "parent_hash": parent.hash,
@@ -133,8 +137,8 @@ def _process_verified_evasion(host: Any, receipt: VerificationReceipt, run: dict
         "germinal_entry_state": "GERMINAL_QUARANTINE",
         "metrics": metrics,
     }
-    store.record_germinal_outcome(receipt.receipt_hash, decision.status, payload)
-    return payload
+    store.record_germinal_outcome(receipt.receipt_hash, decision.status, germinal_payload)
+    return germinal_payload
 
 
 def submit_verification(host: Any, submission: VerificationSubmission) -> dict[str, Any]:
