@@ -6,11 +6,9 @@ import os
 import socket
 import subprocess
 import sys
-from pathlib import Path
 from time import perf_counter
 from typing import Any
 
-from mimicus.agents.identity import make_identity
 from mimicus.memory.gates import write_gate
 from mimicus.memory.models import MemoryItem
 from mimicus.orchestration.dag_executor import DagExecutor
