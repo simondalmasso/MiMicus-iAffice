@@ -6,21 +6,34 @@ from sqlalchemy.orm import Mapped, mapped_column
 from mimicus.storage.models import Base
 
 
+class VerifierAuthorityRow(Base):
+    __tablename__ = "verifier_authorities"
+    verifier_id: Mapped[str] = mapped_column(String(256), primary_key=True)
+    authority_class: Mapped[str] = mapped_column(String(64), nullable=False)
+    source_cluster: Mapped[str] = mapped_column(String(256), nullable=False)
+    verification_method: Mapped[str] = mapped_column(String(64), nullable=False)
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    policy_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    active: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    created_at: Mapped[str] = mapped_column(String(64), nullable=False)
+
+
 class VerificationReceiptRow(Base):
     __tablename__ = "verification_receipts"
     receipt_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
     receipt_id: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     origin_key_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
-    # Rejected receipts are intentionally retained too, so these are hash-bound
-    # identifiers rather than relational FKs. Accepted receipts are validated
-    # against persisted run/claim rows before insertion.
     run_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     claim_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     verified_status: Mapped[str] = mapped_column(String(32), nullable=False)
     authority_class: Mapped[str] = mapped_column(String(64), nullable=False)
     verifier_id: Mapped[str] = mapped_column(String(256), nullable=False)
     source_cluster: Mapped[str] = mapped_column(String(256), nullable=False)
+    verification_method: Mapped[str | None] = mapped_column(String(64))
+    verifier_policy_hash: Mapped[str | None] = mapped_column(String(64))
     accepted: Mapped[int] = mapped_column(Integer, nullable=False)
+    learning_active: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    superseded_by_hash: Mapped[str | None] = mapped_column(String(64))
     rejection_reason: Mapped[str | None] = mapped_column(Text)
     payload_json: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[str] = mapped_column(String(64), nullable=False)
@@ -40,6 +53,23 @@ class ReceiptAttributionRow(Base):
     cost_contribution: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     decisive_test_contribution: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     __table_args__ = (UniqueConstraint("receipt_hash", "fingerprint", "capability", "test_family", name="uq_receipt_attribution"),)
+
+
+class RemovalAttributionRow(Base):
+    __tablename__ = "removal_attributions"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    receipt_hash: Mapped[str] = mapped_column(ForeignKey("verification_receipts.receipt_hash"), nullable=False, index=True)
+    run_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    fingerprint: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    domain: Mapped[str] = mapped_column(String(128), nullable=False)
+    capability: Mapped[str] = mapped_column(String(64), nullable=False)
+    baseline_utility: Mapped[float] = mapped_column(Float, nullable=False)
+    without_agent_utility: Mapped[float] = mapped_column(Float, nullable=False)
+    marginal_delta: Mapped[float] = mapped_column(Float, nullable=False)
+    method: Mapped[str] = mapped_column(String(64), nullable=False)
+    provenance_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[str] = mapped_column(String(64), nullable=False)
+    __table_args__ = (UniqueConstraint("receipt_hash", "fingerprint", "capability", name="uq_removal_attribution"),)
 
 
 class PairwiseCofailureRow(Base):
