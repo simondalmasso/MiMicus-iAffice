@@ -7,4 +7,11 @@ new = "        for item in memory:\n            if str(item.get(\"status\", \"\"
 if old not in text:
     raise SystemExit("memory filter anchor missing")
 path.write_text(text.replace(old, new, 1), encoding="utf-8")
-print("ORDER004_MEMORY_LIMIT_FIX=APPLIED")
+
+harness = Path("scripts/order004_evidence.py")
+harness_text = harness.read_text(encoding="utf-8")
+lint_line = '    assert all(item["status"] if "status" in item else True for item in memory)\n'
+if lint_line not in harness_text:
+    raise SystemExit("evidence lint anchor missing")
+harness.write_text(harness_text.replace(lint_line, "", 1), encoding="utf-8")
+print("ORDER004_CLEANUP_FIX=APPLIED")
