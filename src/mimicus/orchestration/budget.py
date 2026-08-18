@@ -129,9 +129,11 @@ class BudgetLedger:
         return {
             "limit_usd": self.hard_cap_usd,
             "estimated_or_reserved_usd": self.committed_usd,
+            "reserved_usd": self.committed_usd,
             "outstanding_reserved_usd": self.outstanding_reserved_usd,
             "known_actual_usd": self._actual_known_usd,
             "actual_usd": monetary_actual,
+            "spent_usd": self._actual_known_usd,
             "unknown_cost_reserved_usd": self._unknown_locked_usd,
             "remaining_usd": self.remaining_usd,
             "provider_overrun_usd": self._overrun_usd,
