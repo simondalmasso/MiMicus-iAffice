@@ -865,7 +865,7 @@ async def _build_report(count: int) -> tuple[dict[str, Any], list[RawRow]]:
         agent_count_distribution[str(row.agent_count)] = agent_count_distribution.get(str(row.agent_count), 0) + 1
         challenge_edge_distribution[str(row.communication_edge_count)] = challenge_edge_distribution.get(str(row.communication_edge_count), 0) + 1
     report: dict[str, Any] = {
-        "benchmark_version": "ORDER-004-v0.2.1-neutral-execution-derived",
+        "benchmark_version": "ORDER-006-v0.3-swarm-core-neutral-execution-derived",
         "episodes_per_architecture": count,
         "total_architecture_episodes": count * 5,
         "architectures": {
@@ -873,7 +873,7 @@ async def _build_report(count: int) -> tuple[dict[str, Any], list[RawRow]]:
             "B": "static three-agent majority",
             "C": "direct-calibration router",
             "D": "safe falsifier market without persistent germinal/memory controls",
-            "E": "full MiMicus ORDER-003 runtime",
+            "E": "full MiMicus ORDER-006 swarm-core runtime",
         },
         "common_grader": "common_grade(fixture, actual_runner_output); architecture name is unavailable to grader",
         "metrics": metrics,
@@ -914,7 +914,7 @@ def write_benchmark(output_json: Path, output_md: Path, count: int = 200) -> dic
     (output_json.parent / "BENCHMARK_MORPHOLOGY_DISTRIBUTION.json").write_text(json.dumps(report["morphology_distribution"], indent=2, sort_keys=True) + "\n", encoding="utf-8")
     (output_json.parent / "BENCHMARK_LEAKAGE.json").write_text(json.dumps(report["leakage_probe"], indent=2, sort_keys=True) + "\n", encoding="utf-8")
     lines = [
-        "# MiMicus ORDER-004 neutral execution-derived benchmark",
+        "# MiMicus ORDER-006 swarm-core neutral execution-derived benchmark",
         "",
         f"Episodes per architecture: {count}; total real architecture-runs: {count * 5}.",
         "",
