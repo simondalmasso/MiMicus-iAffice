@@ -8,7 +8,7 @@
       ],
       "pass": true,
       "provider_input_evidence_hashes": [],
-      "run_id": "6de89942-e55a-4c68-bee4-b0c1ce9b3297",
+      "run_id": "231b3c89-d6a5-4e61-8b2d-93be012d82de",
       "source_mode": "runtime",
       "status": "inconclusive",
       "task": "TAM numeric price revenue 12x mismatch"
@@ -20,7 +20,7 @@
       ],
       "pass": true,
       "provider_input_evidence_hashes": [],
-      "run_id": "9a0c62fa-1180-46ce-9292-9e52fcf58373",
+      "run_id": "9169c14a-55c7-47c4-aee1-d7c965e4c748",
       "source_mode": "runtime",
       "status": "inconclusive",
       "task": "fresh current stale date evidence"
@@ -32,7 +32,7 @@
       ],
       "pass": true,
       "provider_input_evidence_hashes": [],
-      "run_id": "7f6e41b2-975a-4d33-94db-6b9552fc1e47",
+      "run_id": "ba927e2e-e795-495c-a019-33e3a7e6aa43",
       "source_mode": "runtime",
       "status": "inconclusive",
       "task": "source echo origin citation report"
@@ -45,7 +45,7 @@
       ],
       "pass": true,
       "provider_input_evidence_hashes": [],
-      "run_id": "60061652-8c14-4c94-9dd2-abec5d1a3cc8",
+      "run_id": "667576ec-5703-48ac-ba5a-71f3a67fda51",
       "source_mode": "runtime",
       "status": "inconclusive",
       "task": "citation figure entailment mismatch"
@@ -57,7 +57,7 @@
       ],
       "pass": true,
       "provider_input_evidence_hashes": [],
-      "run_id": "5a20007d-afe3-4ec2-aa2b-5c8682cfb768",
+      "run_id": "6cadba9f-47c8-43a5-82cd-9294409f9b27",
       "source_mode": "runtime",
       "status": "inconclusive",
       "task": "absence counterexample none exist registry"
