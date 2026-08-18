@@ -2,7 +2,7 @@
 
 - Audited starting head: `6c752da3bea3f1578caf5f8149453a044b8c36e3`
 - Continued consolidation head: `8adde0b91ffed8cd610d198d9111eeb47d91cc30`
-- Evidence source head: `d73496e7d04ed545a284cd6d72e859f1105a278a`
+- Evidence source head: `2fe7f92c4d51086cb11c361475123637621bd900`
 - Branch: `order-002-mimicus-v01`
 - PR: `#3`
 - Main baseline: `2d50fd91f4346618acfa87928987e131f54159c7`

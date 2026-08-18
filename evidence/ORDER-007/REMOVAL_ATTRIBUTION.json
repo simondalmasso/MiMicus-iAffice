@@ -34,9 +34,9 @@
           "fingerprint": "05b4888b1415d53573d5701627c34d526c541f06747d8ea8eb5456f0223613c7",
           "marginal_delta": -0.5606060606060606,
           "method": "leave_one_out_semantic_decision_v1",
-          "provenance_hash": "a8ca673c81658c2430b39ae56bc1f3420f2e64c050b3e0c74ad48e06dceb2ea2",
-          "receipt_hash": "519e13b94a4eae0d5a8e892544438081e922612daf1beefd65d276e9ab25d999",
-          "run_id": "6fd57464-4508-45b9-a7bb-9aca1d22d485",
+          "provenance_hash": "6b1aa123286e33c99c3a02690f4cba16d6fc26100209c4fbd34f0019aef2c548",
+          "receipt_hash": "98d6c9d5696a8f5107ce443a1af5697198f7d83dcc94210ab853b029e0810c6c",
+          "run_id": "fd09ed6d-4870-4929-aaad-c4c75017437b",
           "without_agent_utility": 1.0
         },
         {
@@ -46,9 +46,9 @@
           "fingerprint": "7b92ac4afcb66cec6a35dac51f59eb4f75770b47ca7ccb251214a1d53192a950",
           "marginal_delta": 0.4393939393939394,
           "method": "leave_one_out_semantic_decision_v1",
-          "provenance_hash": "c7da74d10b117d616c172a7090881d62d8fb0c8b8468a971d101be58e9d23548",
-          "receipt_hash": "519e13b94a4eae0d5a8e892544438081e922612daf1beefd65d276e9ab25d999",
-          "run_id": "6fd57464-4508-45b9-a7bb-9aca1d22d485",
+          "provenance_hash": "fc395f17099f2c212f8de60326dc1aefb36ec30200cf334b8ebc8ebb4b023028",
+          "receipt_hash": "98d6c9d5696a8f5107ce443a1af5697198f7d83dcc94210ab853b029e0810c6c",
+          "run_id": "fd09ed6d-4870-4929-aaad-c4c75017437b",
           "without_agent_utility": 0.0
         }
       ],
@@ -56,7 +56,7 @@
         {
           "active": 1,
           "authority_class": "deterministic_oracle",
-          "created_at": "2026-08-18T16:51:48.611227+00:00",
+          "created_at": "2026-08-18T17:00:36.990355+00:00",
           "policy_hash": "a4336dddaa4d853477a09db616c5f34a8c320578a29575fab84682374b9f5927",
           "source_cluster": "order007-removal-decisive",
           "verification_method": "run_bound_token",
@@ -71,7 +71,7 @@
         "fingerprint": "05b4888b1415d53573d5701627c34d526c541f06747d8ea8eb5456f0223613c7",
         "marginal_delta": -0.5606060606060606,
         "method": "leave_one_out_semantic_decision_v1",
-        "provenance_hash": "a8ca673c81658c2430b39ae56bc1f3420f2e64c050b3e0c74ad48e06dceb2ea2",
+        "provenance_hash": "6b1aa123286e33c99c3a02690f4cba16d6fc26100209c4fbd34f0019aef2c548",
         "without_agent_utility": 1.0
       },
       {
@@ -80,11 +80,11 @@
         "fingerprint": "7b92ac4afcb66cec6a35dac51f59eb4f75770b47ca7ccb251214a1d53192a950",
         "marginal_delta": 0.4393939393939394,
         "method": "leave_one_out_semantic_decision_v1",
-        "provenance_hash": "c7da74d10b117d616c172a7090881d62d8fb0c8b8468a971d101be58e9d23548",
+        "provenance_hash": "fc395f17099f2c212f8de60326dc1aefb36ec30200cf334b8ebc8ebb4b023028",
         "without_agent_utility": 0.0
       }
     ],
-    "run_id": "6fd57464-4508-45b9-a7bb-9aca1d22d485",
+    "run_id": "fd09ed6d-4870-4929-aaad-c4c75017437b",
     "target_fingerprint": "7b92ac4afcb66cec6a35dac51f59eb4f75770b47ca7ccb251214a1d53192a950"
   },
   "other_negative_delta": -0.5606060606060606,
@@ -124,9 +124,9 @@
           "fingerprint": "05b4888b1415d53573d5701627c34d526c541f06747d8ea8eb5456f0223613c7",
           "marginal_delta": 0.0,
           "method": "leave_one_out_semantic_decision_v1",
-          "provenance_hash": "7e7bac3d734dd48d7dc16eb541eaae3af14251114f1d79e9f79f29dd5e24054f",
-          "receipt_hash": "9dbe4cf7bec788e07ebe1bf24e292bec443a42153b5850f16764a8340209bc2f",
-          "run_id": "4d562e4c-e4bf-46b2-9a43-d0c3bda6ec91",
+          "provenance_hash": "d06d1b5718afe0bc4e4dff38c9f3daf9b2603631c0e2354e4c99059721d7e21e",
+          "receipt_hash": "1f6daac147d413a9a1b2c0e4ce6f197131cf4dd3e45db86aa87e052c48f3f09f",
+          "run_id": "77325b77-98db-4a26-80ba-5ffcaab3abd3",
           "without_agent_utility": 1.0
         },
         {
@@ -136,9 +136,9 @@
           "fingerprint": "7b92ac4afcb66cec6a35dac51f59eb4f75770b47ca7ccb251214a1d53192a950",
           "marginal_delta": 0.0,
           "method": "leave_one_out_semantic_decision_v1",
-          "provenance_hash": "c015c4e38e448b54885a7b4584e7abc45b6f0275362fb358464aa684b6e0fb32",
-          "receipt_hash": "9dbe4cf7bec788e07ebe1bf24e292bec443a42153b5850f16764a8340209bc2f",
-          "run_id": "4d562e4c-e4bf-46b2-9a43-d0c3bda6ec91",
+          "provenance_hash": "d6cdfa12c274e2f28c3584f0b79d7606835225faecbf11efc7062034037378d1",
+          "receipt_hash": "1f6daac147d413a9a1b2c0e4ce6f197131cf4dd3e45db86aa87e052c48f3f09f",
+          "run_id": "77325b77-98db-4a26-80ba-5ffcaab3abd3",
           "without_agent_utility": 1.0
         }
       ],
@@ -146,7 +146,7 @@
         {
           "active": 1,
           "authority_class": "deterministic_oracle",
-          "created_at": "2026-08-18T16:51:48.474218+00:00",
+          "created_at": "2026-08-18T17:00:36.809240+00:00",
           "policy_hash": "29d983c29d4e28436d7304a2ee2a4536343095c4275c00f18511df7ce430f8c5",
           "source_cluster": "order007-removal-redundant",
           "verification_method": "run_bound_token",
@@ -161,7 +161,7 @@
         "fingerprint": "05b4888b1415d53573d5701627c34d526c541f06747d8ea8eb5456f0223613c7",
         "marginal_delta": 0.0,
         "method": "leave_one_out_semantic_decision_v1",
-        "provenance_hash": "7e7bac3d734dd48d7dc16eb541eaae3af14251114f1d79e9f79f29dd5e24054f",
+        "provenance_hash": "d06d1b5718afe0bc4e4dff38c9f3daf9b2603631c0e2354e4c99059721d7e21e",
         "without_agent_utility": 1.0
       },
       {
@@ -170,11 +170,11 @@
         "fingerprint": "7b92ac4afcb66cec6a35dac51f59eb4f75770b47ca7ccb251214a1d53192a950",
         "marginal_delta": 0.0,
         "method": "leave_one_out_semantic_decision_v1",
-        "provenance_hash": "c015c4e38e448b54885a7b4584e7abc45b6f0275362fb358464aa684b6e0fb32",
+        "provenance_hash": "d6cdfa12c274e2f28c3584f0b79d7606835225faecbf11efc7062034037378d1",
         "without_agent_utility": 1.0
       }
     ],
-    "run_id": "4d562e4c-e4bf-46b2-9a43-d0c3bda6ec91",
+    "run_id": "77325b77-98db-4a26-80ba-5ffcaab3abd3",
     "target_fingerprint": "7b92ac4afcb66cec6a35dac51f59eb4f75770b47ca7ccb251214a1d53192a950"
   },
   "target_positive_delta": 0.4393939393939394
