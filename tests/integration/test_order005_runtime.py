@@ -6,7 +6,7 @@ import sys
 import types
 from pathlib import Path
 
-from mimicus.agents.bankruptcy import capability_scope
+from mimicus.agents.calibration import capability_scope
 from mimicus.claims.evidence_bundle import EvidenceInput, runtime_evidence_bundle
 from mimicus.claims.models import Claim
 from mimicus.orchestration.engine import MiMicusEngine, RunRequest
@@ -145,7 +145,15 @@ def test_openai_adapter_receives_canonical_evidence_and_excludes_blocked_memory(
         fixture={},
         verified_memory=(
             {"memory_id": "ok", "claim_hash": "a" * 64, "content": "verified", "authority": 0.9, "status": "shared_verified", "origin_clusters": ["a"], "verified_clusters": ["a"]},
-            {"memory_id": "bad", "claim_hash": "b" * 64, "content": "quarantined poison", "authority": 1.0, "status": "quarantined", "origin_clusters": ["x"], "verified_clusters": []},
+            {
+                "memory_id": "bad",
+                "claim_hash": "b" * 64,
+                "content": "quarantined poison",
+                "authority": 1.0,
+                "status": "quarantined",
+                "origin_clusters": ["x"],
+                "verified_clusters": [],
+            },
         ),
         evidence=bundle.provider_payload(),
     )

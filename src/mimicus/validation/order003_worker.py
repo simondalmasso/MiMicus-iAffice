@@ -54,7 +54,7 @@ def seed_memory() -> dict[str, Any]:
         deterministic_verification=False,
         verified_clusters=[],
     )
-    assert write_gate(verified).allowed
+    assert write_gate(verified).status == MemoryStatus.PRIVATE_VERIFIED
     engine.repository.save_memory_transition(verified, reason="ORDER-003 process seed", from_status="private_verified")
     engine.repository.save_memory_transition(rejected, reason="ORDER-003 process quarantine", from_status="candidate")
     return {"stage": "seed_memory", "pass": True, "verified_memory_id": verified.memory_id, "rejected_memory_id": rejected.memory_id}
