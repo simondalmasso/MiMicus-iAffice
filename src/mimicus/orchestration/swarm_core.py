@@ -28,7 +28,7 @@ from mimicus.orchestration.synthesis import SwarmDecision, synthesize_swarm
 from mimicus.orchestration.task_ledger import TaskLedger
 from mimicus.providers.base import AuditionRequest, ProviderRequest
 from mimicus.storage.swarm_state import SwarmStateStore
-from mimicus.types import BankruptcyState, ClaimStatus, Verdict
+from mimicus.types import BankruptcyState, ClaimStatus
 
 _CANARY_FOR = {
     "numeric": "parameter_trap",
@@ -328,18 +328,17 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
             for candidate in audited
             if candidate not in selected and any(cap in required and candidate.capability_states.get(cap, "ACTIVE") == "ACTIVE" for cap in candidate.capabilities)
         ]
-        if profile.required_capabilities == ("synthesize",) or len(required) >= 2:
-            if overlap_candidates:
-                secondary = min(
-                    overlap_candidates,
-                    key=lambda row: (
-                        max((row.historical_cofailure.get(member.fingerprint, 0.0) for member in selected), default=0.0),
-                        row.fingerprint,
-                    ),
-                )
-                selected.append(secondary)
-                rationale["secondary_verifier"] = secondary.fingerprint
-                rationale["secondary_reason"] = "bounded redundancy for unresolved structural authority"
+        if (profile.required_capabilities == ("synthesize",) or len(required) >= 2) and overlap_candidates:
+            secondary = min(
+                overlap_candidates,
+                key=lambda row: (
+                    max((row.historical_cofailure.get(member.fingerprint, 0.0) for member in selected), default=0.0),
+                    row.fingerprint,
+                ),
+            )
+            selected.append(secondary)
+            rationale["secondary_verifier"] = secondary.fingerprint
+            rationale["secondary_reason"] = "bounded redundancy for unresolved structural authority"
     ledger.append("coalition_selected", {"members": [row.fingerprint for row in selected], "rationale": rationale})
 
     injected_by_agent: dict[str, list[dict[str, Any]]] = {}
@@ -665,22 +664,22 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
     else:
         status = "inconclusive"
         answer = f"INCONCLUSIVE: {decision.candidate_answer}" if decision.candidate_answer else "INCONCLUSIVE: verified evidence is insufficient."
-    for claim in claims_by_fp.values():
-        if claim.hash in decision.selected_claim_hashes:
-            target_status = {
-                "SUPPORTED": ClaimStatus.SUPPORTED,
-                "FALSIFIED": ClaimStatus.FALSIFIED,
-                "INCONCLUSIVE": ClaimStatus.INCONCLUSIVE,
-            }[decision.epistemic_status]
-            claim.status = target_status
+    selected_status = {
+        "SUPPORTED": ClaimStatus.SUPPORTED,
+        "FALSIFIED": ClaimStatus.FALSIFIED,
+        "INCONCLUSIVE": ClaimStatus.INCONCLUSIVE,
+    }[decision.epistemic_status]
     final_claims: list[dict[str, Any]] = []
     for fp, claim in sorted(claims_by_fp.items()):
         member = selected_by_fp[fp]
         relevant = [cap for cap in profile.required_capabilities if cap in member.capabilities]
+        immutable_claim_hash = claim.hash
+        persisted_status = selected_status if immutable_claim_hash in decision.selected_claim_hashes else claim.status
         final_claims.append(
             claim.model_dump(mode="json")
             | {
-                "claim_hash": claim.hash,
+                "status": persisted_status.value,
+                "claim_hash": immutable_claim_hash,
                 "provider_trace_id": claim_trace_ids.get(fp),
                 "contributor_fingerprint": fp,
                 "contributor_capabilities": relevant,

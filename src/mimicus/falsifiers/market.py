@@ -113,6 +113,9 @@ class FalsifierMarket:
     @staticmethod
     def _applicability(spec: FalsifierSpec, claim: Claim, evidence: dict[str, Any]) -> float:
         keys = set(evidence)
+        # A claim-aware missing-evidence probe returns only INCONCLUSIVE when facts are absent.
+        if not evidence and claim.claim_type == "other":
+            return 0.10
         if spec.primitive == "numeric_invariant":
             if claim.claim_type == "numeric":
                 return 1.0

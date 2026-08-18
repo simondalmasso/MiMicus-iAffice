@@ -6,8 +6,14 @@ from pydantic import ConfigDict, Field
 
 from mimicus.orchestration.legacy_engine import (
     MiMicusEngine as LegacyMiMicusEngine,
+)
+from mimicus.orchestration.legacy_engine import (
     RunRequest as LegacyRunRequest,
+)
+from mimicus.orchestration.legacy_engine import (
     RunResult as LegacyRunResult,
+)
+from mimicus.orchestration.legacy_engine import (
     _fingerprint,
     _spec_keys,
     _trust_from_row,

@@ -10,7 +10,6 @@ from mimicus.orchestration.communication import ChallengeRequest, ChallengeRespo
 from mimicus.providers.base import AuditionRequest, Provider, ProviderAuditionResponse, ProviderCapabilities, ProviderRequest, ProviderResponse
 from mimicus.types import ClaimStatus
 
-
 _DEFAULT_AUDITION_COMPETENCE: dict[str, frozenset[str]] = {
     "numeric-1": frozenset({"numeric", "synthesize"}),
     "source-1": frozenset({"source", "freshness", "independence"}),

@@ -9,10 +9,9 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from alembic import op
-
-from mimicus.storage.models import Base
 import mimicus.storage.swarm_models  # noqa: F401
+from alembic import op
+from mimicus.storage.models import Base
 
 revision: str = "0003_order006"
 down_revision: str | None = "0002_order003"
