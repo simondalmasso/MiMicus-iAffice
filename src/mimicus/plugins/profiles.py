@@ -45,6 +45,7 @@ def build_kernel(profile_name: str, database_url: str | None = None, *, provider
     repository = Repository(db_url)
     provider: Provider = provider_override or (ScriptedProvider() if profile_name != "openai" else OpenAIAgentsProvider(os.getenv("MIMICUS_OPENAI_MODEL", "gpt-5-mini")))
     storage = RepositoryStorage(repository)
+    factory = BuiltinAgentFactory(provider.capabilities)
     plugins = [
         BuiltinPlugin(builtin_manifest("storage.sqlite", "storage_backend", ("storage",)), storage),
         BuiltinPlugin(builtin_manifest(f"model.{PROFILES[profile_name].provider}", "model_provider", ("model_provider",), dependencies=("storage.sqlite",)), provider),
@@ -54,7 +55,7 @@ def build_kernel(profile_name: str, database_url: str | None = None, *, provider
         BuiltinPlugin(builtin_manifest("communication.sparse", "communication_policy", ("communication",)), SparseCommunicationService()),
         BuiltinPlugin(builtin_manifest("sandbox.local", "sandbox", ("sandbox",)), LocalSandboxService()),
         BuiltinPlugin(builtin_manifest("telemetry.ledger", "telemetry", ("telemetry",)), LedgerTelemetryService()),
-        BuiltinPlugin(builtin_manifest("agents.phenotypes", "agent_factory", ("agent_factory",)), BuiltinAgentFactory()),
+        BuiltinPlugin(builtin_manifest("agents.phenotypes", "agent_factory", ("agent_factory",)), factory),
     ]
     kernel = PluginKernel()
     for plugin in plugins:
