@@ -1,0 +1,48 @@
+name: ORDER-006 core semantic patch 2
+on:
+  push:
+    branches: [order-002-mimicus-v01]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: order-002-mimicus-v01
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: python -m pip install ruff==0.16.3
+      - name: Bind auditions to the single monetary ledger
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/mimicus/orchestration/swarm_core.py')
+          s = p.read_text()
+          old = '''    ledger.append("threat_profiled", profile.model_dump(mode="json"))\n\n    audited: list[AgentCandidate] = []\n'''
+          new = '''    ledger.append("threat_profiled", profile.model_dump(mode="json"))\n\n    budget = BudgetLedger(request.budget_usd)\n    provider_estimate = host.provider.capabilities.estimated_max_cost_per_call\n    if provider_estimate is None and host.provider.capabilities.known_zero_cost:\n        provider_estimate = 0.0\n\n    audited: list[AgentCandidate] = []\n'''
+          assert old in s
+          s = s.replace(old, new, 1)
+          old = '''            provider_result = await host.provider.audition_async(\n                AuditionRequest(\n                    fingerprint=candidate.fingerprint,\n                    domain=domain,\n                    phenotype=candidate.name,\n                    capability=capability,\n                    test_family=family,\n                    category=category,\n                    prompt=canary_prompt,\n                    sealed_context_id=sealed,\n                )\n            )\n            scored = audition(\n'''
+          new = '''            audition_reservation = await budget.reserve(\n                "audition",\n                provider_estimate,\n                known_zero_cost=host.provider.capabilities.known_zero_cost,\n            )\n            if audition_reservation is None:\n                state_key = capability_scope(domain, capability, family)\n                current_state = host.repository.bankruptcy_state(candidate.fingerprint, state_key)\n                scores[capability] = 0.5\n                calibrations[capability] = _blend_verified_authority(\n                    host, candidate.fingerprint, domain, capability, 0.5\n                )\n                states[capability] = current_state\n                audition_row = {\n                    "fingerprint": candidate.fingerprint,\n                    "phenotype": candidate.name,\n                    "capability": capability,\n                    "category": category,\n                    "test_family": family,\n                    "prompt_hash": sha256_obj(canary_prompt),\n                    "provider_trace_id": None,\n                    "provider_executed": False,\n                    "applicability": "BUDGET_BLOCKED",\n                    "passed": None,\n                    "score": 0.5,\n                    "routing_state": current_state,\n                }\n                audition_records.append(audition_row)\n                ledger.append("agent_audition_budget_blocked", audition_row)\n                continue\n            try:\n                provider_result = await host.provider.audition_async(\n                    AuditionRequest(\n                        fingerprint=candidate.fingerprint,\n                        domain=domain,\n                        phenotype=candidate.name,\n                        capability=capability,\n                        test_family=family,\n                        category=category,\n                        prompt=canary_prompt,\n                        sealed_context_id=sealed,\n                    )\n                )\n            except BaseException:\n                await budget.release(audition_reservation, reason="audition failure/cancellation")\n                raise\n            await budget.reconcile(audition_reservation, provider_result.cost)\n            scored = audition(\n'''
+          assert old in s
+          s = s.replace(old, new, 1)
+          old = '''    budget = BudgetLedger(request.budget_usd)\n    provider_estimate = host.provider.capabilities.estimated_max_cost_per_call\n    if provider_estimate is None and host.provider.capabilities.known_zero_cost:\n        provider_estimate = 0.0\n    planned_members = [row.fingerprint for row in selected]\n'''
+          new = '''    planned_members = [row.fingerprint for row in selected]\n'''
+          assert old in s
+          s = s.replace(old, new, 1)
+          old = '''        affordable = int((request.budget_usd + 1e-12) // provider_estimate)\n'''
+          new = '''        affordable = int((budget.remaining_usd + 1e-12) // provider_estimate)\n'''
+          assert old in s
+          s = s.replace(old, new, 1)
+          p.write_text(s)
+          PY
+      - run: ruff format src/mimicus/orchestration/swarm_core.py src/mimicus/storage/swarm_state.py src/mimicus/orchestration/synthesis.py src/mimicus/verification/service.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/mimicus
+          git commit -m "ORDER-006: close core semantic regressions"
+          git push origin HEAD:order-002-mimicus-v01
