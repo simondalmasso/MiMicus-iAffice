@@ -1,0 +1,21 @@
+{
+  "challenge_edges": 3,
+  "concurrency": {
+    "avoidable_serialization_count": 0,
+    "parallel_efficiency": 0.475190565625535,
+    "parallel_speedup_estimate": 0.95038113125107,
+    "peak_concurrency": 2,
+    "subtask_finish_rate": 1.0
+  },
+  "critical_path": {
+    "critical_path_ms": 4.1360600000075465,
+    "critical_steps": 6,
+    "observed_wall_ms": 5.3755759999774,
+    "serial_work_ms": 5.108845999984624,
+    "work_steps": 11
+  },
+  "executable_not_label_only": true,
+  "morphology": "sparse_graph",
+  "pass": true,
+  "plan_hash": "3ed318665c20f6d8fdbbc3668ceb2adef6b9045b517ea2efe8cf1e2290429c78"
+}

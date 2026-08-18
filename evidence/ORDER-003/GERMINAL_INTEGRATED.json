@@ -1,0 +1,65 @@
+{
+  "later_falsifier_execution": [
+    {
+      "cost": 0.0,
+      "evidence": {
+        "claimed": 104.0,
+        "expected": 100.0,
+        "normalized_period": "annual",
+        "relative_error": 0.04,
+        "tolerance": 0.02
+      },
+      "execution_snapshot_hash": "d2732fbd95d326eafb25728a19a299f59e5cb546056b71fb32ce32f8607b0b8e",
+      "id": "F1.numeric_invariant",
+      "latency_ms": 1.0,
+      "persistent_reuse": true,
+      "primitive": "numeric_invariant",
+      "reason": null,
+      "spec_hash": "1be144a0cba1a9743c22e68ad947c5da05194548f1dc51e665265f1b96d28408",
+      "verdict": "FAIL"
+    }
+  ],
+  "parent_replayable": true,
+  "pass": true,
+  "process_restart": true,
+  "promotion": [
+    {
+      "candidate_hash": "1be144a0cba1a9743c22e68ad947c5da05194548f1dc51e665265f1b96d28408",
+      "evasion_hash": "d323e1dc681c27bc99dc998cf2a91126c3fd661cf8020f97c04e5ec2630e6178",
+      "metrics": {
+        "candidate": {
+          "critical_regressions": 0,
+          "fn": 0,
+          "fnr": 0.0,
+          "fp": 0,
+          "fpr": 0.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "tested": 20,
+          "tn": 10,
+          "tp": 10
+        },
+        "catches_triggering_evasion": true,
+        "fossils_tested": 20,
+        "parent": {
+          "critical_regressions": 0,
+          "fn": 0,
+          "fnr": 0.0,
+          "fp": 0,
+          "fpr": 0.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "tested": 20,
+          "tn": 10,
+          "tp": 10
+        },
+        "reason": "deterministic promotion gate passed"
+      },
+      "parent_hash": "70723980fce09fad9eb891385d274cc1c7a088dc82689cff95a64edad380cfe4",
+      "status": "PROMOTE"
+    }
+  ],
+  "reused_spec_hashes": [
+    "1be144a0cba1a9743c22e68ad947c5da05194548f1dc51e665265f1b96d28408"
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "challenge_calls": 3,
+  "challenge_edges": 3,
+  "communications": [
+    {
+      "disposition": "partial",
+      "input_hash": "f2a4d32ccc8493df0de4e5372349d111e4c2992a097e2702dc13dafa1eea3caf",
+      "output_hash": "861829da708e28f7315f1fb9942f590ec4d48c078433a92f956730798a1efb41",
+      "provider_call_id": "5cd334b9-947d-5379-b47c-39c87dd64398",
+      "reason": "residual disagreement/information score=0.6844",
+      "revised_probability": 0.58,
+      "revised_status": "proposed",
+      "round": 1,
+      "score": 0.6844000000000001,
+      "source_fp": "62a1f164974f29ec065615746fb844b007763490e73fe2455bb8f39e2acc3b9e",
+      "target_fp": "7b75f300aa38dc3acadf4af6607b63a3706c4a8406e73fb577bb091693eb84f1"
+    },
+    {
+      "disposition": "partial",
+      "input_hash": "55b7a4517dc37d25b70fdc1ea380f35560e1f3ca1b2ed65e4f5ae3cc51d8566f",
+      "output_hash": "4f80e01e6485e46a4a65240e31a576a2dcd4fce5bfb074a1dd7ac27ed8c04e2c",
+      "provider_call_id": "c744c6f2-fc4c-5459-8c67-a028826606d2",
+      "reason": "residual disagreement/information score=0.4940",
+      "revised_probability": 0.66,
+      "revised_status": "proposed",
+      "round": 2,
+      "score": 0.4940000000000001,
+      "source_fp": "62a1f164974f29ec065615746fb844b007763490e73fe2455bb8f39e2acc3b9e",
+      "target_fp": "7b75f300aa38dc3acadf4af6607b63a3706c4a8406e73fb577bb091693eb84f1"
+    },
+    {
+      "disposition": "partial",
+      "input_hash": "68715981046691cc89ec7123b71d51a1a81e8d898a0df89d4312447f47a930eb",
+      "output_hash": "96394a6c8306c3f7b0d9690fbe6ecb4422442ee5deed1154c376ba5cf8c6b60f",
+      "provider_call_id": "1bfe0555-52da-51b3-a7df-dc98801d508c",
+      "reason": "residual disagreement/information score=0.5388",
+      "revised_probability": 0.74,
+      "revised_status": "proposed",
+      "round": 3,
+      "score": 0.5388000000000001,
+      "source_fp": "62a1f164974f29ec065615746fb844b007763490e73fe2455bb8f39e2acc3b9e",
+      "target_fp": "7b75f300aa38dc3acadf4af6607b63a3706c4a8406e73fb577bb091693eb84f1"
+    }
+  ],
+  "concurrency": {
+    "avoidable_serialization_count": 0,
+    "parallel_efficiency": 0.475190565625535,
+    "parallel_speedup_estimate": 0.95038113125107,
+    "peak_concurrency": 2,
+    "subtask_finish_rate": 1.0
+  },
+  "critical_path": {
+    "critical_path_ms": 4.1360600000075465,
+    "critical_steps": 6,
+    "observed_wall_ms": 5.3755759999774,
+    "serial_work_ms": 5.108845999984624,
+    "work_steps": 11
+  },
+  "morphology": "sparse_graph",
+  "pass": true,
+  "plan_hash": "3ed318665c20f6d8fdbbc3668ceb2adef6b9045b517ea2efe8cf1e2290429c78",
+  "provider_calls": 5,
+  "run_id": "e5d7936c-471d-43c2-b094-f13a6a7598b9",
+  "stage": "sparse"
+}

@@ -1,0 +1,12 @@
+{
+  "bankrupt_fingerprint": "3192cda8633411aeedf0f783e28f2b2b0c0e3f721a25594b56988a4613099d8b",
+  "bankrupt_state": "BANKRUPT",
+  "lineage_id": "dd6d51fa118c0e390ca4416f654062a955309e4672e3ea2e8efd0146572ae59f",
+  "pass": true,
+  "process_restart": true,
+  "recovery_audition_required": true,
+  "recovery_state": "ACTIVE",
+  "whitewash_child_fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "whitewash_excluded_from_coalition": true,
+  "whitewash_state": "PROBATION"
+}

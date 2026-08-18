@@ -1,0 +1,16 @@
+{
+  "openai_key_required": false,
+  "pass": true,
+  "path": "/mcp",
+  "persistent_memory_reused_after_restart": [
+    "0cfaa85f-d5eb-499f-9801-39573076bd6c"
+  ],
+  "plan_hash_after_restart": "4b02b9632a6d3cd64ad2d0c246310dd2ddddb6d1a47227f6452e653b1008c220",
+  "replay_verified_after_restart": true,
+  "reuse_ledger_head": "9435e2846d9ff20d1290e8e7db72ff937f5f8797174c046ae736384a70193757",
+  "reuse_run_id": "f4f83ac4-4208-497c-86ce-459ad1be0d41",
+  "seed_ledger_head": "aabf9e5761b9f0e51de2159f0fa9699efea0fd45869afef71a90c92f18b4a98c",
+  "seed_run_id": "5299bd79-b94e-4a43-8ee2-c774c31ef270",
+  "server_process_restarted": true,
+  "transport": "streamable-http"
+}
