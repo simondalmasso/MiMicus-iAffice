@@ -16,3 +16,5 @@
 - Direct write to `main`: NO
 
 Remote truth was reconstructed from GitHub immediately before ORDER-003 implementation. The first ORDER-003 commit is intentionally this evidence record; all subsequent implementation stays on the same branch and PR.
+
+During ORDER-003 process validation, the recovery probe initially attempted to re-register the same child fingerprint with changed provenance metadata; the runtime correctly rejected that as lineage tampering. The probe was repaired on the same branch to preserve the exact registered identity metadata across the dedicated recovery audition. The anti-whitewashing/tamper invariant was not weakened. Final evidence and CI are generated only after this remediation.
