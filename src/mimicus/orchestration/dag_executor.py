@@ -47,6 +47,13 @@ class DagExecution:
     schedule: list[dict[str, object]]
 
 
+class DagExecutionError(RuntimeError):
+    def __init__(self, failed_nodes: list[str], cancelled_nodes: list[str]) -> None:
+        super().__init__(f"fatal DAG node failure; failed={failed_nodes}; cancelled={cancelled_nodes}")
+        self.failed_nodes = failed_nodes
+        self.cancelled_nodes = cancelled_nodes
+
+
 class DagExecutor:
     def __init__(self, max_concurrency: int = 4) -> None:
         if not 1 <= max_concurrency <= 8:
@@ -83,11 +90,17 @@ class DagExecutor:
             try:
                 async with asyncio.timeout(node.timeout_s):
                     value = await handler(node) if node.kind in allowed else {"prelude": node.kind.value}
+            except asyncio.CancelledError:
+                node.status = "CANCELLED"
+                node.duration_ms = (perf_counter() - started) * 1000.0
+                raise
             except TimeoutError:
                 node.status = "TIMED_OUT"
+                node.duration_ms = (perf_counter() - started) * 1000.0
                 raise
             except BaseException:
                 node.status = "FAILED"
+                node.duration_ms = (perf_counter() - started) * 1000.0
                 raise
             finally:
                 active -= 1
@@ -107,9 +120,33 @@ class DagExecutor:
                     avoidable_serialization += len(ready) - 1
             batch = ready[: self.max_concurrency]
             batch_started = perf_counter()
-            results = await asyncio.gather(*(invoke(nodes[node_id]) for node_id in batch))
+            tasks: dict[str, asyncio.Task[tuple[object, float, str]]] = {}
+            failure: BaseException | None = None
+            try:
+                async with asyncio.TaskGroup() as group:
+                    for node_id in batch:
+                        tasks[node_id] = group.create_task(invoke(nodes[node_id]), name=f"mimicus:{node_id}")
+            except* BaseException as error_group:
+                failure = error_group
             batch_ms = (perf_counter() - batch_started) * 1000.0
-            for node_id, (value, duration_ms, digest) in zip(batch, results, strict=True):
+            if failure is not None:
+                failed = sorted(node_id for node_id in batch if nodes[node_id].status in {"FAILED", "TIMED_OUT"})
+                cancelled = sorted(node_id for node_id in batch if nodes[node_id].status == "CANCELLED")
+                for node_id in batch:
+                    schedule.append(
+                        {
+                            "node_id": node_id,
+                            "kind": nodes[node_id].kind.value,
+                            "prerequisites": list(nodes[node_id].prerequisites),
+                            "duration_ms": nodes[node_id].duration_ms,
+                            "batch_wall_ms": batch_ms,
+                            "output_hash": nodes[node_id].output_hash,
+                            "status": nodes[node_id].status,
+                        }
+                    )
+                raise DagExecutionError(failed, cancelled) from failure
+            for node_id in batch:
+                value, duration_ms, digest = tasks[node_id].result()
                 outputs[node_id] = value
                 output_hashes[node_id] = digest
                 pending.remove(node_id)
@@ -121,6 +158,7 @@ class DagExecutor:
                         "duration_ms": duration_ms,
                         "batch_wall_ms": batch_ms,
                         "output_hash": digest,
+                        "status": "COMPLETED",
                     }
                 )
 
