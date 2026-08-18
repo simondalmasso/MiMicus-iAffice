@@ -10,9 +10,9 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 import sqlalchemy as sa
-from alembic import op
 
 import mimicus.storage.swarm_models  # noqa: F401
+from alembic import op
 from mimicus.storage.models import Base
 
 revision: str = "0004_order007"
