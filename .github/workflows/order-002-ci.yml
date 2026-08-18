@@ -1,4 +1,4 @@
-name: ORDER-002 exact-head CI
+name: ORDER-003 exact-head CI
 
 on:
   pull_request:
@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: order-002-${{ github.event.pull_request.number || github.ref }}
+  group: order-003-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 env:
@@ -62,7 +62,7 @@ jobs:
         if: ${{ hashFiles('requirements.lock') == '' }}
         uses: actions/upload-artifact@v4
         with:
-          name: order002-bootstrap-lock
+          name: order003-bootstrap-lock
           path: /tmp/requirements.lock
 
   quality:
@@ -104,10 +104,13 @@ jobs:
       - name: Install
         run: |
           if [[ -f requirements.lock ]]; then python -m pip install -r requirements.lock && python -m pip install --no-deps -e .; else python -m pip install -e '.[dev]'; fi
-      - name: Migration SQLite and PostgreSQL DDL
+      - name: Migration clean + ORDER-002 upgrade + PostgreSQL DDL
         run: |
-          export MIMICUS_DATABASE_URL="sqlite:///$RUNNER_TEMP/migration.db"
+          export MIMICUS_DATABASE_URL="sqlite:///$RUNNER_TEMP/migration-clean.db"
           mimicus db upgrade
+          export MIMICUS_DATABASE_URL="sqlite:///$RUNNER_TEMP/migration-order002.db"
+          alembic upgrade 0001_order002
+          alembic upgrade head
           python - <<'PY'
           from mimicus.storage.postgres_compat import compile_postgres_schema
           ddl = compile_postgres_schema()
@@ -138,8 +141,8 @@ jobs:
       - run: python scripts/check_ledger.py
       - run: pytest -q tests/unit/test_memory_germinal.py tests/unit/test_agents_coalition.py tests/unit/test_ledger_storage_security.py
 
-  e2e-mcp:
-    name: 12 process E2E / real MCP transport / no key
+  e2e-order002-compat:
+    name: ORDER-002 12-process compatibility / real MCP / no key
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -165,13 +168,52 @@ jobs:
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: order002-e2e
+          name: order002-compat-e2e
           path: |
             ${{ runner.temp }}/E2E_RESULTS.json
             ${{ runner.temp }}/MCP_E2E.json
 
+  e2e-order003-runtime:
+    name: ORDER-003 restart / parallel / sparse / lineage / MCP E2E
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          if [[ -f requirements.lock ]]; then python -m pip install -r requirements.lock && python -m pip install --no-deps -e .; else python -m pip install -e '.[dev]'; fi
+      - name: Swarm-grade process E2E
+        env:
+          OPENAI_API_KEY: ""
+        run: python -m mimicus.validation.order003_e2e "$RUNNER_TEMP/ORDER-003"
+      - name: Assert required process gates
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          root = Path(os.environ["RUNNER_TEMP"]) / "ORDER-003"
+          report = json.loads((root / "ORDER003_E2E.json").read_text())
+          assert report["passed"] and all(report["gates"].values())
+          parallel = json.loads((root / "PARALLELISM.json").read_text())
+          sparse = json.loads((root / "SPARSE_COMMUNICATION.json").read_text())
+          lineage = json.loads((root / "BANKRUPTCY_LINEAGE.json").read_text())
+          mcp = json.loads((root / "MCP_E2E.json").read_text())
+          assert parallel["metrics"]["peak_concurrency"] >= 2
+          assert parallel["metrics"]["critical_path_ms"] < parallel["metrics"]["serial_work_ms"]
+          assert sparse["challenge_edges"] > 0 and sparse["challenge_calls"] == sparse["challenge_edges"]
+          assert lineage["whitewash_state"] == "PROBATION" and lineage["recovery_state"] == "ACTIVE"
+          assert mcp["server_process_restarted"] and mcp["replay_verified_after_restart"]
+          print("ORDER003_PROCESS_GATES=PASS")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: order003-runtime-e2e
+          path: ${{ runner.temp }}/ORDER-003/
+
   benchmark-evidence:
-    name: benchmark 200 / committed evidence shape
+    name: execution-derived benchmark 200/arch + anti-rigging
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -183,17 +225,22 @@ jobs:
           if [[ -f requirements.lock ]]; then python -m pip install -r requirements.lock && python -m pip install --no-deps -e .; else python -m pip install -e '.[dev]'; fi
       - name: Benchmark
         run: mimicus benchmark --profile offline --episodes 200 --output-dir "$RUNNER_TEMP/benchmark"
-      - name: Assert benchmark dimensions
+      - name: Assert benchmark dimensions and anti-rigging
         run: |
           python - <<'PY'
           import json, os
           from pathlib import Path
           report = json.loads(Path(os.environ["RUNNER_TEMP"] + "/benchmark/BENCHMARK.json").read_text())
+          assert report["benchmark_version"] == "ORDER-003-v0.2-execution-derived"
           assert report["episodes_per_architecture"] >= 200
           assert report["total_architecture_episodes"] >= 1000
           assert set(report["metrics"]) == {"A", "B", "C", "D", "E"}
-          print("BENCHMARK_200=PASS")
+          assert report["anti_rigging"]["passed"] is True
+          print("BENCHMARK_200_PER_ARCH=PASS")
           PY
-      - name: Committed evidence validation
+      - name: Verify preserved ORDER-002 evidence
         if: ${{ hashFiles('evidence/ORDER-002/MANIFEST.sha256') != '' }}
-        run: python scripts/verify_evidence.py
+        run: python scripts/verify_evidence.py ORDER-002
+      - name: Verify committed ORDER-003 evidence
+        if: ${{ hashFiles('evidence/ORDER-003/MANIFEST.sha256') != '' }}
+        run: python scripts/verify_evidence.py ORDER-003
