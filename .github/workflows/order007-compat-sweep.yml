@@ -1,0 +1,110 @@
+name: ORDER-007 explicit fixture compatibility sweep
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  fix:
+    if: github.event.pull_request.head.ref == 'order-002-mimicus-v01' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: order-002-mimicus-v01
+          fetch-depth: 0
+      - name: Apply verified ORDER-007 patch and migrate historical fixtures
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import textwrap
+
+          source = Path('.github/workflows/order007-f034-finalize.yml').read_text()
+          marker = "          python - <<'PY'\n"
+          body = source.split(marker, 1)[1].split("\n          PY\n", 1)[0]
+          exec(compile(textwrap.dedent(body), 'order007-f034-finalize', 'exec'))
+
+          def migrate_calls(path: Path) -> int:
+              text = path.read_text()
+              out = []
+              cursor = 0
+              changed = 0
+              needle = 'RunRequest('
+              while True:
+                  start = text.find(needle, cursor)
+                  if start < 0:
+                      out.append(text[cursor:])
+                      break
+                  out.append(text[cursor:start])
+                  depth = 0
+                  quote = None
+                  escaped = False
+                  end = None
+                  for pos in range(start + len('RunRequest'), len(text)):
+                      ch = text[pos]
+                      if quote is not None:
+                          if escaped:
+                              escaped = False
+                          elif ch == '\\':
+                              escaped = True
+                          elif ch == quote:
+                              quote = None
+                          continue
+                      if ch in ('"', "'"):
+                          quote = ch
+                          continue
+                      if ch == '(':
+                          depth += 1
+                      elif ch == ')':
+                          depth -= 1
+                          if depth == 0:
+                              end = pos + 1
+                              break
+                  if end is None:
+                      raise RuntimeError(f'unbalanced RunRequest in {path}')
+                  call = text[start:end]
+                  if 'fixture=' in call and 'source_mode=' not in call:
+                      call = call.replace('fixture=', 'source_mode="fixture", fixture=', 1)
+                      changed += 1
+                  out.append(call)
+                  cursor = end
+              if changed:
+                  path.write_text(''.join(out))
+              return changed
+
+          total = 0
+          roots = [Path('tests'), Path('src/mimicus/validation'), Path('scripts')]
+          for root in roots:
+              for path in sorted(root.rglob('*.py')):
+                  if path.name == 'test_order007_correctness.py':
+                      continue
+                  total += migrate_calls(path)
+          assert total >= 5, total
+          print(f'EXPLICIT_FIXTURE_CALLS_MIGRATED={total}')
+          PY
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python -m pip install -r requirements.lock && python -m pip install --no-deps -e .
+      - name: Full precommit regression gate
+        shell: bash
+        run: |
+          ruff format src/mimicus tests scripts
+          ruff check src/mimicus tests scripts
+          mypy src/mimicus
+          pytest tests/unit tests/integration --maxfail=1
+          python -m mimicus.validation.order003_e2e "$RUNNER_TEMP/ORDER-003"
+          python -m mimicus.validation.e2e "$RUNNER_TEMP/ORDER-002"
+          python scripts/order005_evidence.py "$RUNNER_TEMP/ORDER-005"
+          python scripts/order005_mcp_e2e.py "$RUNNER_TEMP/ORDER-005-MCP"
+          python scripts/order006_evidence.py "$RUNNER_TEMP/ORDER-006"
+          python scripts/order006_mcp_e2e.py "$RUNNER_TEMP/ORDER-006-MCP"
+      - name: Commit verified ORDER-007 base closure
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/mimicus tests scripts
+          git diff --cached --check
+          git commit -m 'ORDER-007: enforce authenticated lineage-safe swarm learning'
+          git push origin HEAD:order-002-mimicus-v01
