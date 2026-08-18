@@ -180,7 +180,11 @@ jobs:
           PY
           (
             cd evidence/ORDER-007
-            find . -maxdepth 1 -type f ! -name MANIFEST.sha256 -printf '%P\n' | LC_ALL=C sort | while read -r file; do sha256sum "$file"; done
+            find . -maxdepth 1 -type f ! -name MANIFEST.sha256 -printf '%P\n' | LC_ALL=C sort | while read -r file; do
+              if ! git -C ../.. check-ignore -q "evidence/ORDER-007/$file"; then
+                sha256sum "$file"
+              fi
+            done
           ) > evidence/ORDER-007/MANIFEST.sha256
           (cd evidence/ORDER-007 && sha256sum -c MANIFEST.sha256)
       - name: Commit ORDER-007 evidence on same branch
