@@ -1,4 +1,4 @@
-name: ORDER-006 exact-head CI
+name: ORDER-007 exact-head CI
 
 on:
   pull_request:
@@ -37,44 +37,50 @@ jobs:
       - run: python -m mimicus.validation.order003_e2e "$RUNNER_TEMP/ORDER-003"
       - run: python -m mimicus.validation.e2e "$RUNNER_TEMP/ORDER-002"
       - run: pytest tests/unit/test_order005_correctness.py tests/integration/test_order005_runtime.py
-      - env:
-          OPENAI_API_KEY: ""
+      - env: {OPENAI_API_KEY: ""}
         run: python scripts/order005_evidence.py "$RUNNER_TEMP/ORDER-005"
-      - env:
-          OPENAI_API_KEY: ""
-        run: python scripts/order005_mcp_e2e.py "$RUNNER_TEMP/ORDER-005"
+      - env: {OPENAI_API_KEY: ""}
+        run: python scripts/order005_mcp_e2e.py "$RUNNER_TEMP/ORDER-005-MCP"
+      - run: pytest tests/unit/test_order006_core.py tests/integration/test_order006_runtime.py
+      - env: {OPENAI_API_KEY: ""}
+        run: python scripts/order006_evidence.py "$RUNNER_TEMP/ORDER-006"
+      - env: {OPENAI_API_KEY: ""}
+        run: python scripts/order006_mcp_e2e.py "$RUNNER_TEMP/ORDER-006-MCP"
 
-  order006-swarm-core-mcp:
+  order007-core-mcp:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: "3.12"}
       - run: python -m pip install -r requirements.lock && python -m pip install --no-deps -e .
-      - run: pytest tests/unit/test_order006_core.py tests/integration/test_order006_runtime.py
-      - env:
-          OPENAI_API_KEY: ""
-        run: python scripts/order006_evidence.py "$RUNNER_TEMP/ORDER-006"
-      - env:
-          OPENAI_API_KEY: ""
-        run: python scripts/order006_mcp_e2e.py "$RUNNER_TEMP/ORDER-006"
-      - name: Assert F023 through F031 executable evidence
+      - run: pytest tests/unit/test_order007_correctness.py
+      - env: {OPENAI_API_KEY: ""}
+        run: python scripts/order007_evidence.py "$RUNNER_TEMP/ORDER-007"
+      - env: {OPENAI_API_KEY: ""}
+        run: python scripts/order007_mcp_e2e.py "$RUNNER_TEMP/ORDER-007"
+      - name: Assert F032 through F037 executable evidence
+        shell: bash
         run: |
           python - <<'PY'
           import json, os
           from pathlib import Path
-          root = Path(os.environ['RUNNER_TEMP']) / 'ORDER-006'
+          root = Path(os.environ["RUNNER_TEMP"]) / "ORDER-007"
           required = [
-              'REAL_MICRO_AUDITIONS.json','VERIFICATION_RECEIPTS.json','RUNTIME_GERMINAL_LOOP.json',
-              'CLAIM_AWARE_FALSIFIER_MARKET.json','SWARM_DECISION_SYNTHESIS.json','HIERARCHICAL_SUBTASKS.json',
-              'COFAILURE_ATTRIBUTION.json','MORPHOLOGY_ALL_FIVE.json','THREAT_PROFILE_STRUCTURAL.json',
-              'PERSISTENCE_RESTART.json','MCP_E2E.json'
+              "VERIFIER_AUTHORITY_BINDING.json",
+              "CLAIM_IDENTITY_LINEAGE.json",
+              "CLAIM_MARKET_NOVELTY.json",
+              "HIERARCHY_COMPLETE_EXECUTION.json",
+              "REMOVAL_ATTRIBUTION.json",
+              "RUNTIME_CORE_LOCK.json",
+              "MCP_E2E.json",
           ]
           for name in required:
               payload = json.loads((root / name).read_text())
-              assert payload['pass'] is True, name
-          assert json.loads((root / 'ORDER006_E2E.json').read_text())['passed'] is True
-          print('ORDER006_SWARM_CORE_MCP=PASS')
+              assert payload["pass"] is True, name
+          assert json.loads((root / "HIERARCHY_COMPLETE_EXECUTION.json").read_text())["incomplete_status"] == "inconclusive"
+          assert json.loads((root / "MCP_E2E.json").read_text())["legacy_escape_fields_exposed"] == []
+          print("ORDER007_F032_F037_MCP=PASS")
           PY
 
   benchmark-evidence:
@@ -85,48 +91,54 @@ jobs:
         with: {python-version: "3.12"}
       - run: python -m pip install -r requirements.lock && python -m pip install --no-deps -e .
       - run: mimicus benchmark --profile offline --episodes 200 --output-dir "$RUNNER_TEMP/benchmark"
-      - name: Assert neutral benchmark and all-five MiMicus coverage
+      - name: Assert neutral benchmark and all-five morphology coverage
+        shell: bash
         run: |
           python - <<'PY'
           import json, os
           from pathlib import Path
-          report = json.loads((Path(os.environ['RUNNER_TEMP']) / 'benchmark' / 'BENCHMARK.json').read_text())
-          required = {'solo','paired_verify','parallel_fanout','sparse_graph','hierarchical_fanout_fanin'}
-          assert report['benchmark_version'].startswith('ORDER-006-')
-          assert report['episodes_per_architecture'] == 200
-          assert report['total_architecture_episodes'] == 1000
-          assert report['anti_rigging']['passed'] is True
-          assert report['leakage_probe']['passed'] is True
-          assert report['metrics']['E']['avg_simulated_cost'] > 0
-          assert required <= set(report['morphology_distribution']['classes'])
-          print(json.dumps(report['morphology_distribution'], sort_keys=True))
+          report = json.loads((Path(os.environ["RUNNER_TEMP"]) / "benchmark" / "BENCHMARK.json").read_text())
+          required = {"solo","paired_verify","parallel_fanout","sparse_graph","hierarchical_fanout_fanin"}
+          assert report["episodes_per_architecture"] == 200
+          assert report["total_architecture_episodes"] == 1000
+          assert report["anti_rigging"]["passed"] is True
+          assert report["leakage_probe"]["passed"] is True
+          assert report["metrics"]["E"]["avg_simulated_cost"] > 0
+          assert required <= set(report["morphology_distribution"]["classes"])
+          print("ORDER007_BENCHMARK=PASS")
           PY
-      - name: Verify committed ORDER-006 evidence manifest and shape
+      - name: Verify committed ORDER-007 evidence manifest and shape
+        shell: bash
         run: |
-          test -s evidence/ORDER-006/MANIFEST.sha256
-          (cd evidence/ORDER-006 && sha256sum -c MANIFEST.sha256)
+          test -s evidence/ORDER-007/MANIFEST.sha256
+          (cd evidence/ORDER-007 && sha256sum -c MANIFEST.sha256)
           python - <<'PY'
           import json
           from pathlib import Path
-          root = Path('evidence/ORDER-006')
-          required_files = [
-              'REMOTE_TRUTH.md','AUD_FINDINGS_CLOSURE.md','REAL_MICRO_AUDITIONS.json',
-              'VERIFICATION_RECEIPTS.json','RUNTIME_GERMINAL_LOOP.json','CLAIM_AWARE_FALSIFIER_MARKET.json',
-              'SWARM_DECISION_SYNTHESIS.json','HIERARCHICAL_SUBTASKS.json','COFAILURE_ATTRIBUTION.json',
-              'MORPHOLOGY_ALL_FIVE.json','THREAT_PROFILE_STRUCTURAL.json','PERSISTENCE_RESTART.json',
-              'LEDGER_VERIFY.json','MCP_E2E.json','BENCHMARK.json','BENCHMARK_RAW.jsonl',
-              'TEST_RESULTS.txt','PACKAGE_MIGRATION_DOCTOR.txt','ORDER006_E2E.json','MANIFEST.sha256'
+          root = Path("evidence/ORDER-007")
+          required = [
+              "REMOTE_TRUTH.md","AUD_FINDINGS_CLOSURE.md",
+              "VERIFIER_AUTHORITY_BINDING.json","CLAIM_IDENTITY_LINEAGE.json",
+              "CLAIM_MARKET_NOVELTY.json","HIERARCHY_COMPLETE_EXECUTION.json",
+              "REMOVAL_ATTRIBUTION.json","RUNTIME_CORE_LOCK.json",
+              "REGRESSION_F001_F031.txt","MCP_E2E.json","TEST_RESULTS.txt",
+              "BENCHMARK.json","BENCHMARK_RAW.jsonl","MANIFEST.sha256",
           ]
-          missing = [name for name in required_files if not (root / name).is_file() or (root / name).stat().st_size == 0]
+          missing = [name for name in required if not (root / name).is_file() or (root / name).stat().st_size == 0]
           assert not missing, missing
-          benchmark = json.loads((root / 'BENCHMARK.json').read_text())
-          required = {'solo','paired_verify','parallel_fanout','sparse_graph','hierarchical_fanout_fanin'}
-          assert benchmark['benchmark_version'].startswith('ORDER-006-')
-          assert benchmark['episodes_per_architecture'] == 200 and benchmark['total_architecture_episodes'] == 1000
-          assert benchmark['anti_rigging']['passed'] and benchmark['leakage_probe']['passed']
-          assert required <= set(benchmark['morphology_distribution']['classes'])
-          assert json.loads((root / 'ORDER006_E2E.json').read_text())['passed'] is True
-          print('ORDER006_COMMITTED_EVIDENCE=PASS')
+          for name in [
+              "VERIFIER_AUTHORITY_BINDING.json","CLAIM_IDENTITY_LINEAGE.json",
+              "CLAIM_MARKET_NOVELTY.json","HIERARCHY_COMPLETE_EXECUTION.json",
+              "REMOVAL_ATTRIBUTION.json","RUNTIME_CORE_LOCK.json","MCP_E2E.json",
+          ]:
+              assert json.loads((root / name).read_text())["pass"] is True, name
+          benchmark = json.loads((root / "BENCHMARK.json").read_text())
+          required_morph = {"solo","paired_verify","parallel_fanout","sparse_graph","hierarchical_fanout_fanin"}
+          assert benchmark["episodes_per_architecture"] == 200
+          assert benchmark["total_architecture_episodes"] == 1000
+          assert benchmark["anti_rigging"]["passed"] and benchmark["leakage_probe"]["passed"]
+          assert required_morph <= set(benchmark["morphology_distribution"]["classes"])
+          print("ORDER007_COMMITTED_EVIDENCE=PASS")
           PY
 
   migration-package:
@@ -137,25 +149,27 @@ jobs:
         with: {python-version: "3.12"}
       - run: python -m pip install -r requirements.lock && python -m pip install --no-deps -e .
       - name: SQLite clean prior upgrade and PostgreSQL compile
+        shell: bash
         run: |
-          export MIMICUS_DATABASE_URL="sqlite:///$RUNNER_TEMP/order006-clean.db"
+          export MIMICUS_DATABASE_URL="sqlite:///$RUNNER_TEMP/order007-clean.db"
           mimicus db upgrade
-          export MIMICUS_DATABASE_URL="sqlite:///$RUNNER_TEMP/order006-from-order002.db"
+          export MIMICUS_DATABASE_URL="sqlite:///$RUNNER_TEMP/order007-from-order002.db"
           alembic upgrade 0001_order002
           alembic upgrade head
           python - <<'PY'
           from mimicus.storage.postgres_compat import compile_postgres_schema
           d = compile_postgres_schema()
           required = {
-              'runs','verification_receipts','receipt_attributions','pairwise_cofailure',
-              'pair_episode_updates','agent_marginal_value','receipt_germinal_outcomes'
+              "runs","verification_receipts","receipt_attributions","pairwise_cofailure",
+              "pair_episode_updates","agent_marginal_value","receipt_germinal_outcomes",
+              "verifier_authorities","removal_attributions",
           }
           assert required <= set(d), sorted(required - set(d))
-          print('POSTGRESQL_ORDER006_SCHEMA_COMPILE=PASS')
+          print("POSTGRESQL_ORDER007_SCHEMA_COMPILE=PASS")
           PY
       - run: python -m build
       - run: |
-          python -m venv "$RUNNER_TEMP/order006-wheel"
-          "$RUNNER_TEMP/order006-wheel/bin/python" -m pip install -r requirements.lock
-          "$RUNNER_TEMP/order006-wheel/bin/python" -m pip install dist/*.whl
-          "$RUNNER_TEMP/order006-wheel/bin/mimicus" doctor --profile offline
+          python -m venv "$RUNNER_TEMP/order007-wheel"
+          "$RUNNER_TEMP/order007-wheel/bin/python" -m pip install -r requirements.lock
+          "$RUNNER_TEMP/order007-wheel/bin/python" -m pip install dist/*.whl
+          "$RUNNER_TEMP/order007-wheel/bin/mimicus" doctor --profile offline
