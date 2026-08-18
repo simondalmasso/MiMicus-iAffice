@@ -49,18 +49,9 @@ class RecordingProvider(ScriptedProvider):
 
     async def generate_request_async(self, request: ProviderRequest) -> ProviderResponse:
         response = await super().generate_request_async(request)
-        evidence_refs = [
-            str(row["evidence_hash"])
-            for row in request.evidence
-            if isinstance(row, dict) and isinstance(row.get("evidence_hash"), str)
-        ]
+        evidence_refs = [str(row["evidence_hash"]) for row in request.evidence if isinstance(row, dict) and isinstance(row.get("evidence_hash"), str)]
         evidence_keys = sorted(
-            {
-                str(key)
-                for row in request.evidence
-                if isinstance(row, dict)
-                for key in (row.get("extracted_facts", {}) if isinstance(row.get("extracted_facts"), dict) else {})
-            }
+            {str(key) for row in request.evidence if isinstance(row, dict) for key in (row.get("extracted_facts", {}) if isinstance(row.get("extracted_facts"), dict) else {})}
         )
         self.requests.append(
             {
@@ -160,6 +151,7 @@ def verifier_authority_binding(root: Path) -> dict[str, Any]:
         source_independence_cluster=cluster,
         auth_token=token,
     )
+    after_policy = store.learned_state("finance")
     bogus = engine.submit_verification(
         _receipt(
             run,
@@ -172,7 +164,7 @@ def verifier_authority_binding(root: Path) -> dict[str, Any]:
     )
     assert bogus["accepted"] is False
     assert bogus["receipt"]["rejection_reason"] == "evidence_hash_not_bound_to_run"
-    assert store.learned_state("finance") == before
+    assert store.learned_state("finance") == after_policy
 
     accepted = engine.submit_verification(
         _receipt(
@@ -468,11 +460,7 @@ def hierarchy_complete_execution(root: Path) -> dict[str, Any]:
     assert len(scoped_requests) == len(run.subtasks)
 
     group_by_subtask = {row["subtask_hash"]: row["dependency_group"] for row in run.subtasks}
-    group_by_node = {
-        str(claim["contributor_node_id"]): group_by_subtask[str(claim["subtask_hash"])]
-        for claim in run.final_claims
-        if claim.get("subtask_hash")
-    }
+    group_by_node = {str(claim["contributor_node_id"]): group_by_subtask[str(claim["subtask_hash"])] for claim in run.final_claims if claim.get("subtask_hash")}
     for group_name, result in hx["subgroup_results"].items():
         expected = group_name.split("subgroup:", 1)[1]
         assert all(group_by_node[str(node_id)] == expected for node_id in result["claims"])
