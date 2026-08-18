@@ -1,37 +1,51 @@
-name: ORDER-004 cleanup bootstrap
+name: ORDER-004 development validation
 
 on:
   pull_request:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: order-004-cleanup-${{ github.event.pull_request.number || github.ref }}
+  group: order-004-dev-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  PYTHONUNBUFFERED: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
 jobs:
-  cleanup:
-    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'order-002-mimicus-v01' }}
+  quality:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: order-002-mimicus-v01
-          fetch-depth: 0
       - uses: actions/setup-python@v5
         with: {python-version: "3.12"}
-      - run: python -m pip install ruff==0.16.3
-      - run: python scripts/order004_cleanup_patch.py
-      - run: |
-          ruff format src tests scripts
-          ruff check --fix src tests scripts
-          git rm -f scripts/order004_cleanup_patch.py
-          git diff --check
-      - run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A src tests scripts
-          git commit -m 'ORDER-004: enforce eligible-memory limits and normalize tests'
-          git push origin HEAD:order-002-mimicus-v01
+      - run: python -m pip install -r requirements.lock && python -m pip install --no-deps -e .
+      - run: python -m pip check
+      - run: ruff format --check .
+      - run: ruff check .
+      - run: mypy src/mimicus
+
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: python -m pip install -r requirements.lock && python -m pip install --no-deps -e .
+      - run: pytest tests/unit tests/integration --cov=mimicus --cov-report=term-missing --cov-fail-under=90
+
+  regression-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: python -m pip install -r requirements.lock && python -m pip install --no-deps -e .
+      - run: python scripts/check_security.py
+      - run: python scripts/check_ledger.py
+      - run: python -m mimicus.validation.order003_e2e "$RUNNER_TEMP/ORDER-003"
+      - run: python scripts/order004_evidence.py "$RUNNER_TEMP/ORDER-004"
+      - run: python -c "from mimicus.benchmark import run_benchmark; r=run_benchmark(20); assert r['anti_rigging']['passed']; assert r['leakage_probe']['passed']; assert r['metrics']['E']['avg_simulated_cost'] > 0; print(r['morphology_distribution'])"
