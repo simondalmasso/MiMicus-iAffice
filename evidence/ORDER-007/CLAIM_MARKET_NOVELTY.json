@@ -1,0 +1,24 @@
+{
+  "near_duplicate_candidate_count": 4,
+  "near_duplicate_retained_specs": [
+    "b47d6a2837326140ef24ad6d20b5d061d283ac6f69676c02391d9c60e12f1cf9"
+  ],
+  "pass": true,
+  "probability_reordered_target": "030506ce6419a69d242c2b9d639ad97ca00f31636df317a9a3b46385ec1f1d56",
+  "runtime_candidate_count": 1,
+  "runtime_run_id": "a72fa6be-3675-45e8-a4b2-0f8021496609",
+  "runtime_selected": [
+    {
+      "applicability": 1.0,
+      "disagreement": 0.0,
+      "evidence_quality": 1.0,
+      "expected_information_gain": 0.5391,
+      "selection_reason": "claim-aware applicability=1.00; uncertainty=0.14; disagreement=0.00; novelty=complementary; proximity=0.00",
+      "spec_hash": "70723980fce09fad9eb891385d274cc1c7a088dc82689cff95a64edad380cfe4",
+      "target_claim_hash": "f7d1175a49a60eee911ba83f09905ce02ed48be023b274b2bc80926089fef054",
+      "uncertainty": 0.1399999999999999,
+      "utility": 53910.0
+    }
+  ],
+  "task_text": "Assess this supplied material."
+}

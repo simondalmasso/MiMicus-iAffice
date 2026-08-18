@@ -1,0 +1,536 @@
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_order002, ORDER-002 initial portable schema.
+INFO  [alembic.runtime.migration] Running upgrade 0001_order002 -> 0002_order003, ORDER-003 persistent swarm runtime state.
+INFO  [alembic.runtime.migration] Running upgrade 0002_order003 -> 0003_order006, ORDER-006 verified swarm learning state.
+INFO  [alembic.runtime.migration] Running upgrade 0003_order006 -> 0004_order007, ORDER-007 verifier authority and counterfactual attribution state.
+{"database": "upgraded", "url_scheme": "sqlite"}
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_order002, ORDER-002 initial portable schema.
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade 0001_order002 -> 0002_order003, ORDER-003 persistent swarm runtime state.
+INFO  [alembic.runtime.migration] Running upgrade 0002_order003 -> 0003_order006, ORDER-006 verified swarm learning state.
+INFO  [alembic.runtime.migration] Running upgrade 0003_order006 -> 0004_order007, ORDER-007 verifier authority and counterfactual attribution state.
+POSTGRESQL_ORDER007_SCHEMA_COMPILE=PASS
+* Creating isolated environment: venv+pip...
+* Installing packages in isolated environment:
+  - setuptools==82.0.1
+* Getting build dependencies for sdist...
+running egg_info
+writing src/mimicus_swarm.egg-info/PKG-INFO
+writing dependency_links to src/mimicus_swarm.egg-info/dependency_links.txt
+writing entry points to src/mimicus_swarm.egg-info/entry_points.txt
+writing requirements to src/mimicus_swarm.egg-info/requires.txt
+writing top-level names to src/mimicus_swarm.egg-info/top_level.txt
+reading manifest file 'src/mimicus_swarm.egg-info/SOURCES.txt'
+adding license file 'LICENSE'
+writing manifest file 'src/mimicus_swarm.egg-info/SOURCES.txt'
+* Building sdist...
+running sdist
+running egg_info
+writing src/mimicus_swarm.egg-info/PKG-INFO
+writing dependency_links to src/mimicus_swarm.egg-info/dependency_links.txt
+writing entry points to src/mimicus_swarm.egg-info/entry_points.txt
+writing requirements to src/mimicus_swarm.egg-info/requires.txt
+writing top-level names to src/mimicus_swarm.egg-info/top_level.txt
+reading manifest file 'src/mimicus_swarm.egg-info/SOURCES.txt'
+adding license file 'LICENSE'
+writing manifest file 'src/mimicus_swarm.egg-info/SOURCES.txt'
+running check
+creating mimicus_swarm-0.2.2
+creating mimicus_swarm-0.2.2/src/mimicus
+creating mimicus_swarm-0.2.2/src/mimicus/agents
+creating mimicus_swarm-0.2.2/src/mimicus/claims
+creating mimicus_swarm-0.2.2/src/mimicus/coalition
+creating mimicus_swarm-0.2.2/src/mimicus/events
+creating mimicus_swarm-0.2.2/src/mimicus/falsifiers
+creating mimicus_swarm-0.2.2/src/mimicus/germinal
+creating mimicus_swarm-0.2.2/src/mimicus/interfaces
+creating mimicus_swarm-0.2.2/src/mimicus/memory
+creating mimicus_swarm-0.2.2/src/mimicus/orchestration
+creating mimicus_swarm-0.2.2/src/mimicus/plugins
+creating mimicus_swarm-0.2.2/src/mimicus/providers
+creating mimicus_swarm-0.2.2/src/mimicus/storage
+creating mimicus_swarm-0.2.2/src/mimicus/validation
+creating mimicus_swarm-0.2.2/src/mimicus/verification
+creating mimicus_swarm-0.2.2/src/mimicus_swarm.egg-info
+copying files to mimicus_swarm-0.2.2...
+copying LICENSE -> mimicus_swarm-0.2.2
+copying README.md -> mimicus_swarm-0.2.2
+copying pyproject.toml -> mimicus_swarm-0.2.2
+copying src/mimicus/__init__.py -> mimicus_swarm-0.2.2/src/mimicus
+copying src/mimicus/benchmark.py -> mimicus_swarm-0.2.2/src/mimicus
+copying src/mimicus/canonical.py -> mimicus_swarm-0.2.2/src/mimicus
+copying src/mimicus/config.py -> mimicus_swarm-0.2.2/src/mimicus
+copying src/mimicus/security.py -> mimicus_swarm-0.2.2/src/mimicus
+copying src/mimicus/types.py -> mimicus_swarm-0.2.2/src/mimicus
+copying src/mimicus/agents/__init__.py -> mimicus_swarm-0.2.2/src/mimicus/agents
+copying src/mimicus/agents/auditions.py -> mimicus_swarm-0.2.2/src/mimicus/agents
+copying src/mimicus/agents/bankruptcy.py -> mimicus_swarm-0.2.2/src/mimicus/agents
+copying src/mimicus/agents/calibration.py -> mimicus_swarm-0.2.2/src/mimicus/agents
+copying src/mimicus/agents/fingerprints.py -> mimicus_swarm-0.2.2/src/mimicus/agents
+copying src/mimicus/agents/identity.py -> mimicus_swarm-0.2.2/src/mimicus/agents
+copying src/mimicus/agents/phenotypes.py -> mimicus_swarm-0.2.2/src/mimicus/agents
+copying src/mimicus/claims/__init__.py -> mimicus_swarm-0.2.2/src/mimicus/claims
+copying src/mimicus/claims/evidence.py -> mimicus_swarm-0.2.2/src/mimicus/claims
+copying src/mimicus/claims/evidence_bundle.py -> mimicus_swarm-0.2.2/src/mimicus/claims
+copying src/mimicus/claims/graph.py -> mimicus_swarm-0.2.2/src/mimicus/claims
+copying src/mimicus/claims/models.py -> mimicus_swarm-0.2.2/src/mimicus/claims
+copying src/mimicus/coalition/__init__.py -> mimicus_swarm-0.2.2/src/mimicus/coalition
+copying src/mimicus/coalition/selector.py -> mimicus_swarm-0.2.2/src/mimicus/coalition
+copying src/mimicus/coalition/sparse_comm.py -> mimicus_swarm-0.2.2/src/mimicus/coalition
+copying src/mimicus/coalition/threat_profile.py -> mimicus_swarm-0.2.2/src/mimicus/coalition
+copying src/mimicus/coalition/topology.py -> mimicus_swarm-0.2.2/src/mimicus/coalition
+copying src/mimicus/events/__init__.py -> mimicus_swarm-0.2.2/src/mimicus/events
+copying src/mimicus/events/bus.py -> mimicus_swarm-0.2.2/src/mimicus/events
+copying src/mimicus/events/ledger.py -> mimicus_swarm-0.2.2/src/mimicus/events
+copying src/mimicus/falsifiers/__init__.py -> mimicus_swarm-0.2.2/src/mimicus/falsifiers
+copying src/mimicus/falsifiers/builtins.py -> mimicus_swarm-0.2.2/src/mimicus/falsifiers
+copying src/mimicus/falsifiers/k3_compat.py -> mimicus_swarm-0.2.2/src/mimicus/falsifiers
+copying src/mimicus/falsifiers/market.py -> mimicus_swarm-0.2.2/src/mimicus/falsifiers
+copying src/mimicus/falsifiers/primitives.py -> mimicus_swarm-0.2.2/src/mimicus/falsifiers
+copying src/mimicus/falsifiers/registry.py -> mimicus_swarm-0.2.2/src/mimicus/falsifiers
+copying src/mimicus/falsifiers/spec.py -> mimicus_swarm-0.2.2/src/mimicus/falsifiers
+copying src/mimicus/germinal/__init__.py -> mimicus_swarm-0.2.2/src/mimicus/germinal
+copying src/mimicus/germinal/center.py -> mimicus_swarm-0.2.2/src/mimicus/germinal
+copying src/mimicus/germinal/fossils.py -> mimicus_swarm-0.2.2/src/mimicus/germinal
+copying src/mimicus/germinal/mutate.py -> mimicus_swarm-0.2.2/src/mimicus/germinal
+copying src/mimicus/germinal/promote.py -> mimicus_swarm-0.2.2/src/mimicus/germinal
+copying src/mimicus/interfaces/__init__.py -> mimicus_swarm-0.2.2/src/mimicus/interfaces
+copying src/mimicus/interfaces/cli.py -> mimicus_swarm-0.2.2/src/mimicus/interfaces
+copying src/mimicus/interfaces/mcp_server.py -> mimicus_swarm-0.2.2/src/mimicus/interfaces
+copying src/mimicus/memory/__init__.py -> mimicus_swarm-0.2.2/src/mimicus/memory
+copying src/mimicus/memory/gates.py -> mimicus_swarm-0.2.2/src/mimicus/memory
+copying src/mimicus/memory/models.py -> mimicus_swarm-0.2.2/src/mimicus/memory
+copying src/mimicus/memory/provenance.py -> mimicus_swarm-0.2.2/src/mimicus/memory
+copying src/mimicus/memory/retrieval.py -> mimicus_swarm-0.2.2/src/mimicus/memory
+copying src/mimicus/orchestration/__init__.py -> mimicus_swarm-0.2.2/src/mimicus/orchestration
+copying src/mimicus/orchestration/attribution.py -> mimicus_swarm-0.2.2/src/mimicus/orchestration
+copying src/mimicus/orchestration/budget.py -> mimicus_swarm-0.2.2/src/mimicus/orchestration
+copying src/mimicus/orchestration/communication.py -> mimicus_swarm-0.2.2/src/mimicus/orchestration
+copying src/mimicus/orchestration/dag_executor.py -> mimicus_swarm-0.2.2/src/mimicus/orchestration
+copying src/mimicus/orchestration/decomposition.py -> mimicus_swarm-0.2.2/src/mimicus/orchestration
+copying src/mimicus/orchestration/engine.py -> mimicus_swarm-0.2.2/src/mimicus/orchestration
+copying src/mimicus/orchestration/legacy_engine.py -> mimicus_swarm-0.2.2/src/mimicus/orchestration
+copying src/mimicus/orchestration/morphology.py -> mimicus_swarm-0.2.2/src/mimicus/orchestration
+copying src/mimicus/orchestration/progress_ledger.py -> mimicus_swarm-0.2.2/src/mimicus/orchestration
+copying src/mimicus/orchestration/proximity.py -> mimicus_swarm-0.2.2/src/mimicus/orchestration
+copying src/mimicus/orchestration/replay.py -> mimicus_swarm-0.2.2/src/mimicus/orchestration
+copying src/mimicus/orchestration/swarm_core.py -> mimicus_swarm-0.2.2/src/mimicus/orchestration
+copying src/mimicus/orchestration/synthesis.py -> mimicus_swarm-0.2.2/src/mimicus/orchestration
+copying src/mimicus/orchestration/task_ledger.py -> mimicus_swarm-0.2.2/src/mimicus/orchestration
+copying src/mimicus/plugins/__init__.py -> mimicus_swarm-0.2.2/src/mimicus/plugins
+copying src/mimicus/plugins/api.py -> mimicus_swarm-0.2.2/src/mimicus/plugins
+copying src/mimicus/plugins/builtin.py -> mimicus_swarm-0.2.2/src/mimicus/plugins
+copying src/mimicus/plugins/loader.py -> mimicus_swarm-0.2.2/src/mimicus/plugins
+copying src/mimicus/plugins/manifests.py -> mimicus_swarm-0.2.2/src/mimicus/plugins
+copying src/mimicus/plugins/profiles.py -> mimicus_swarm-0.2.2/src/mimicus/plugins
+copying src/mimicus/plugins/registry.py -> mimicus_swarm-0.2.2/src/mimicus/plugins
+copying src/mimicus/plugins/services.py -> mimicus_swarm-0.2.2/src/mimicus/plugins
+copying src/mimicus/providers/__init__.py -> mimicus_swarm-0.2.2/src/mimicus/providers
+copying src/mimicus/providers/base.py -> mimicus_swarm-0.2.2/src/mimicus/providers
+copying src/mimicus/providers/openai_agents.py -> mimicus_swarm-0.2.2/src/mimicus/providers
+copying src/mimicus/providers/scripted.py -> mimicus_swarm-0.2.2/src/mimicus/providers
+copying src/mimicus/storage/__init__.py -> mimicus_swarm-0.2.2/src/mimicus/storage
+copying src/mimicus/storage/migrations_adapter.py -> mimicus_swarm-0.2.2/src/mimicus/storage
+copying src/mimicus/storage/models.py -> mimicus_swarm-0.2.2/src/mimicus/storage
+copying src/mimicus/storage/postgres_compat.py -> mimicus_swarm-0.2.2/src/mimicus/storage
+copying src/mimicus/storage/repository.py -> mimicus_swarm-0.2.2/src/mimicus/storage
+copying src/mimicus/storage/swarm_models.py -> mimicus_swarm-0.2.2/src/mimicus/storage
+copying src/mimicus/storage/swarm_state.py -> mimicus_swarm-0.2.2/src/mimicus/storage
+copying src/mimicus/validation/__init__.py -> mimicus_swarm-0.2.2/src/mimicus/validation
+copying src/mimicus/validation/e2e.py -> mimicus_swarm-0.2.2/src/mimicus/validation
+copying src/mimicus/validation/order003_e2e.py -> mimicus_swarm-0.2.2/src/mimicus/validation
+copying src/mimicus/validation/order003_worker.py -> mimicus_swarm-0.2.2/src/mimicus/validation
+copying src/mimicus/validation/worker.py -> mimicus_swarm-0.2.2/src/mimicus/validation
+copying src/mimicus/verification/__init__.py -> mimicus_swarm-0.2.2/src/mimicus/verification
+copying src/mimicus/verification/models.py -> mimicus_swarm-0.2.2/src/mimicus/verification
+copying src/mimicus/verification/service.py -> mimicus_swarm-0.2.2/src/mimicus/verification
+copying src/mimicus_swarm.egg-info/PKG-INFO -> mimicus_swarm-0.2.2/src/mimicus_swarm.egg-info
+copying src/mimicus_swarm.egg-info/SOURCES.txt -> mimicus_swarm-0.2.2/src/mimicus_swarm.egg-info
+copying src/mimicus_swarm.egg-info/dependency_links.txt -> mimicus_swarm-0.2.2/src/mimicus_swarm.egg-info
+copying src/mimicus_swarm.egg-info/entry_points.txt -> mimicus_swarm-0.2.2/src/mimicus_swarm.egg-info
+copying src/mimicus_swarm.egg-info/requires.txt -> mimicus_swarm-0.2.2/src/mimicus_swarm.egg-info
+copying src/mimicus_swarm.egg-info/top_level.txt -> mimicus_swarm-0.2.2/src/mimicus_swarm.egg-info
+copying src/mimicus_swarm.egg-info/SOURCES.txt -> mimicus_swarm-0.2.2/src/mimicus_swarm.egg-info
+Writing mimicus_swarm-0.2.2/setup.cfg
+Creating tar archive
+removing 'mimicus_swarm-0.2.2' (and everything under it)
+* Building wheel from sdist
+* Creating isolated environment: venv+pip...
+* Installing packages in isolated environment:
+  - setuptools==82.0.1
+* Getting build dependencies for wheel...
+running egg_info
+writing src/mimicus_swarm.egg-info/PKG-INFO
+writing dependency_links to src/mimicus_swarm.egg-info/dependency_links.txt
+writing entry points to src/mimicus_swarm.egg-info/entry_points.txt
+writing requirements to src/mimicus_swarm.egg-info/requires.txt
+writing top-level names to src/mimicus_swarm.egg-info/top_level.txt
+reading manifest file 'src/mimicus_swarm.egg-info/SOURCES.txt'
+adding license file 'LICENSE'
+writing manifest file 'src/mimicus_swarm.egg-info/SOURCES.txt'
+* Building wheel...
+running bdist_wheel
+running build
+running build_py
+creating build/lib/mimicus
+copying src/mimicus/__init__.py -> build/lib/mimicus
+copying src/mimicus/benchmark.py -> build/lib/mimicus
+copying src/mimicus/config.py -> build/lib/mimicus
+copying src/mimicus/types.py -> build/lib/mimicus
+copying src/mimicus/security.py -> build/lib/mimicus
+copying src/mimicus/canonical.py -> build/lib/mimicus
+creating build/lib/mimicus/germinal
+copying src/mimicus/germinal/__init__.py -> build/lib/mimicus/germinal
+copying src/mimicus/germinal/mutate.py -> build/lib/mimicus/germinal
+copying src/mimicus/germinal/center.py -> build/lib/mimicus/germinal
+copying src/mimicus/germinal/promote.py -> build/lib/mimicus/germinal
+copying src/mimicus/germinal/fossils.py -> build/lib/mimicus/germinal
+creating build/lib/mimicus/providers
+copying src/mimicus/providers/__init__.py -> build/lib/mimicus/providers
+copying src/mimicus/providers/scripted.py -> build/lib/mimicus/providers
+copying src/mimicus/providers/openai_agents.py -> build/lib/mimicus/providers
+copying src/mimicus/providers/base.py -> build/lib/mimicus/providers
+creating build/lib/mimicus/agents
+copying src/mimicus/agents/__init__.py -> build/lib/mimicus/agents
+copying src/mimicus/agents/auditions.py -> build/lib/mimicus/agents
+copying src/mimicus/agents/identity.py -> build/lib/mimicus/agents
+copying src/mimicus/agents/calibration.py -> build/lib/mimicus/agents
+copying src/mimicus/agents/bankruptcy.py -> build/lib/mimicus/agents
+copying src/mimicus/agents/fingerprints.py -> build/lib/mimicus/agents
+copying src/mimicus/agents/phenotypes.py -> build/lib/mimicus/agents
+creating build/lib/mimicus/coalition
+copying src/mimicus/coalition/__init__.py -> build/lib/mimicus/coalition
+copying src/mimicus/coalition/topology.py -> build/lib/mimicus/coalition
+copying src/mimicus/coalition/selector.py -> build/lib/mimicus/coalition
+copying src/mimicus/coalition/threat_profile.py -> build/lib/mimicus/coalition
+copying src/mimicus/coalition/sparse_comm.py -> build/lib/mimicus/coalition
+creating build/lib/mimicus/falsifiers
+copying src/mimicus/falsifiers/__init__.py -> build/lib/mimicus/falsifiers
+copying src/mimicus/falsifiers/builtins.py -> build/lib/mimicus/falsifiers
+copying src/mimicus/falsifiers/spec.py -> build/lib/mimicus/falsifiers
+copying src/mimicus/falsifiers/primitives.py -> build/lib/mimicus/falsifiers
+copying src/mimicus/falsifiers/market.py -> build/lib/mimicus/falsifiers
+copying src/mimicus/falsifiers/registry.py -> build/lib/mimicus/falsifiers
+copying src/mimicus/falsifiers/k3_compat.py -> build/lib/mimicus/falsifiers
+creating build/lib/mimicus/orchestration
+copying src/mimicus/orchestration/__init__.py -> build/lib/mimicus/orchestration
+copying src/mimicus/orchestration/communication.py -> build/lib/mimicus/orchestration
+copying src/mimicus/orchestration/morphology.py -> build/lib/mimicus/orchestration
+copying src/mimicus/orchestration/task_ledger.py -> build/lib/mimicus/orchestration
+copying src/mimicus/orchestration/attribution.py -> build/lib/mimicus/orchestration
+copying src/mimicus/orchestration/legacy_engine.py -> build/lib/mimicus/orchestration
+copying src/mimicus/orchestration/synthesis.py -> build/lib/mimicus/orchestration
+copying src/mimicus/orchestration/decomposition.py -> build/lib/mimicus/orchestration
+copying src/mimicus/orchestration/progress_ledger.py -> build/lib/mimicus/orchestration
+copying src/mimicus/orchestration/replay.py -> build/lib/mimicus/orchestration
+copying src/mimicus/orchestration/engine.py -> build/lib/mimicus/orchestration
+copying src/mimicus/orchestration/proximity.py -> build/lib/mimicus/orchestration
+copying src/mimicus/orchestration/budget.py -> build/lib/mimicus/orchestration
+copying src/mimicus/orchestration/swarm_core.py -> build/lib/mimicus/orchestration
+copying src/mimicus/orchestration/dag_executor.py -> build/lib/mimicus/orchestration
+creating build/lib/mimicus/plugins
+copying src/mimicus/plugins/__init__.py -> build/lib/mimicus/plugins
+copying src/mimicus/plugins/api.py -> build/lib/mimicus/plugins
+copying src/mimicus/plugins/services.py -> build/lib/mimicus/plugins
+copying src/mimicus/plugins/manifests.py -> build/lib/mimicus/plugins
+copying src/mimicus/plugins/builtin.py -> build/lib/mimicus/plugins
+copying src/mimicus/plugins/profiles.py -> build/lib/mimicus/plugins
+copying src/mimicus/plugins/registry.py -> build/lib/mimicus/plugins
+copying src/mimicus/plugins/loader.py -> build/lib/mimicus/plugins
+creating build/lib/mimicus/memory
+copying src/mimicus/memory/__init__.py -> build/lib/mimicus/memory
+copying src/mimicus/memory/retrieval.py -> build/lib/mimicus/memory
+copying src/mimicus/memory/gates.py -> build/lib/mimicus/memory
+copying src/mimicus/memory/models.py -> build/lib/mimicus/memory
+copying src/mimicus/memory/provenance.py -> build/lib/mimicus/memory
+creating build/lib/mimicus/events
+copying src/mimicus/events/__init__.py -> build/lib/mimicus/events
+copying src/mimicus/events/ledger.py -> build/lib/mimicus/events
+copying src/mimicus/events/bus.py -> build/lib/mimicus/events
+creating build/lib/mimicus/verification
+copying src/mimicus/verification/__init__.py -> build/lib/mimicus/verification
+copying src/mimicus/verification/service.py -> build/lib/mimicus/verification
+copying src/mimicus/verification/models.py -> build/lib/mimicus/verification
+creating build/lib/mimicus/interfaces
+copying src/mimicus/interfaces/__init__.py -> build/lib/mimicus/interfaces
+copying src/mimicus/interfaces/mcp_server.py -> build/lib/mimicus/interfaces
+copying src/mimicus/interfaces/cli.py -> build/lib/mimicus/interfaces
+creating build/lib/mimicus/claims
+copying src/mimicus/claims/__init__.py -> build/lib/mimicus/claims
+copying src/mimicus/claims/models.py -> build/lib/mimicus/claims
+copying src/mimicus/claims/evidence_bundle.py -> build/lib/mimicus/claims
+copying src/mimicus/claims/evidence.py -> build/lib/mimicus/claims
+copying src/mimicus/claims/graph.py -> build/lib/mimicus/claims
+creating build/lib/mimicus/validation
+copying src/mimicus/validation/__init__.py -> build/lib/mimicus/validation
+copying src/mimicus/validation/order003_e2e.py -> build/lib/mimicus/validation
+copying src/mimicus/validation/e2e.py -> build/lib/mimicus/validation
+copying src/mimicus/validation/worker.py -> build/lib/mimicus/validation
+copying src/mimicus/validation/order003_worker.py -> build/lib/mimicus/validation
+creating build/lib/mimicus/storage
+copying src/mimicus/storage/__init__.py -> build/lib/mimicus/storage
+copying src/mimicus/storage/swarm_models.py -> build/lib/mimicus/storage
+copying src/mimicus/storage/models.py -> build/lib/mimicus/storage
+copying src/mimicus/storage/postgres_compat.py -> build/lib/mimicus/storage
+copying src/mimicus/storage/repository.py -> build/lib/mimicus/storage
+copying src/mimicus/storage/swarm_state.py -> build/lib/mimicus/storage
+copying src/mimicus/storage/migrations_adapter.py -> build/lib/mimicus/storage
+running egg_info
+writing src/mimicus_swarm.egg-info/PKG-INFO
+writing dependency_links to src/mimicus_swarm.egg-info/dependency_links.txt
+writing entry points to src/mimicus_swarm.egg-info/entry_points.txt
+writing requirements to src/mimicus_swarm.egg-info/requires.txt
+writing top-level names to src/mimicus_swarm.egg-info/top_level.txt
+reading manifest file 'src/mimicus_swarm.egg-info/SOURCES.txt'
+adding license file 'LICENSE'
+writing manifest file 'src/mimicus_swarm.egg-info/SOURCES.txt'
+installing to build/bdist.linux-x86_64/wheel
+running install
+running install_lib
+creating build/bdist.linux-x86_64/wheel
+creating build/bdist.linux-x86_64/wheel/mimicus
+copying build/lib/mimicus/__init__.py -> build/bdist.linux-x86_64/wheel/./mimicus
+copying build/lib/mimicus/benchmark.py -> build/bdist.linux-x86_64/wheel/./mimicus
+creating build/bdist.linux-x86_64/wheel/mimicus/germinal
+copying build/lib/mimicus/germinal/__init__.py -> build/bdist.linux-x86_64/wheel/./mimicus/germinal
+copying build/lib/mimicus/germinal/mutate.py -> build/bdist.linux-x86_64/wheel/./mimicus/germinal
+copying build/lib/mimicus/germinal/center.py -> build/bdist.linux-x86_64/wheel/./mimicus/germinal
+copying build/lib/mimicus/germinal/promote.py -> build/bdist.linux-x86_64/wheel/./mimicus/germinal
+copying build/lib/mimicus/germinal/fossils.py -> build/bdist.linux-x86_64/wheel/./mimicus/germinal
+creating build/bdist.linux-x86_64/wheel/mimicus/providers
+copying build/lib/mimicus/providers/__init__.py -> build/bdist.linux-x86_64/wheel/./mimicus/providers
+copying build/lib/mimicus/providers/scripted.py -> build/bdist.linux-x86_64/wheel/./mimicus/providers
+copying build/lib/mimicus/providers/openai_agents.py -> build/bdist.linux-x86_64/wheel/./mimicus/providers
+copying build/lib/mimicus/providers/base.py -> build/bdist.linux-x86_64/wheel/./mimicus/providers
+creating build/bdist.linux-x86_64/wheel/mimicus/agents
+copying build/lib/mimicus/agents/__init__.py -> build/bdist.linux-x86_64/wheel/./mimicus/agents
+copying build/lib/mimicus/agents/auditions.py -> build/bdist.linux-x86_64/wheel/./mimicus/agents
+copying build/lib/mimicus/agents/identity.py -> build/bdist.linux-x86_64/wheel/./mimicus/agents
+copying build/lib/mimicus/agents/calibration.py -> build/bdist.linux-x86_64/wheel/./mimicus/agents
+copying build/lib/mimicus/agents/bankruptcy.py -> build/bdist.linux-x86_64/wheel/./mimicus/agents
+copying build/lib/mimicus/agents/fingerprints.py -> build/bdist.linux-x86_64/wheel/./mimicus/agents
+copying build/lib/mimicus/agents/phenotypes.py -> build/bdist.linux-x86_64/wheel/./mimicus/agents
+creating build/bdist.linux-x86_64/wheel/mimicus/coalition
+copying build/lib/mimicus/coalition/__init__.py -> build/bdist.linux-x86_64/wheel/./mimicus/coalition
+copying build/lib/mimicus/coalition/topology.py -> build/bdist.linux-x86_64/wheel/./mimicus/coalition
+copying build/lib/mimicus/coalition/selector.py -> build/bdist.linux-x86_64/wheel/./mimicus/coalition
+copying build/lib/mimicus/coalition/threat_profile.py -> build/bdist.linux-x86_64/wheel/./mimicus/coalition
+copying build/lib/mimicus/coalition/sparse_comm.py -> build/bdist.linux-x86_64/wheel/./mimicus/coalition
+creating build/bdist.linux-x86_64/wheel/mimicus/falsifiers
+copying build/lib/mimicus/falsifiers/__init__.py -> build/bdist.linux-x86_64/wheel/./mimicus/falsifiers
+copying build/lib/mimicus/falsifiers/builtins.py -> build/bdist.linux-x86_64/wheel/./mimicus/falsifiers
+copying build/lib/mimicus/falsifiers/spec.py -> build/bdist.linux-x86_64/wheel/./mimicus/falsifiers
+copying build/lib/mimicus/falsifiers/primitives.py -> build/bdist.linux-x86_64/wheel/./mimicus/falsifiers
+copying build/lib/mimicus/falsifiers/market.py -> build/bdist.linux-x86_64/wheel/./mimicus/falsifiers
+copying build/lib/mimicus/falsifiers/registry.py -> build/bdist.linux-x86_64/wheel/./mimicus/falsifiers
+copying build/lib/mimicus/falsifiers/k3_compat.py -> build/bdist.linux-x86_64/wheel/./mimicus/falsifiers
+creating build/bdist.linux-x86_64/wheel/mimicus/orchestration
+copying build/lib/mimicus/orchestration/__init__.py -> build/bdist.linux-x86_64/wheel/./mimicus/orchestration
+copying build/lib/mimicus/orchestration/communication.py -> build/bdist.linux-x86_64/wheel/./mimicus/orchestration
+copying build/lib/mimicus/orchestration/morphology.py -> build/bdist.linux-x86_64/wheel/./mimicus/orchestration
+copying build/lib/mimicus/orchestration/task_ledger.py -> build/bdist.linux-x86_64/wheel/./mimicus/orchestration
+copying build/lib/mimicus/orchestration/attribution.py -> build/bdist.linux-x86_64/wheel/./mimicus/orchestration
+copying build/lib/mimicus/orchestration/legacy_engine.py -> build/bdist.linux-x86_64/wheel/./mimicus/orchestration
+copying build/lib/mimicus/orchestration/synthesis.py -> build/bdist.linux-x86_64/wheel/./mimicus/orchestration
+copying build/lib/mimicus/orchestration/decomposition.py -> build/bdist.linux-x86_64/wheel/./mimicus/orchestration
+copying build/lib/mimicus/orchestration/progress_ledger.py -> build/bdist.linux-x86_64/wheel/./mimicus/orchestration
+copying build/lib/mimicus/orchestration/replay.py -> build/bdist.linux-x86_64/wheel/./mimicus/orchestration
+copying build/lib/mimicus/orchestration/engine.py -> build/bdist.linux-x86_64/wheel/./mimicus/orchestration
+copying build/lib/mimicus/orchestration/proximity.py -> build/bdist.linux-x86_64/wheel/./mimicus/orchestration
+copying build/lib/mimicus/orchestration/budget.py -> build/bdist.linux-x86_64/wheel/./mimicus/orchestration
+copying build/lib/mimicus/orchestration/swarm_core.py -> build/bdist.linux-x86_64/wheel/./mimicus/orchestration
+copying build/lib/mimicus/orchestration/dag_executor.py -> build/bdist.linux-x86_64/wheel/./mimicus/orchestration
+creating build/bdist.linux-x86_64/wheel/mimicus/plugins
+copying build/lib/mimicus/plugins/__init__.py -> build/bdist.linux-x86_64/wheel/./mimicus/plugins
+copying build/lib/mimicus/plugins/api.py -> build/bdist.linux-x86_64/wheel/./mimicus/plugins
+copying build/lib/mimicus/plugins/services.py -> build/bdist.linux-x86_64/wheel/./mimicus/plugins
+copying build/lib/mimicus/plugins/manifests.py -> build/bdist.linux-x86_64/wheel/./mimicus/plugins
+copying build/lib/mimicus/plugins/builtin.py -> build/bdist.linux-x86_64/wheel/./mimicus/plugins
+copying build/lib/mimicus/plugins/profiles.py -> build/bdist.linux-x86_64/wheel/./mimicus/plugins
+copying build/lib/mimicus/plugins/registry.py -> build/bdist.linux-x86_64/wheel/./mimicus/plugins
+copying build/lib/mimicus/plugins/loader.py -> build/bdist.linux-x86_64/wheel/./mimicus/plugins
+copying build/lib/mimicus/config.py -> build/bdist.linux-x86_64/wheel/./mimicus
+creating build/bdist.linux-x86_64/wheel/mimicus/memory
+copying build/lib/mimicus/memory/__init__.py -> build/bdist.linux-x86_64/wheel/./mimicus/memory
+copying build/lib/mimicus/memory/retrieval.py -> build/bdist.linux-x86_64/wheel/./mimicus/memory
+copying build/lib/mimicus/memory/gates.py -> build/bdist.linux-x86_64/wheel/./mimicus/memory
+copying build/lib/mimicus/memory/models.py -> build/bdist.linux-x86_64/wheel/./mimicus/memory
+copying build/lib/mimicus/memory/provenance.py -> build/bdist.linux-x86_64/wheel/./mimicus/memory
+creating build/bdist.linux-x86_64/wheel/mimicus/events
+copying build/lib/mimicus/events/__init__.py -> build/bdist.linux-x86_64/wheel/./mimicus/events
+copying build/lib/mimicus/events/ledger.py -> build/bdist.linux-x86_64/wheel/./mimicus/events
+copying build/lib/mimicus/events/bus.py -> build/bdist.linux-x86_64/wheel/./mimicus/events
+creating build/bdist.linux-x86_64/wheel/mimicus/verification
+copying build/lib/mimicus/verification/__init__.py -> build/bdist.linux-x86_64/wheel/./mimicus/verification
+copying build/lib/mimicus/verification/service.py -> build/bdist.linux-x86_64/wheel/./mimicus/verification
+copying build/lib/mimicus/verification/models.py -> build/bdist.linux-x86_64/wheel/./mimicus/verification
+copying build/lib/mimicus/types.py -> build/bdist.linux-x86_64/wheel/./mimicus
+creating build/bdist.linux-x86_64/wheel/mimicus/interfaces
+copying build/lib/mimicus/interfaces/__init__.py -> build/bdist.linux-x86_64/wheel/./mimicus/interfaces
+copying build/lib/mimicus/interfaces/mcp_server.py -> build/bdist.linux-x86_64/wheel/./mimicus/interfaces
+copying build/lib/mimicus/interfaces/cli.py -> build/bdist.linux-x86_64/wheel/./mimicus/interfaces
+copying build/lib/mimicus/security.py -> build/bdist.linux-x86_64/wheel/./mimicus
+creating build/bdist.linux-x86_64/wheel/mimicus/claims
+copying build/lib/mimicus/claims/__init__.py -> build/bdist.linux-x86_64/wheel/./mimicus/claims
+copying build/lib/mimicus/claims/models.py -> build/bdist.linux-x86_64/wheel/./mimicus/claims
+copying build/lib/mimicus/claims/evidence_bundle.py -> build/bdist.linux-x86_64/wheel/./mimicus/claims
+copying build/lib/mimicus/claims/evidence.py -> build/bdist.linux-x86_64/wheel/./mimicus/claims
+copying build/lib/mimicus/claims/graph.py -> build/bdist.linux-x86_64/wheel/./mimicus/claims
+creating build/bdist.linux-x86_64/wheel/mimicus/validation
+copying build/lib/mimicus/validation/__init__.py -> build/bdist.linux-x86_64/wheel/./mimicus/validation
+copying build/lib/mimicus/validation/order003_e2e.py -> build/bdist.linux-x86_64/wheel/./mimicus/validation
+copying build/lib/mimicus/validation/e2e.py -> build/bdist.linux-x86_64/wheel/./mimicus/validation
+copying build/lib/mimicus/validation/worker.py -> build/bdist.linux-x86_64/wheel/./mimicus/validation
+copying build/lib/mimicus/validation/order003_worker.py -> build/bdist.linux-x86_64/wheel/./mimicus/validation
+copying build/lib/mimicus/canonical.py -> build/bdist.linux-x86_64/wheel/./mimicus
+creating build/bdist.linux-x86_64/wheel/mimicus/storage
+copying build/lib/mimicus/storage/__init__.py -> build/bdist.linux-x86_64/wheel/./mimicus/storage
+copying build/lib/mimicus/storage/swarm_models.py -> build/bdist.linux-x86_64/wheel/./mimicus/storage
+copying build/lib/mimicus/storage/models.py -> build/bdist.linux-x86_64/wheel/./mimicus/storage
+copying build/lib/mimicus/storage/postgres_compat.py -> build/bdist.linux-x86_64/wheel/./mimicus/storage
+copying build/lib/mimicus/storage/repository.py -> build/bdist.linux-x86_64/wheel/./mimicus/storage
+copying build/lib/mimicus/storage/swarm_state.py -> build/bdist.linux-x86_64/wheel/./mimicus/storage
+copying build/lib/mimicus/storage/migrations_adapter.py -> build/bdist.linux-x86_64/wheel/./mimicus/storage
+running install_egg_info
+Copying src/mimicus_swarm.egg-info to build/bdist.linux-x86_64/wheel/./mimicus_swarm-0.2.2-py3.12.egg-info
+running install_scripts
+creating build/bdist.linux-x86_64/wheel/mimicus_swarm-0.2.2.dist-info/WHEEL
+creating '/home/runner/work/MiMicus-swarm/MiMicus-swarm/dist/.tmp-jxkzk4j0/mimicus_swarm-0.2.2-py3-none-any.whl' and adding 'build/bdist.linux-x86_64/wheel' to it
+adding 'mimicus/__init__.py'
+adding 'mimicus/benchmark.py'
+adding 'mimicus/canonical.py'
+adding 'mimicus/config.py'
+adding 'mimicus/security.py'
+adding 'mimicus/types.py'
+adding 'mimicus/agents/__init__.py'
+adding 'mimicus/agents/auditions.py'
+adding 'mimicus/agents/bankruptcy.py'
+adding 'mimicus/agents/calibration.py'
+adding 'mimicus/agents/fingerprints.py'
+adding 'mimicus/agents/identity.py'
+adding 'mimicus/agents/phenotypes.py'
+adding 'mimicus/claims/__init__.py'
+adding 'mimicus/claims/evidence.py'
+adding 'mimicus/claims/evidence_bundle.py'
+adding 'mimicus/claims/graph.py'
+adding 'mimicus/claims/models.py'
+adding 'mimicus/coalition/__init__.py'
+adding 'mimicus/coalition/selector.py'
+adding 'mimicus/coalition/sparse_comm.py'
+adding 'mimicus/coalition/threat_profile.py'
+adding 'mimicus/coalition/topology.py'
+adding 'mimicus/events/__init__.py'
+adding 'mimicus/events/bus.py'
+adding 'mimicus/events/ledger.py'
+adding 'mimicus/falsifiers/__init__.py'
+adding 'mimicus/falsifiers/builtins.py'
+adding 'mimicus/falsifiers/k3_compat.py'
+adding 'mimicus/falsifiers/market.py'
+adding 'mimicus/falsifiers/primitives.py'
+adding 'mimicus/falsifiers/registry.py'
+adding 'mimicus/falsifiers/spec.py'
+adding 'mimicus/germinal/__init__.py'
+adding 'mimicus/germinal/center.py'
+adding 'mimicus/germinal/fossils.py'
+adding 'mimicus/germinal/mutate.py'
+adding 'mimicus/germinal/promote.py'
+adding 'mimicus/interfaces/__init__.py'
+adding 'mimicus/interfaces/cli.py'
+adding 'mimicus/interfaces/mcp_server.py'
+adding 'mimicus/memory/__init__.py'
+adding 'mimicus/memory/gates.py'
+adding 'mimicus/memory/models.py'
+adding 'mimicus/memory/provenance.py'
+adding 'mimicus/memory/retrieval.py'
+adding 'mimicus/orchestration/__init__.py'
+adding 'mimicus/orchestration/attribution.py'
+adding 'mimicus/orchestration/budget.py'
+adding 'mimicus/orchestration/communication.py'
+adding 'mimicus/orchestration/dag_executor.py'
+adding 'mimicus/orchestration/decomposition.py'
+adding 'mimicus/orchestration/engine.py'
+adding 'mimicus/orchestration/legacy_engine.py'
+adding 'mimicus/orchestration/morphology.py'
+adding 'mimicus/orchestration/progress_ledger.py'
+adding 'mimicus/orchestration/proximity.py'
+adding 'mimicus/orchestration/replay.py'
+adding 'mimicus/orchestration/swarm_core.py'
+adding 'mimicus/orchestration/synthesis.py'
+adding 'mimicus/orchestration/task_ledger.py'
+adding 'mimicus/plugins/__init__.py'
+adding 'mimicus/plugins/api.py'
+adding 'mimicus/plugins/builtin.py'
+adding 'mimicus/plugins/loader.py'
+adding 'mimicus/plugins/manifests.py'
+adding 'mimicus/plugins/profiles.py'
+adding 'mimicus/plugins/registry.py'
+adding 'mimicus/plugins/services.py'
+adding 'mimicus/providers/__init__.py'
+adding 'mimicus/providers/base.py'
+adding 'mimicus/providers/openai_agents.py'
+adding 'mimicus/providers/scripted.py'
+adding 'mimicus/storage/__init__.py'
+adding 'mimicus/storage/migrations_adapter.py'
+adding 'mimicus/storage/models.py'
+adding 'mimicus/storage/postgres_compat.py'
+adding 'mimicus/storage/repository.py'
+adding 'mimicus/storage/swarm_models.py'
+adding 'mimicus/storage/swarm_state.py'
+adding 'mimicus/validation/__init__.py'
+adding 'mimicus/validation/e2e.py'
+adding 'mimicus/validation/order003_e2e.py'
+adding 'mimicus/validation/order003_worker.py'
+adding 'mimicus/validation/worker.py'
+adding 'mimicus/verification/__init__.py'
+adding 'mimicus/verification/models.py'
+adding 'mimicus/verification/service.py'
+adding 'mimicus_swarm-0.2.2.dist-info/licenses/LICENSE'
+adding 'mimicus_swarm-0.2.2.dist-info/METADATA'
+adding 'mimicus_swarm-0.2.2.dist-info/WHEEL'
+adding 'mimicus_swarm-0.2.2.dist-info/entry_points.txt'
+adding 'mimicus_swarm-0.2.2.dist-info/top_level.txt'
+adding 'mimicus_swarm-0.2.2.dist-info/RECORD'
+removing build/bdist.linux-x86_64/wheel
+Successfully built mimicus_swarm-0.2.2.tar.gz and mimicus_swarm-0.2.2-py3-none-any.whl
+{
+  "database_reachable": true,
+  "estimated_max_cost_per_call": 0.0,
+  "evidence_acquisition_available": false,
+  "mcp_version": "2.0.0",
+  "placeholder_services": [],
+  "plugin_order": [
+    "agents.phenotypes",
+    "coalition.mimicus",
+    "communication.sparse",
+    "sandbox.local",
+    "storage.sqlite",
+    "telemetry.ledger",
+    "falsifiers.safe",
+    "memory.immune",
+    "model.scripted"
+  ],
+  "plugin_services": {
+    "agent_factory": "agents.phenotypes",
+    "coalition": "coalition.mimicus",
+    "communication": "communication.sparse",
+    "falsifiers": "falsifiers.safe",
+    "memory": "memory.immune",
+    "model_provider": "model.scripted",
+    "sandbox": "sandbox.local",
+    "storage": "storage.sqlite",
+    "telemetry": "telemetry.ledger"
+  },
+  "pricing_metadata_authoritative": true,
+  "pricing_preflight_status": "READY",
+  "profile": "offline",
+  "provider_live_credential_present": false,
+  "provider_ready": true,
+  "provider_supports_tools": false,
+  "provider_tool_manifest_hash": "no-tools",
+  "secrets_printed": false,
+  "version": "0.2.2"
+}

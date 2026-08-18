@@ -1,0 +1,161 @@
+{
+  "assigned_subtasks": [
+    "55b21884d1c04311702aa87dffe12494b808566b43b591e238f0f06bf5d8fd55",
+    "7071874247b4654c2db62e91618439735e7ed548e9339ddeb89b1696acb4d658",
+    "750157daab65f708b07480535a3ea69503e786dcabbda59a030dab71f82389cc",
+    "b9179fec41551ad52940efa4d8cc7b6ebc23f927ae70130890636b21479022cf",
+    "f02fbe3e9c11e941d7550d20cd5dbf598a3418a7ac9edcb78cb5609ddfe0fc2f",
+    "fb5931857edaaec48fe7e6ff243a2251d059cee2f609a59426ad7591be200e4f"
+  ],
+  "complete_run_id": "9b1dabf5-1b68-4ae5-888e-d377fe5cdb99",
+  "executed_subtasks": [
+    "55b21884d1c04311702aa87dffe12494b808566b43b591e238f0f06bf5d8fd55",
+    "7071874247b4654c2db62e91618439735e7ed548e9339ddeb89b1696acb4d658",
+    "750157daab65f708b07480535a3ea69503e786dcabbda59a030dab71f82389cc",
+    "b9179fec41551ad52940efa4d8cc7b6ebc23f927ae70130890636b21479022cf",
+    "f02fbe3e9c11e941d7550d20cd5dbf598a3418a7ac9edcb78cb5609ddfe0fc2f",
+    "fb5931857edaaec48fe7e6ff243a2251d059cee2f609a59426ad7591be200e4f"
+  ],
+  "incomplete_run_id": "42fe64ad-4e15-464a-bcb5-04e034b7697c",
+  "incomplete_status": "inconclusive",
+  "incomplete_unresolved_subtasks": [
+    "85d44ec2d86a97a01fc0452abb90d93010faadca68752fd606c7c88da21e9f15"
+  ],
+  "pass": true,
+  "required_subtasks": [
+    "55b21884d1c04311702aa87dffe12494b808566b43b591e238f0f06bf5d8fd55",
+    "7071874247b4654c2db62e91618439735e7ed548e9339ddeb89b1696acb4d658",
+    "750157daab65f708b07480535a3ea69503e786dcabbda59a030dab71f82389cc",
+    "b9179fec41551ad52940efa4d8cc7b6ebc23f927ae70130890636b21479022cf",
+    "f02fbe3e9c11e941d7550d20cd5dbf598a3418a7ac9edcb78cb5609ddfe0fc2f",
+    "fb5931857edaaec48fe7e6ff243a2251d059cee2f609a59426ad7591be200e4f"
+  ],
+  "scoped_provider_requests": [
+    {
+      "declared_scope": [
+        "claim_figure",
+        "claimed",
+        "price",
+        "price_period",
+        "users"
+      ],
+      "evidence_hashes": [
+        "4aa7744c968eb7736d9e2df8fdaf120b7fa718087384c9765cafdab71c68e5fe"
+      ],
+      "evidence_keys": [
+        "claim_figure",
+        "claimed",
+        "price",
+        "price_period",
+        "users"
+      ],
+      "phenotype": "numeric-1",
+      "task": "Evaluate the numeric subproblem using only its structured evidence scope; return a bounded claim."
+    },
+    {
+      "declared_scope": [
+        "as_of",
+        "evidence_date"
+      ],
+      "evidence_hashes": [
+        "4aa7744c968eb7736d9e2df8fdaf120b7fa718087384c9765cafdab71c68e5fe"
+      ],
+      "evidence_keys": [
+        "as_of",
+        "evidence_date"
+      ],
+      "phenotype": "source-1",
+      "task": "Evaluate the freshness subproblem using only its structured evidence scope; return a bounded claim."
+    },
+    {
+      "declared_scope": [
+        "clusters",
+        "evidence_spans",
+        "texts"
+      ],
+      "evidence_hashes": [
+        "4aa7744c968eb7736d9e2df8fdaf120b7fa718087384c9765cafdab71c68e5fe"
+      ],
+      "evidence_keys": [
+        "clusters",
+        "evidence_spans",
+        "texts"
+      ],
+      "phenotype": "counterexample-1",
+      "task": "Evaluate the source subproblem using only its structured evidence scope; return a bounded claim."
+    },
+    {
+      "declared_scope": [
+        "clusters",
+        "texts"
+      ],
+      "evidence_hashes": [
+        "4aa7744c968eb7736d9e2df8fdaf120b7fa718087384c9765cafdab71c68e5fe"
+      ],
+      "evidence_keys": [
+        "clusters",
+        "texts"
+      ],
+      "phenotype": "source-1",
+      "task": "Evaluate the independence subproblem using only its structured evidence scope; return a bounded claim."
+    },
+    {
+      "declared_scope": [
+        "claim_figure",
+        "evidence_spans"
+      ],
+      "evidence_hashes": [
+        "4aa7744c968eb7736d9e2df8fdaf120b7fa718087384c9765cafdab71c68e5fe"
+      ],
+      "evidence_keys": [
+        "claim_figure",
+        "evidence_spans"
+      ],
+      "phenotype": "critic-1",
+      "task": "Evaluate the entailment subproblem using only its structured evidence scope; return a bounded claim."
+    },
+    {
+      "declared_scope": [
+        "absence_key",
+        "registry",
+        "registry_snapshot_hash"
+      ],
+      "evidence_hashes": [
+        "4aa7744c968eb7736d9e2df8fdaf120b7fa718087384c9765cafdab71c68e5fe"
+      ],
+      "evidence_keys": [
+        "absence_key",
+        "registry",
+        "registry_snapshot_hash"
+      ],
+      "phenotype": "counterexample-1",
+      "task": "Evaluate the counterexample subproblem using only its structured evidence scope; return a bounded claim."
+    }
+  ],
+  "subgroup_results": {
+    "subgroup:capability-0": {
+      "claims": {
+        "core-agent_task-00-ab73ee96d8": "1bb7c9887c0931a79ddfc12e689a9b29e46293c72b4c7d3ab2d44fbc281cc79f",
+        "core-agent_task-02-8ea66199a6": "2690a54d4e76e861c4678abf5893045a39b9ce1c9210130fba4f56ed063890e3",
+        "core-agent_task-04-bd7fc28a6e": "64bfdbf46da3a2fc898a4eb6ab2beb45cd97ed73e1ebddc0dc7705b5a12c9315"
+      },
+      "subtask_hashes": [
+        "750157daab65f708b07480535a3ea69503e786dcabbda59a030dab71f82389cc",
+        "b9179fec41551ad52940efa4d8cc7b6ebc23f927ae70130890636b21479022cf",
+        "f02fbe3e9c11e941d7550d20cd5dbf598a3418a7ac9edcb78cb5609ddfe0fc2f"
+      ]
+    },
+    "subgroup:capability-1": {
+      "claims": {
+        "core-agent_task-01-2777ed5b76": "c598a06a038c0427b852df2ae467363aa06a18c8744b34692e0a507b1fabb56f",
+        "core-agent_task-03-79178e3686": "5e3b13a10bebac78f753596c69d0c077400ef2069e0b922a824fefbb307340f9",
+        "core-agent_task-05-722d87bd89": "df21022eeadccfd0efc43697c2812dcc3de7ae074013d441ed8b35c6f7cbe04d"
+      },
+      "subtask_hashes": [
+        "7071874247b4654c2db62e91618439735e7ed548e9339ddeb89b1696acb4d658",
+        "fb5931857edaaec48fe7e6ff243a2251d059cee2f609a59426ad7591be200e4f",
+        "55b21884d1c04311702aa87dffe12494b808566b43b591e238f0f06bf5d8fd55"
+      ]
+    }
+  }
+}

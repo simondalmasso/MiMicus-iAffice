@@ -1,0 +1,27 @@
+ORDER_007_F001_F031_REGRESSION
+============================= test session starts ==============================
+platform linux -- Python 3.12.13, pytest-9.0.2, pluggy-1.6.0
+rootdir: /home/runner/work/MiMicus-swarm/MiMicus-swarm
+configfile: pyproject.toml
+plugins: anyio-4.14.2, cov-7.0.0
+collected 13 items
+
+tests/unit/test_order005_correctness.py .......                          [ 53%]
+tests/integration/test_order005_runtime.py ......                        [100%]
+
+============================== 13 passed in 1.28s ==============================
+{"ORDER_005_EVIDENCE": "PASS", "gates": ["F018", "F019", "F020", "F021", "F022_CAPABILITIES", "F022_PREFLIGHT"]}
+{"ORDER_005_MCP_E2E": "PASS", "run_id": "8870c2eb-fbd7-42e1-bfa2-8e7bb0fe45a9"}
+============================= test session starts ==============================
+platform linux -- Python 3.12.13, pytest-9.0.2, pluggy-1.6.0
+rootdir: /home/runner/work/MiMicus-swarm/MiMicus-swarm
+configfile: pyproject.toml
+plugins: anyio-4.14.2, cov-7.0.0
+collected 10 items
+
+tests/unit/test_order006_core.py .....                                   [ 50%]
+tests/integration/test_order006_runtime.py .....                         [100%]
+
+============================== 10 passed in 2.19s ==============================
+{"order": "ORDER-006", "passed": true}
+{"ORDER_006_MCP_E2E": "PASS", "run_id": "4b348756-1301-46f2-841e-4d7097f3e9f0"}

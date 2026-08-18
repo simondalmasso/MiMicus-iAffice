@@ -1,0 +1,58 @@
+{
+  "authorized_verification": {
+    "accepted": true,
+    "attributions": [
+      {
+        "capability": "numeric",
+        "fingerprint": "7b92ac4afcb66cec6a35dac51f59eb4f75770b47ca7ccb251214a1d53192a950",
+        "outcome": false,
+        "test_family": "numeric_verified_task"
+      }
+    ],
+    "receipt_hash": "f4d2044321f73e0eb1c99c853b59a2562ffa091f4b99536954fbc2011d452d85",
+    "removal_attributions": [
+      {
+        "baseline_utility": 0.0,
+        "capability": "numeric",
+        "fingerprint": "7b92ac4afcb66cec6a35dac51f59eb4f75770b47ca7ccb251214a1d53192a950",
+        "marginal_delta": 0.0,
+        "method": "leave_one_out_semantic_decision_v1",
+        "provenance_hash": "2f4da7dbf6c2835793daa9bdab185d0f15d8761564cfc4bf2a27e05c9115c2d0",
+        "without_agent_utility": 0.0
+      }
+    ]
+  },
+  "first_run": {
+    "claim_hash": "462c9553566114e606b3d319908aee7882087c99b30954128ebe22dcf13009c6",
+    "morphology": "solo",
+    "run_id": "b9d0ecae-e89d-4a36-908c-5afb43379580",
+    "source_mode": "runtime"
+  },
+  "forged_verification": {
+    "accepted": false,
+    "learning_state_unchanged": true,
+    "receipt_state_unchanged": true,
+    "rejection_reason": "verifier_not_authorized"
+  },
+  "legacy_escape_fields_exposed": [],
+  "pass": true,
+  "path": "/mcp",
+  "restart": {
+    "policy_persisted": true,
+    "receipt_persisted": true,
+    "replay_verified": true,
+    "rerun_id": "0d493f2c-1a73-47a8-980e-09da066bc454",
+    "rerun_source_mode": "runtime"
+  },
+  "runtime_schema_properties": [
+    "budget_usd",
+    "depth",
+    "domain",
+    "evidence",
+    "learn",
+    "max_agents",
+    "max_concurrency",
+    "task"
+  ],
+  "transport": "streamable-http"
+}
