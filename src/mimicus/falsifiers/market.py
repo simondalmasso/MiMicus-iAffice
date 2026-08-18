@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Any
 
 from mimicus.canonical import sha256_obj
@@ -37,7 +37,7 @@ class FalsifierSignature:
 
     @property
     def hash(self) -> str:
-        return sha256_obj(self)
+        return sha256_obj(asdict(self))
 
 
 def falsifier_signature(spec: FalsifierSpec) -> FalsifierSignature:
