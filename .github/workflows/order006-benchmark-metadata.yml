@@ -1,0 +1,34 @@
+name: ORDER-006 benchmark metadata patch
+on:
+  push:
+    branches: [order-002-mimicus-v01]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: order-002-mimicus-v01
+      - run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/mimicus/benchmark.py')
+          s = p.read_text()
+          replacements = {
+              'ORDER-004-v0.2.1-neutral-execution-derived': 'ORDER-006-v0.3-swarm-core-neutral-execution-derived',
+              'full MiMicus ORDER-003 runtime': 'full MiMicus ORDER-006 swarm-core runtime',
+              '# MiMicus ORDER-004 neutral execution-derived benchmark': '# MiMicus ORDER-006 swarm-core neutral execution-derived benchmark',
+          }
+          for old, new in replacements.items():
+              assert old in s, old
+              s = s.replace(old, new)
+          p.write_text(s)
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/mimicus/benchmark.py
+          git commit -m "ORDER-006: normalize benchmark metadata"
+          git push origin HEAD:order-002-mimicus-v01
