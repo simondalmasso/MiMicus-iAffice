@@ -20,6 +20,13 @@ class ProviderCapabilities:
     version: str = "unknown"
     usage_metadata_available: bool = False
     cancellation: str = "asyncio"
+    known_zero_cost: bool = False
+    estimated_max_cost_per_call: float | None = None
+    pricing_metadata_authoritative: bool = False
+
+    @property
+    def runtime_identity(self) -> tuple[str, str, str]:
+        return self.provider_id, self.model_id, self.version
 
 
 @dataclass(frozen=True)
@@ -35,7 +42,7 @@ class ProviderRequest:
 @dataclass(frozen=True)
 class ProviderResponse:
     claim: Claim
-    cost: float
+    cost: float | None
     latency_ms: float
     trace_id: str | None = None
     usage: dict[str, Any] = field(default_factory=dict)
@@ -60,4 +67,6 @@ class Provider(ABC):
             revised_status=ClaimStatus.PROPOSED,
             rationale_summary="provider has no specialized challenge adapter",
             provider_call_id=None,
+            cost=0.0 if self.capabilities.known_zero_cost else None,
+            usage={"provider": self.capabilities.provider_id},
         )
