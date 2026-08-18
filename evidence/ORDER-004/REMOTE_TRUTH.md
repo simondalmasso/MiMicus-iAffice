@@ -16,4 +16,4 @@
 - Merge performed: NO
 - Direct write to `main`: NO
 
-Remote truth was reconstructed from GitHub immediately before ORDER-004 implementation. All ORDER-004 changes must descend from the audited starting head and remain on the same branch and PR.
+Remote truth was reconstructed from GitHub immediately before ORDER-004 implementation. All ORDER-004 changes descend from the audited starting head and remain on the same branch and PR. The one-shot core patch workflow is branch-local implementation tooling and deletes itself together with its staging script after applying the deterministic patch.
