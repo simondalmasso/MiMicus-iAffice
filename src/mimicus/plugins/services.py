@@ -3,8 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Protocol
 
-from mimicus.agents.identity import AgentIdentity, make_identity
-from mimicus.canonical import sha256_obj, sha256_text
+from mimicus.agents.identity import AgentIdentity, exact_fingerprint, make_identity
+from mimicus.canonical import sha256_text
 from mimicus.coalition.selector import AgentCandidate, select_coalition
 from mimicus.coalition.threat_profile import ThreatProfile
 from mimicus.falsifiers.builtins import builtin_specs
@@ -13,7 +13,7 @@ from mimicus.falsifiers.spec import FalsifierExecution, FalsifierSpec
 from mimicus.memory.gates import cross_agent_gate, retrieval_gate
 from mimicus.memory.models import MemoryItem
 from mimicus.orchestration.communication import CommunicationCandidate, select_sparse_edges
-from mimicus.providers.base import Provider
+from mimicus.providers.base import Provider, ProviderCapabilities
 from mimicus.storage.repository import Repository
 
 
@@ -43,26 +43,51 @@ class RepositoryStorage:
 
 @dataclass
 class BuiltinAgentFactory:
+    provider_capabilities: ProviderCapabilities = field(default_factory=lambda: ProviderCapabilities(provider_id="scripted", model_id="fixture-v2", version="2", known_zero_cost=True))
+    policy_version: str = "mimicus-v0.2.1-policy"
+
+    _PHENOTYPES = (
+        ("numeric-1", frozenset({"numeric", "synthesize"}), "numeric-verifier-v2.1"),
+        ("source-1", frozenset({"source", "freshness", "independence"}), "source-investigator-v2.1"),
+        ("counterexample-1", frozenset({"counterexample", "source"}), "counterexample-hunter-v2.1"),
+        ("critic-1", frozenset({"critic", "entailment"}), "adversarial-critic-v2.1"),
+        ("synth-1", frozenset({"synthesize"}), "synthesizer-v2.1"),
+    )
+
     def candidates(self) -> list[AgentCandidate]:
-        rows = [
-            ("numeric-1", {"numeric", "synthesize"}, "provider-a", "math-v2"),
-            ("source-1", {"source", "freshness", "independence"}, "provider-b", "research-v2"),
-            ("counterexample-1", {"counterexample", "source"}, "provider-c", "hunt-v2"),
-            ("critic-1", {"critic", "entailment"}, "provider-d", "critic-v2"),
-            ("synth-1", {"synthesize"}, "provider-e", "synth-v2"),
-        ]
-        return [
-            AgentCandidate(
-                fingerprint=sha256_obj({"provider": provider, "model": model, "name": name, "policy": "mimicus-v0.2"}),
-                name=name,
-                capabilities=frozenset(caps),
-                provider=provider,
-                model=model,
-                prompt_hash=sha256_text(f"{name}:v2"),
-                tool_hash=sha256_text(f"tools:{name}"),
+        caps = self.provider_capabilities
+        policy_hash = sha256_text(self.policy_version)
+        rows: list[AgentCandidate] = []
+        for name, capabilities, role_version in self._PHENOTYPES:
+            prompt_hash = sha256_text(f"mimicus:{role_version}:{name}")
+            tool_hash = sha256_text(f"tools:{role_version}:{','.join(sorted(capabilities))}")
+            fingerprint = exact_fingerprint(
+                provider=caps.provider_id,
+                model=caps.model_id,
+                model_version=caps.version,
+                phenotype=name,
+                phenotype_version=role_version,
+                system_prompt_hash=prompt_hash,
+                tool_manifest_hash=tool_hash,
+                policy_hash=policy_hash,
+                provider_adapter_version=caps.version,
             )
-            for name, caps, provider, model in rows
-        ]
+            rows.append(
+                AgentCandidate(
+                    fingerprint=fingerprint,
+                    name=name,
+                    capabilities=capabilities,
+                    provider=caps.provider_id,
+                    model=caps.model_id,
+                    prompt_hash=prompt_hash,
+                    tool_hash=tool_hash,
+                    phenotype_version=role_version,
+                    policy_hash=policy_hash,
+                    provider_adapter_version=caps.version,
+                    runtime_model_version=caps.version,
+                )
+            )
+        return rows
 
     def identity_for(self, candidate: AgentCandidate) -> AgentIdentity:
         return make_identity(
@@ -71,6 +96,12 @@ class BuiltinAgentFactory:
             model_family=candidate.model,
             phenotype=candidate.name,
             tool_policy_hash=candidate.tool_hash,
+            runtime_model_version=candidate.runtime_model_version,
+            phenotype_version=candidate.phenotype_version,
+            system_prompt_hash=candidate.prompt_hash,
+            tool_manifest_hash=candidate.tool_hash,
+            policy_hash=candidate.policy_hash,
+            provider_adapter_version=candidate.provider_adapter_version,
         )
 
 
