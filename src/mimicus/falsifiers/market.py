@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from typing import Any
 
 from mimicus.canonical import sha256_obj
@@ -113,7 +113,6 @@ class FalsifierMarket:
     @staticmethod
     def _applicability(spec: FalsifierSpec, claim: Claim, evidence: dict[str, Any]) -> float:
         keys = set(evidence)
-        # A claim-aware missing-evidence probe returns only INCONCLUSIVE when facts are absent.
         if not evidence and claim.claim_type == "other":
             return 0.10
         if spec.primitive == "numeric_invariant":
@@ -142,6 +141,7 @@ class FalsifierMarket:
         max_tests: int,
         evidence_quality: float = 1.0,
     ) -> tuple[list[ClaimFalsifierBid], list[ClaimFalsifierBid]]:
+        """Claim-first market with the same F014 proximity/novelty discipline as select()."""
         if not claims:
             return [], []
         probabilities = [claim.probability for claim in claims]
@@ -173,6 +173,8 @@ class FalsifierMarket:
         selected: list[ClaimFalsifierBid] = []
         spent = 0.0
         selected_pairs: set[tuple[str, str]] = set()
+        selected_specs: list[FalsifierSpec] = []
+        selected_spec_hashes: set[str] = set()
         spec_by_hash = {spec.hash: spec for spec in specs}
         for bid in candidates:
             if len(selected) >= max_tests:
@@ -181,10 +183,29 @@ class FalsifierMarket:
             if pair in selected_pairs:
                 continue
             spec = spec_by_hash[bid.spec_hash]
+            # Reusing one already-selected deterministic spec for another target
+            # is free at execution time; a near-duplicate different spec is not.
+            if spec.hash in selected_spec_hashes:
+                selected.append(replace(bid, selection_reason=f"{bid.selection_reason}; novelty=reuse_same_spec; proximity=1.00"))
+                selected_pairs.add(pair)
+                continue
+            closest = max((falsifier_proximity(spec, chosen) for chosen in selected_specs), default=0.0)
+            near_duplicate = bool(selected_specs) and closest >= 0.80 and any(chosen.primitive == spec.primitive for chosen in selected_specs)
+            if near_duplicate:
+                continue
+            adjusted_utility = bid.utility * (1.0 + 0.10 * max(0.0, 1.0 - closest)) if selected_specs else bid.utility
             if spent + spec.estimated_cost > budget_usd + 1e-12:
                 continue
-            selected.append(bid)
+            selected.append(
+                replace(
+                    bid,
+                    utility=adjusted_utility,
+                    selection_reason=f"{bid.selection_reason}; novelty=complementary; proximity={closest:.2f}",
+                )
+            )
             selected_pairs.add(pair)
+            selected_specs.append(spec)
+            selected_spec_hashes.add(spec.hash)
             spent += spec.estimated_cost
         return selected, candidates
 
