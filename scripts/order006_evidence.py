@@ -152,6 +152,13 @@ def real_microauditions(root: Path) -> dict[str, Any]:
 def receipt_and_germinal(root: Path) -> tuple[dict[str, Any], dict[str, Any]]:
     db = f"sqlite:///{root / 'germinal.db'}"
     engine = MiMicusEngine(db)
+    verifier_token = "order006-evidence-oracle-token-v1"
+    engine.register_verifier_authority(
+        verifier_id="oracle:order006-numeric-registry",
+        authority_class="deterministic_oracle",
+        source_independence_cluster="order006-numeric-registry-v1",
+        auth_token=verifier_token,
+    )
     run = engine.run(RunRequest(task="Assess the supplied bundle.", domain="finance", evidence=_evidence(_numeric(1248.0)), learn=True))
     assert run.falsifiers and run.falsifiers[0]["verdict"] == "PASS"
     claim = run.final_claims[0]
@@ -164,6 +171,7 @@ def receipt_and_germinal(root: Path) -> tuple[dict[str, Any], dict[str, Any]]:
         evidence_hashes=tuple(run.evidence_provenance["provider_input_evidence_hashes"]),
         snapshot_hashes=(run.falsifiers[0]["execution_snapshot_hash"],),
         verifier_id="oracle:order006-numeric-registry",
+        auth_token=verifier_token,
         observed_at=observed,
         source_independence_cluster="order006-numeric-registry-v1",
     )
@@ -373,24 +381,40 @@ def all_five(root: Path) -> dict[str, Any]:
 def cofailure(root: Path) -> dict[str, Any]:
     db = f"sqlite:///{root / 'cofailure.db'}"
     engine = MiMicusEngine(db, services=_services(db, 2))
+    verifier_token = "order006-evidence-cofailure-token-v1"
+    engine.register_verifier_authority(
+        verifier_id="order006:cofailure:authority",
+        authority_class="trusted_human",
+        source_independence_cluster="order006-cofailure-authority",
+        auth_token=verifier_token,
+    )
     failed_pair: set[str] | None = None
     run_ids: list[str] = []
     for episode in range(5):
-        result = engine.run(RunRequest(task="Assess an underdetermined question.", domain="general", max_agents=2))
+        result = engine.run(
+            RunRequest(
+                task="Assess an underdetermined question.",
+                domain="general",
+                max_agents=2,
+                evidence=_evidence({"context": f"cofailure-{episode}"}),
+            )
+        )
         run_ids.append(result.run_id)
         pair = {row["contributor_fingerprint"] for row in result.final_claims}
         failed_pair = pair if failed_pair is None else failed_pair
         assert pair == failed_pair and len(pair) == 2
-        for index, claim in enumerate(result.final_claims):
+        for claim in result.final_claims:
             verified = engine.submit_verification(
                 VerificationSubmission(
                     run_id=result.run_id,
                     claim_hash=claim["claim_hash"],
                     verified_status="FALSIFIED",
                     authority_class="trusted_human",
-                    verifier_id=f"order006:cofailure:{episode}:{index}",
+                    evidence_hashes=tuple(result.evidence_provenance["provider_input_evidence_hashes"]),
+                    verifier_id="order006:cofailure:authority",
+                    auth_token=verifier_token,
                     observed_at=datetime(2026, 8, 18, 12, episode, tzinfo=UTC),
-                    source_independence_cluster=f"order006-verified-episode-{episode}-{index}",
+                    source_independence_cluster="order006-cofailure-authority",
                 )
             )
             assert verified["accepted"] is True

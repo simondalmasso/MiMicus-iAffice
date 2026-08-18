@@ -46,7 +46,10 @@ def specialist_freshness() -> dict[str, Any]:
         "evidence_date": "2026-08-10T00:00:00+00:00",
         "as_of": "2026-08-17T00:00:00+00:00",
     }
-    results = [engine.run(RunRequest(task="Evaluate temporal freshness from supplied evidence", domain="research", scenario="freshness", fixture=fixture)) for _ in range(3)]
+    results = [
+        engine.run(RunRequest(task="Evaluate temporal freshness from supplied evidence", domain="research", scenario="freshness", source_mode="fixture", fixture=fixture))
+        for _ in range(3)
+    ]
     scope = capability_scope("research", "entailment", "entailment_canary")
     row = engine.repository.calibration(critic.fingerprint, scope)
     assert row["attempts"] == 0
@@ -67,7 +70,9 @@ def specialist_entailment() -> dict[str, Any]:
         "claim_figure": 42,
         "evidence_spans": [{"span_id": "a", "supported_figures": [42], "material_support": True}],
     }
-    result = engine.run(RunRequest(task="Evaluate citation entailment for supplied figure", domain="research", scenario="citation_entailment", fixture=fixture))
+    result = engine.run(
+        RunRequest(task="Evaluate citation entailment for supplied figure", domain="research", scenario="citation_entailment", source_mode="fixture", fixture=fixture)
+    )
     assert critic.fingerprint in result.coalition["members"]
     return {"pass": True, "critic_fingerprint": critic.fingerprint, "selected": True, "run_id": result.run_id}
 
@@ -83,7 +88,7 @@ def specialist_bankrupt() -> dict[str, Any]:
         "audition_fail_capabilities": ["entailment"],
     }
     for _ in range(3):
-        engine.run(RunRequest(task="Evaluate citation entailment for supplied figure", domain="research", scenario="citation_entailment", fixture=fixture))
+        engine.run(RunRequest(task="Evaluate citation entailment for supplied figure", domain="research", scenario="citation_entailment", source_mode="fixture", fixture=fixture))
     scope = capability_scope("research", "entailment", "entailment_canary")
     state = engine.repository.bankruptcy_state(critic.fingerprint, scope)
     assert state == "BANKRUPT"
@@ -105,13 +110,16 @@ def specialist_recovery() -> dict[str, Any]:
         "claim_figure": 42,
         "evidence_spans": [{"span_id": "a", "supported_figures": [42], "material_support": True}],
     }
-    excluded = engine.run(RunRequest(task="Evaluate citation entailment for supplied figure", domain="research", scenario="citation_entailment", fixture=fixture))
+    excluded = engine.run(
+        RunRequest(task="Evaluate citation entailment for supplied figure", domain="research", scenario="citation_entailment", source_mode="fixture", fixture=fixture)
+    )
     assert critic.fingerprint not in excluded.coalition["members"]
     recovered = engine.run(
         RunRequest(
             task="Evaluate citation entailment for supplied figure",
             domain="research",
             scenario="citation_entailment",
+            source_mode="fixture",
             fixture=fixture | {"recovery_names": ["critic-1"]},
         )
     )
@@ -194,7 +202,7 @@ def memory_openai() -> dict[str, Any]:
 def evidence_process() -> dict[str, Any]:
     engine = MiMicusEngine(_database())
     fixture = {"claim_statement": "annual amount", "claim_type": "numeric", "price": 10.0, "users": 10.0, "price_period": "monthly", "claimed": 1000.0}
-    result = engine.run(RunRequest(task="numeric annualized consistency", domain="finance", scenario="tam_12x", fixture=fixture))
+    result = engine.run(RunRequest(task="numeric annualized consistency", domain="finance", scenario="tam_12x", source_mode="fixture", fixture=fixture))
     fetched = MiMicusEngine(_database()).get_run(result.run_id)
     assert fetched is not None
     refs = {ref for claim in fetched["final_claims"] for ref in claim.get("evidence_refs", [])}
@@ -275,6 +283,7 @@ def budget_probe() -> dict[str, Any]:
                 task="source citation figure evidence",
                 domain="research",
                 scenario="general",
+                source_mode="fixture",
                 fixture={
                     "claim_statement": "evidence set",
                     "claim_type": "factual",

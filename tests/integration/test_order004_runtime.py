@@ -36,6 +36,7 @@ def test_specialist_auditions_are_capability_scoped_persistent_and_recoverable(t
                 task="Evaluate temporal freshness from supplied evidence",
                 domain="research",
                 scenario="freshness",
+                source_mode="fixture",
                 fixture=freshness_fixture,
             )
         )
@@ -54,6 +55,7 @@ def test_specialist_auditions_are_capability_scoped_persistent_and_recoverable(t
             task="Evaluate citation entailment for the supplied figure",
             domain="research",
             scenario="citation_entailment",
+            source_mode="fixture",
             fixture=entailment_fixture,
         )
     )
@@ -66,6 +68,7 @@ def test_specialist_auditions_are_capability_scoped_persistent_and_recoverable(t
                 task="Evaluate citation entailment for the supplied figure",
                 domain="research",
                 scenario="citation_entailment",
+                source_mode="fixture",
                 fixture=failing_fixture,
             )
         )
@@ -79,6 +82,7 @@ def test_specialist_auditions_are_capability_scoped_persistent_and_recoverable(t
             task="Evaluate citation entailment for the supplied figure",
             domain="research",
             scenario="citation_entailment",
+            source_mode="fixture",
             fixture=entailment_fixture,
         )
     )
@@ -89,6 +93,7 @@ def test_specialist_auditions_are_capability_scoped_persistent_and_recoverable(t
             task="Evaluate citation entailment for the supplied figure",
             domain="research",
             scenario="citation_entailment",
+            source_mode="fixture",
             fixture=entailment_fixture | {"recovery_names": ["critic-1"]},
         )
     )
@@ -228,6 +233,7 @@ def test_challenge_cannot_bypass_exhausted_budget(tmp_path: Path) -> None:
             task="source citation figure evidence",
             domain="research",
             scenario="general",
+            source_mode="fixture",
             fixture=fixture,
             budget_usd=0.01,
             max_agents=2,
@@ -249,6 +255,7 @@ def test_evidence_persists_and_all_claim_refs_resolve_after_restart(tmp_path: Pa
             task="numeric annualized consistency",
             domain="finance",
             scenario="tam_12x",
+            source_mode="fixture",
             fixture={
                 "claim_statement": "annual amount",
                 "claim_type": "numeric",
@@ -278,6 +285,7 @@ def test_evidence_rows_do_not_collide_across_repeated_runs(tmp_path: Path) -> No
         task="numeric consistency repeated",
         domain="finance",
         scenario="tam_12x",
+        source_mode="fixture",
         fixture={"claim_statement": "x", "claim_type": "numeric", "price": 1.0, "users": 1.0, "claimed": 12.0, "price_period": "monthly"},
     )
     first = engine.run(request)

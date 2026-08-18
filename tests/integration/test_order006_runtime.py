@@ -72,6 +72,13 @@ def test_real_microauditions_fail_incompetent_and_persist_bankruptcy(tmp_path: P
 def test_receipt_drives_real_germinal_and_restart_reuses_promoted_falsifier(tmp_path: Path) -> None:
     database = f"sqlite:///{tmp_path / 'germinal.db'}"
     engine = MiMicusEngine(database)
+    verifier_token = "order006-numeric-registry-token-v1"
+    engine.register_verifier_authority(
+        verifier_id="oracle:numeric-registry",
+        authority_class="deterministic_oracle",
+        source_independence_cluster="numeric-registry-v1",
+        auth_token=verifier_token,
+    )
     # Parent tolerance is 5%; 4% error passes parent, while the safe deterministic
     # mutation policy tightens to 2% after a verified false negative.
     result = engine.run(RunRequest(task="Assess the structured bundle.", domain="finance", evidence=_evidence(_numeric_facts(1248.0)), learn=True))
@@ -87,6 +94,7 @@ def test_receipt_drives_real_germinal_and_restart_reuses_promoted_falsifier(tmp_
         evidence_hashes=tuple(result.evidence_provenance["provider_input_evidence_hashes"]),
         snapshot_hashes=(snapshot,),
         verifier_id="oracle:numeric-registry",
+        auth_token=verifier_token,
         observed_at=observed,
         source_independence_cluster="numeric-registry-v1",
     )
@@ -283,21 +291,37 @@ def _services(database: str, names: int) -> RuntimeServices:
 def test_verified_cofailure_and_marginal_value_change_future_coalition_after_restart(tmp_path: Path) -> None:
     database = f"sqlite:///{tmp_path / 'cofailure.db'}"
     engine = MiMicusEngine(database, services=_services(database, 2))
+    verifier_token = "order006-cofailure-authority-token-v1"
+    engine.register_verifier_authority(
+        verifier_id="verifier:order006-regression",
+        authority_class="trusted_human",
+        source_independence_cluster="order006-regression-authority",
+        auth_token=verifier_token,
+    )
     failed_pair: set[str] | None = None
     for episode in range(5):
-        result = engine.run(RunRequest(task="Assess an underdetermined question.", domain="general", max_agents=2))
+        result = engine.run(
+            RunRequest(
+                task="Assess an underdetermined question.",
+                domain="general",
+                max_agents=2,
+                evidence=_evidence({"context": f"verified-episode-{episode}"}),
+            )
+        )
         pair = {row["contributor_fingerprint"] for row in result.final_claims}
         failed_pair = pair if failed_pair is None else failed_pair
         assert pair == failed_pair and len(pair) == 2
-        for index, claim in enumerate(result.final_claims):
+        for claim in result.final_claims:
             receipt = VerificationSubmission(
                 run_id=result.run_id,
                 claim_hash=claim["claim_hash"],
                 verified_status="FALSIFIED",
                 authority_class="trusted_human",
-                verifier_id=f"verifier:{episode}:{index}",
+                evidence_hashes=tuple(result.evidence_provenance["provider_input_evidence_hashes"]),
+                verifier_id="verifier:order006-regression",
+                auth_token=verifier_token,
                 observed_at=datetime(2026, 8, 18, 12, episode, tzinfo=UTC),
-                source_independence_cluster=f"verified-episode-{episode}-{index}",
+                source_independence_cluster="order006-regression-authority",
             )
             assert engine.submit_verification(receipt)["accepted"] is True
     assert failed_pair is not None

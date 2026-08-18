@@ -27,7 +27,7 @@ def test_task_words_never_create_fixture_facts() -> None:
         scenario, fixture = scenario_fixture(RunRequest(task=task, domain="audit"))
         assert scenario == "runtime"
         assert fixture == {}
-    explicit = RunRequest(task="same words", scenario="tam_12x", fixture={"price": 3, "users": 4, "claimed": 99})
+    explicit = RunRequest(task="same words", scenario="tam_12x", source_mode="fixture", fixture={"price": 3, "users": 4, "claimed": 99})
     assert scenario_fixture(explicit)[1] == explicit.fixture
 
 

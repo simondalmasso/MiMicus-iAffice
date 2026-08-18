@@ -36,6 +36,7 @@ def seed_memory() -> dict[str, Any]:
             task="K3 TAM 12x mismatch",
             domain="finance",
             scenario="tam_12x",
+            source_mode="fixture",
             fixture={"claim_statement": "TAM", "claim_type": "numeric", "price": 10.0, "users": 100.0, "price_period": "monthly", "claimed": 1000.0},
             learn=True,
         )
@@ -73,6 +74,7 @@ def reuse_memory() -> dict[str, Any]:
             task="K3 TAM 12x mismatch",
             domain="finance",
             scenario="tam_12x",
+            source_mode="fixture",
             fixture={"claim_statement": "TAM", "claim_type": "numeric", "price": 10.0, "users": 100.0, "price_period": "monthly", "claimed": 1000.0},
         )
     )
@@ -103,7 +105,7 @@ def germinal_seed() -> dict[str, Any]:
         "evasion_primitive": "numeric_invariant",
         "mutation_relative_tolerance": 0.02,
     }
-    result = _engine().run(RunRequest(task="TAM slight mismatch", domain="finance", scenario="tam_12x", fixture=fixture, learn=True))
+    result = _engine().run(RunRequest(task="TAM slight mismatch", domain="finance", scenario="tam_12x", source_mode="fixture", fixture=fixture, learn=True))
     assert result.germinal_changes and result.germinal_changes[0]["status"] == "PROMOTE"
     return {"stage": "germinal_seed", "pass": True, "run_id": result.run_id, "changes": result.germinal_changes, "ledger_head": result.ledger_head}
 
@@ -117,7 +119,7 @@ def germinal_reuse() -> dict[str, Any]:
         "price_period": "annual",
         "claimed": 104.0,
     }
-    result = _engine().run(RunRequest(task="TAM slight mismatch", domain="finance", scenario="tam_12x", fixture=fixture))
+    result = _engine().run(RunRequest(task="TAM slight mismatch", domain="finance", scenario="tam_12x", source_mode="fixture", fixture=fixture))
     assert result.persistent_falsifiers_reused
     assert result.falsifiers and result.falsifiers[0]["verdict"] == "FAIL"
     return {
@@ -143,7 +145,7 @@ def bankrupt_seed() -> dict[str, Any]:
     }
     run_ids: list[str] = []
     for _ in range(3):
-        result = engine.run(RunRequest(task="numeric mismatch", domain="finance", scenario="tam_12x", fixture=fixture))
+        result = engine.run(RunRequest(task="numeric mismatch", domain="finance", scenario="tam_12x", source_mode="fixture", fixture=fixture))
         run_ids.append(result.run_id)
     state = engine.repository.bankruptcy_state(candidate.fingerprint, "finance")
     assert state == "BANKRUPT"
@@ -192,7 +194,7 @@ def whitewash() -> dict[str, Any]:
             }
         },
     }
-    result = engine.run(RunRequest(task="numeric mismatch", domain="finance", scenario="tam_12x", fixture=fixture))
+    result = engine.run(RunRequest(task="numeric mismatch", domain="finance", scenario="tam_12x", source_mode="fixture", fixture=fixture))
     state = engine.repository.bankruptcy_state(child, "finance")
     assert state == "PROBATION" and child not in result.coalition["members"]
     return {"stage": "whitewash", "pass": True, "child_fingerprint": child, "state": state, "excluded": result.lineage_exclusions, "run_id": result.run_id}
@@ -233,7 +235,7 @@ def recovery() -> dict[str, Any]:
             }
         },
     }
-    result = engine.run(RunRequest(task="numeric mismatch", domain="finance", scenario="tam_12x", fixture=fixture))
+    result = engine.run(RunRequest(task="numeric mismatch", domain="finance", scenario="tam_12x", source_mode="fixture", fixture=fixture))
     state = engine.repository.bankruptcy_state(child, "finance")
     assert state == "ACTIVE"
     return {"stage": "recovery", "pass": True, "child_fingerprint": child, "state": state, "run_id": result.run_id, "coalition": result.coalition}
@@ -255,7 +257,9 @@ def sparse() -> dict[str, Any]:
         "force_challenge": True,
         "agent_probabilities": {"source-1": 0.92, "critic-1": 0.18},
     }
-    result = engine.run(RunRequest(task="source citation fresh figure echo mixed evidence", domain="research", scenario="general", fixture=fixture, max_concurrency=4))
+    result = engine.run(
+        RunRequest(task="source citation fresh figure echo mixed evidence", domain="research", scenario="general", source_mode="fixture", fixture=fixture, max_concurrency=4)
+    )
     persisted = engine.get_run(result.run_id)
     assert result.morphology == "sparse_graph"
     assert result.challenge_edge_count > 0

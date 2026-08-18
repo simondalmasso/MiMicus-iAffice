@@ -32,6 +32,7 @@ def scenario_01_tam() -> dict[str, Any]:
             task="K3 TAM 12x mismatch",
             domain="finance",
             scenario="tam_12x",
+            source_mode="fixture",
             fixture={"claim_statement": "TAM", "claim_type": "numeric", "price": 10.0, "users": 100.0, "price_period": "monthly", "claimed": 1000.0},
             learn=True,
         )
@@ -58,6 +59,7 @@ def scenario_02_echo() -> dict[str, Any]:
             task="source echo same origin citation",
             domain="research",
             scenario="echo_chamber",
+            source_mode="fixture",
             fixture={"claim_statement": "sources", "claim_type": "factual", "clusters": ["origin-wire", "origin-wire"], "texts": ["same report", "same report"]},
         )
     )
@@ -88,6 +90,7 @@ def scenario_03_freshness() -> dict[str, Any]:
             task="freshness stale current date evidence",
             domain="research",
             scenario="freshness",
+            source_mode="fixture",
             fixture={"claim_statement": "freshness", "claim_type": "temporal", "evidence_date": "2025-01-01T00:00:00+00:00", "as_of": "2026-08-17T00:00:00+00:00"},
         )
     )
@@ -102,6 +105,7 @@ def scenario_04_entailment() -> dict[str, Any]:
             task="citation figure entailment mismatch",
             domain="research",
             scenario="citation_entailment",
+            source_mode="fixture",
             fixture={
                 "claim_statement": "figure",
                 "claim_type": "numeric",
@@ -125,6 +129,7 @@ def scenario_05_counterexample() -> dict[str, Any]:
             task="absence counterexample none exist",
             domain="research",
             scenario="counterexample",
+            source_mode="fixture",
             fixture={"claim_statement": "absence", "claim_type": "factual", "absence_key": "target", "registry": {"target": {"id": "known"}}, "registry_snapshot_hash": "b" * 64},
         )
     )

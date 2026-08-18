@@ -137,10 +137,10 @@ def test_engine_restart_memory_reuse_and_falsifier_germinal_reuse(tmp_path: Path
     url = f"sqlite:///{tmp_path / 'restart.db'}"
     engine1 = MiMicusEngine(url)
     base_fixture = {"claim_statement": "TAM", "claim_type": "numeric", "price": 10.0, "users": 100.0, "price_period": "monthly", "claimed": 1000.0}
-    first = engine1.run(RunRequest(task="K3 TAM 12x mismatch", domain="finance", scenario="tam_12x", fixture=base_fixture, learn=True))
+    first = engine1.run(RunRequest(task="K3 TAM 12x mismatch", domain="finance", scenario="tam_12x", source_mode="fixture", fixture=base_fixture, learn=True))
     assert first.memory_changes and first.memory_changes[0]["status"] == "shared_verified"
     engine2 = MiMicusEngine(url)
-    second = engine2.run(RunRequest(task="K3 TAM 12x mismatch", domain="finance", scenario="tam_12x", fixture=base_fixture))
+    second = engine2.run(RunRequest(task="K3 TAM 12x mismatch", domain="finance", scenario="tam_12x", source_mode="fixture", fixture=base_fixture))
     assert first.memory_changes[0]["memory_id"] in second.persistent_memory_reused
     fetched = engine2.get_run(first.run_id)
     assert fetched is not None and fetched["replay_state"]["verified"] is True
@@ -157,11 +157,11 @@ def test_engine_restart_memory_reuse_and_falsifier_germinal_reuse(tmp_path: Path
         "evasion_primitive": "numeric_invariant",
         "mutation_relative_tolerance": 0.02,
     }
-    promoted = engine2.run(RunRequest(task="TAM slight mismatch", domain="finance", scenario="tam_12x", fixture=evasion_fixture, learn=True))
+    promoted = engine2.run(RunRequest(task="TAM slight mismatch", domain="finance", scenario="tam_12x", source_mode="fixture", fixture=evasion_fixture, learn=True))
     assert promoted.germinal_changes and promoted.germinal_changes[0]["status"] == "PROMOTE"
     engine3 = MiMicusEngine(url)
     reuse_fixture = {key: value for key, value in evasion_fixture.items() if key != "confirmed_evasion"}
-    reused = engine3.run(RunRequest(task="TAM slight mismatch", domain="finance", scenario="tam_12x", fixture=reuse_fixture))
+    reused = engine3.run(RunRequest(task="TAM slight mismatch", domain="finance", scenario="tam_12x", source_mode="fixture", fixture=reuse_fixture))
     assert reused.persistent_falsifiers_reused
     assert reused.falsifiers[0]["verdict"] == "FAIL"
 
@@ -173,7 +173,7 @@ def test_bankruptcy_enforcement_whitewash_probation_and_recovery(tmp_path: Path)
     identity = probe.services.agent_factory.identity_for(base)
     fail_fixture = {"claim_statement": "x", "claim_type": "numeric", "price": 1, "users": 1, "claimed": 10, "audition_fail_names": [base.name]}
     for _ in range(3):
-        probe.run(RunRequest(task="numeric mismatch", domain="finance", scenario="tam_12x", fixture=fail_fixture))
+        probe.run(RunRequest(task="numeric mismatch", domain="finance", scenario="tam_12x", source_mode="fixture", fixture=fail_fixture))
     assert probe.repository.bankruptcy_state(base.fingerprint, "finance") == "BANKRUPT"
     child_identity = make_identity(
         provider=base.provider,
@@ -198,11 +198,11 @@ def test_bankruptcy_enforcement_whitewash_probation_and_recovery(tmp_path: Path)
         "claimed": 10,
         "identity_revisions": {base.name: {"system_prompt_hash": "c" * 64, "lineage_id": identity.lineage_id, "parent_fingerprint": base.fingerprint}},
     }
-    whitewash = MiMicusEngine(url).run(RunRequest(task="numeric mismatch", domain="finance", scenario="tam_12x", fixture=revision))
+    whitewash = MiMicusEngine(url).run(RunRequest(task="numeric mismatch", domain="finance", scenario="tam_12x", source_mode="fixture", fixture=revision))
     assert child_fp in whitewash.lineage_exclusions["probation"]
     assert child_fp not in whitewash.coalition["members"]
     revision["recovery_names"] = [base.name]
-    recovered = MiMicusEngine(url).run(RunRequest(task="numeric mismatch", domain="finance", scenario="tam_12x", fixture=revision))
+    recovered = MiMicusEngine(url).run(RunRequest(task="numeric mismatch", domain="finance", scenario="tam_12x", source_mode="fixture", fixture=revision))
     assert child_fp not in recovered.lineage_exclusions["probation"]
     assert MiMicusEngine(url).repository.bankruptcy_state(child_fp, "finance") == "ACTIVE"
 
@@ -223,7 +223,9 @@ def test_sparse_communication_is_real_provider_work_and_plan_changes(tmp_path: P
         "force_challenge": True,
         "agent_probabilities": {"source-1": 0.9, "critic-1": 0.2},
     }
-    result = engine.run(RunRequest(task="source citation fresh figure echo mixed evidence", domain="research", scenario="general", fixture=fixture, max_concurrency=4))
+    result = engine.run(
+        RunRequest(task="source citation fresh figure echo mixed evidence", domain="research", scenario="general", source_mode="fixture", fixture=fixture, max_concurrency=4)
+    )
     assert result.morphology == "sparse_graph"
     assert result.challenge_edge_count >= 1
     assert provider.challenge_calls == result.challenge_edge_count

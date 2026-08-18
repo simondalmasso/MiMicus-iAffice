@@ -180,7 +180,7 @@ def test_capability_bankruptcy_is_conditional_and_persists(tmp_path: Path) -> No
     }
     result = None
     for _ in range(3):
-        result = engine.run(RunRequest(task="fresh source echo origin", domain="research", scenario="general", fixture=fixture))
+        result = engine.run(RunRequest(task="fresh source echo origin", domain="research", scenario="general", source_mode="fixture", fixture=fixture))
     assert result is not None
     fresh_scope = capability_scope("research", "freshness", "freshness_canary")
     independent_scope = capability_scope("research", "independence", "independence_canary")

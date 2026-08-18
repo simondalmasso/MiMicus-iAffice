@@ -39,17 +39,14 @@ def _bound_proof_hashes(run: dict[str, Any]) -> tuple[set[str], set[str]]:
         if isinstance(value, str) and len(value) == 64
     }
     snapshot_hashes = {
-        str(row.get("execution_snapshot_hash"))
-        for row in run.get("falsifiers", [])
-        if isinstance(row, dict) and isinstance(row.get("execution_snapshot_hash"), str)
+        str(row.get("execution_snapshot_hash")) for row in run.get("falsifiers", []) if isinstance(row, dict) and isinstance(row.get("execution_snapshot_hash"), str)
     }
     return evidence_hashes, snapshot_hashes
 
 
-def _verification_utility(claims: list[dict[str, Any]], verified_status: str) -> float:
+def _verification_utility(claims: list[dict[str, Any]], verified_status: str, anchor_statement: str) -> float:
     if not claims:
         return 0.0
-    anchor_statement = str(claims[0].get("statement", ""))
     weights = [max(0.01, float(row.get("probability", 0.5))) for row in claims]
     total = sum(weights)
     aligned = sum(weight for row, weight in zip(claims, weights, strict=True) if str(row.get("statement", "")) == anchor_statement)
@@ -67,22 +64,16 @@ def _record_removal_attributions(
     # Evaluate counterfactual utility with the verified target statement first so
     # the leave-one-out metric measures contribution to the adjudicated outcome.
     target_first = [target_claim] + [row for row in all_claims if row.get("claim_hash") != target_claim.get("claim_hash")]
-    baseline = _verification_utility(target_first, receipt.verified_status)
+    anchor_statement = str(target_claim.get("statement", ""))
+    baseline = _verification_utility(target_first, receipt.verified_status, anchor_statement)
     fingerprints = sorted({str(row.get("contributor_fingerprint")) for row in all_claims if row.get("contributor_fingerprint")})
     recorded: list[dict[str, Any]] = []
     for fingerprint in fingerprints:
         without = [row for row in target_first if str(row.get("contributor_fingerprint")) != fingerprint]
-        without_utility = _verification_utility(without, receipt.verified_status)
+        without_utility = _verification_utility(without, receipt.verified_status, anchor_statement)
         delta = max(-1.0, min(1.0, baseline - without_utility))
         contributor_claims = [row for row in all_claims if str(row.get("contributor_fingerprint")) == fingerprint]
-        capabilities = sorted(
-            {
-                str(capability)
-                for row in contributor_claims
-                for capability in row.get("contributor_capabilities", [])
-                if capability
-            }
-        )
+        capabilities = sorted({str(capability) for row in contributor_claims for capability in row.get("contributor_capabilities", []) if capability})
         for capability in capabilities:
             provenance_hash = sha256_obj(
                 {
@@ -154,8 +145,7 @@ def _process_verified_evasion(host: Any, receipt: VerificationReceipt, run: dict
     contradictions = [
         row
         for row in relevant
-        if (receipt.verified_status == "SUPPORTED" and row.get("verdict") == "FAIL")
-        or (receipt.verified_status == "FALSIFIED" and row.get("verdict") == "PASS")
+        if (receipt.verified_status == "SUPPORTED" and row.get("verdict") == "FAIL") or (receipt.verified_status == "FALSIFIED" and row.get("verdict") == "PASS")
     ]
     if not contradictions:
         return None

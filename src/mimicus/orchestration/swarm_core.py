@@ -444,9 +444,18 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
     builtins = host.services.falsifiers.specs(domain)
     promoted = host.repository.promoted_falsifiers(domain)
     registry_by_hash = {spec.hash: spec for spec in [*builtins.values(), *promoted]}
-    candidate_specs = sorted(registry_by_hash.values(), key=lambda spec: spec.hash)
+    superseded_hashes = {spec.parent_hash for spec in promoted if spec.parent_hash}
+    candidate_specs = sorted(
+        (spec for spec in registry_by_hash.values() if spec.hash not in superseded_hashes),
+        key=lambda spec: spec.hash,
+    )
     promoted_hashes = {row.hash for row in promoted}
     persistent_falsifiers_reused = [spec.hash for spec in candidate_specs if spec.hash in promoted_hashes]
+    if superseded_hashes:
+        ledger.append(
+            "falsifier_registry_lineage_superseded",
+            {"suppressed_ancestor_hashes": sorted(superseded_hashes), "active_registry_hashes": [spec.hash for spec in candidate_specs]},
+        )
     if candidate_specs and not evidence_bundle.items:
         ledger.append(
             "evidence_missing",
@@ -753,9 +762,12 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
         if node.kind == NodeKind.JOIN:
             if node.group and node.group.startswith("subgroup:"):
                 visible = {parent: claims_by_node[parent].identity_hash for parent in node.prerequisites if parent in claims_by_node}
-                payload = {"claims": visible, "subtask_hashes": [subtask_assignment[parent].hash for parent in node.prerequisites if parent in subtask_assignment]}
-                subgroup_results[node.group] = payload
-                return payload
+                subgroup_payload: dict[str, Any] = {
+                    "claims": visible,
+                    "subtask_hashes": [subtask_assignment[parent].hash for parent in node.prerequisites if parent in subtask_assignment],
+                }
+                subgroup_results[node.group] = subgroup_payload
+                return subgroup_payload
             return {
                 "claims": {key: claim.identity_hash for key, claim in claims_by_node.items()},
                 "executions": [row.execution_snapshot_hash for row in executions],

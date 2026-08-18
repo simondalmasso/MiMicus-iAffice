@@ -57,9 +57,7 @@ def test_claim_market_applies_novelty_and_probability_can_reorder() -> None:
         Claim(statement="temporal", domain="test", probability=0.95, claim_type="temporal"),
     ]
     evidence = {"price": 10, "users": 10, "claimed": 100, "evidence_date": "2026-08-17", "as_of": "2026-08-18"}
-    selected, candidates = FalsifierMarket().select_for_claims(
-        [numeric, numeric_duplicate, freshness], claims, evidence=evidence, budget_usd=1.0, max_tests=3
-    )
+    selected, candidates = FalsifierMarket().select_for_claims([numeric, numeric_duplicate, freshness], claims, evidence=evidence, budget_usd=1.0, max_tests=3)
     numeric_selected = {row.spec_hash for row in selected if row.spec_hash in {numeric.hash, numeric_duplicate.hash}}
     assert len(numeric_selected) == 1
     assert {row.spec_hash for row in candidates} >= {numeric.hash, numeric_duplicate.hash, freshness.hash}
@@ -69,9 +67,7 @@ def test_claim_market_applies_novelty_and_probability_can_reorder() -> None:
         claims[0].model_copy(update={"probability": 0.99}),
         claims[1].model_copy(update={"probability": 0.52}),
     ]
-    selected_flipped, _ = FalsifierMarket().select_for_claims(
-        [numeric, freshness], flipped_claims, evidence=evidence, budget_usd=1.0, max_tests=2
-    )
+    selected_flipped, _ = FalsifierMarket().select_for_claims([numeric, freshness], flipped_claims, evidence=evidence, budget_usd=1.0, max_tests=2)
     assert selected and selected_flipped
     assert selected[0].target_claim_hash != selected_flipped[0].target_claim_hash
 

@@ -190,7 +190,7 @@ class FalsifierMarket:
                 selected_pairs.add(pair)
                 continue
             closest = max((falsifier_proximity(spec, chosen) for chosen in selected_specs), default=0.0)
-            near_duplicate = bool(selected_specs) and closest >= 0.80 and any(chosen.primitive == spec.primitive for chosen in selected_specs)
+            near_duplicate = bool(selected_specs) and closest >= 0.75 and any(chosen.primitive == spec.primitive for chosen in selected_specs)
             if near_duplicate:
                 continue
             adjusted_utility = bid.utility * (1.0 + 0.10 * max(0.0, 1.0 - closest)) if selected_specs else bid.utility
@@ -217,7 +217,7 @@ class FalsifierMarket:
         final_scores: list[CandidateScore] = []
         for spec, score in base:
             closest = max((falsifier_proximity(spec, chosen) for chosen in selected), default=0.0)
-            near_duplicate = bool(selected) and closest >= 0.80 and any(chosen.primitive == spec.primitive for chosen in selected)
+            near_duplicate = bool(selected) and closest >= 0.75 and any(chosen.primitive == spec.primitive for chosen in selected)
             redundancy_penalty = score.base_utility * (0.95 if near_duplicate else 0.35 * closest)
             novelty_bonus = score.base_utility * (0.10 * max(0.0, 1.0 - closest)) if selected and not near_duplicate else 0.0
             final_utility = max(0.0, score.base_utility - redundancy_penalty + novelty_bonus)

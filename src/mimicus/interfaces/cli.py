@@ -144,7 +144,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
     if args.command == "plugin":
         kernel = build_kernel(args.profile, _database_url())
-        print(json.dumps([plugin.manifest.model_dump(mode="json") | {"manifest_hash": plugin.manifest.manifest_hash} for plugin in kernel.plugins.values()], indent=2, sort_keys=True))
+        print(
+            json.dumps([plugin.manifest.model_dump(mode="json") | {"manifest_hash": plugin.manifest.manifest_hash} for plugin in kernel.plugins.values()], indent=2, sort_keys=True)
+        )
         return 0
     if args.command == "run":
         payload = _load_task(args.task_file)
@@ -212,7 +214,16 @@ def main(argv: Sequence[str] | None = None) -> int:
             raise SystemExit("ORDER-007 reference benchmark is offline only")
         out = Path(args.output_dir)
         report = write_benchmark(out / "BENCHMARK.json", out / "BENCHMARK.md", args.episodes)
-        print(json.dumps({"episodes": report["episodes_per_architecture"], "total_runs": report["total_architecture_episodes"], "output": str(out), "anti_rigging": report["anti_rigging"]["passed"]}))
+        print(
+            json.dumps(
+                {
+                    "episodes": report["episodes_per_architecture"],
+                    "total_runs": report["total_architecture_episodes"],
+                    "output": str(out),
+                    "anti_rigging": report["anti_rigging"]["passed"],
+                }
+            )
+        )
         return 0
     if args.command == "serve":
         from mimicus.interfaces.mcp_server import serve

@@ -64,16 +64,20 @@ class SwarmStateStore:
         }
         policy_hash = sha256_obj(material)
         with self.engine.begin() as connection:
-            existing = connection.execute(
-                select(
-                    VerifierAuthorityRow.authority_class,
-                    VerifierAuthorityRow.source_cluster,
-                    VerifierAuthorityRow.verification_method,
-                    VerifierAuthorityRow.token_hash,
-                    VerifierAuthorityRow.policy_hash,
-                    VerifierAuthorityRow.active,
-                ).where(VerifierAuthorityRow.verifier_id == verifier_id)
-            ).mappings().one_or_none()
+            existing = (
+                connection.execute(
+                    select(
+                        VerifierAuthorityRow.authority_class,
+                        VerifierAuthorityRow.source_cluster,
+                        VerifierAuthorityRow.verification_method,
+                        VerifierAuthorityRow.token_hash,
+                        VerifierAuthorityRow.policy_hash,
+                        VerifierAuthorityRow.active,
+                    ).where(VerifierAuthorityRow.verifier_id == verifier_id)
+                )
+                .mappings()
+                .one_or_none()
+            )
             if existing is None:
                 connection.execute(
                     insert(VerifierAuthorityRow).values(
@@ -116,16 +120,20 @@ class SwarmStateStore:
         auth_token: str | None,
     ) -> tuple[bool, str | None, dict[str, Any] | None]:
         with self.engine.connect() as connection:
-            row = connection.execute(
-                select(
-                    VerifierAuthorityRow.authority_class,
-                    VerifierAuthorityRow.source_cluster,
-                    VerifierAuthorityRow.verification_method,
-                    VerifierAuthorityRow.token_hash,
-                    VerifierAuthorityRow.policy_hash,
-                    VerifierAuthorityRow.active,
-                ).where(VerifierAuthorityRow.verifier_id == verifier_id)
-            ).mappings().one_or_none()
+            row = (
+                connection.execute(
+                    select(
+                        VerifierAuthorityRow.authority_class,
+                        VerifierAuthorityRow.source_cluster,
+                        VerifierAuthorityRow.verification_method,
+                        VerifierAuthorityRow.token_hash,
+                        VerifierAuthorityRow.policy_hash,
+                        VerifierAuthorityRow.active,
+                    ).where(VerifierAuthorityRow.verifier_id == verifier_id)
+                )
+                .mappings()
+                .one_or_none()
+            )
         if row is None:
             return False, "verifier_not_authorized", None
         policy = {
@@ -148,28 +156,36 @@ class SwarmStateStore:
 
     def verifier_policies(self) -> list[dict[str, Any]]:
         with self.engine.connect() as connection:
-            rows = connection.execute(
-                select(
-                    VerifierAuthorityRow.verifier_id,
-                    VerifierAuthorityRow.authority_class,
-                    VerifierAuthorityRow.source_cluster,
-                    VerifierAuthorityRow.verification_method,
-                    VerifierAuthorityRow.policy_hash,
-                    VerifierAuthorityRow.active,
-                    VerifierAuthorityRow.created_at,
-                ).order_by(VerifierAuthorityRow.verifier_id)
-            ).mappings().all()
+            rows = (
+                connection.execute(
+                    select(
+                        VerifierAuthorityRow.verifier_id,
+                        VerifierAuthorityRow.authority_class,
+                        VerifierAuthorityRow.source_cluster,
+                        VerifierAuthorityRow.verification_method,
+                        VerifierAuthorityRow.policy_hash,
+                        VerifierAuthorityRow.active,
+                        VerifierAuthorityRow.created_at,
+                    ).order_by(VerifierAuthorityRow.verifier_id)
+                )
+                .mappings()
+                .all()
+            )
         return [dict(row) for row in rows]
 
     def receipt_by_origin(self, origin_key_hash: str) -> dict[str, Any] | None:
         with self.engine.connect() as connection:
-            row = connection.execute(
-                select(
-                    VerificationReceiptRow.payload_json,
-                    VerificationReceiptRow.learning_active,
-                    VerificationReceiptRow.superseded_by_hash,
-                ).where(VerificationReceiptRow.origin_key_hash == origin_key_hash)
-            ).mappings().one_or_none()
+            row = (
+                connection.execute(
+                    select(
+                        VerificationReceiptRow.payload_json,
+                        VerificationReceiptRow.learning_active,
+                        VerificationReceiptRow.superseded_by_hash,
+                    ).where(VerificationReceiptRow.origin_key_hash == origin_key_hash)
+                )
+                .mappings()
+                .one_or_none()
+            )
         if row is None:
             return None
         return json.loads(str(row["payload_json"])) | {
@@ -179,13 +195,17 @@ class SwarmStateStore:
 
     def receipt_payload(self, receipt_hash: str) -> dict[str, Any] | None:
         with self.engine.connect() as connection:
-            row = connection.execute(
-                select(
-                    VerificationReceiptRow.payload_json,
-                    VerificationReceiptRow.learning_active,
-                    VerificationReceiptRow.superseded_by_hash,
-                ).where(VerificationReceiptRow.receipt_hash == receipt_hash)
-            ).mappings().one_or_none()
+            row = (
+                connection.execute(
+                    select(
+                        VerificationReceiptRow.payload_json,
+                        VerificationReceiptRow.learning_active,
+                        VerificationReceiptRow.superseded_by_hash,
+                    ).where(VerificationReceiptRow.receipt_hash == receipt_hash)
+                )
+                .mappings()
+                .one_or_none()
+            )
         if row is None:
             return None
         return json.loads(str(row["payload_json"])) | {
@@ -223,32 +243,30 @@ class SwarmStateStore:
 
     def deactivate_receipt(self, receipt_hash: str, superseded_by_hash: str) -> bool:
         with self.engine.begin() as connection:
-            current = connection.execute(
-                select(VerificationReceiptRow.learning_active).where(VerificationReceiptRow.receipt_hash == receipt_hash)
-            ).scalar_one_or_none()
+            current = connection.execute(select(VerificationReceiptRow.learning_active).where(VerificationReceiptRow.receipt_hash == receipt_hash)).scalar_one_or_none()
             if current is None or not bool(current):
                 return False
             connection.execute(
-                update(VerificationReceiptRow)
-                .where(VerificationReceiptRow.receipt_hash == receipt_hash)
-                .values(learning_active=0, superseded_by_hash=superseded_by_hash)
+                update(VerificationReceiptRow).where(VerificationReceiptRow.receipt_hash == receipt_hash).values(learning_active=0, superseded_by_hash=superseded_by_hash)
             )
         return True
 
     def receipts_for_run(self, run_id: str) -> list[dict[str, Any]]:
         with self.engine.connect() as connection:
-            rows = connection.execute(
-                select(
-                    VerificationReceiptRow.payload_json,
-                    VerificationReceiptRow.learning_active,
-                    VerificationReceiptRow.superseded_by_hash,
-                ).where(VerificationReceiptRow.run_id == run_id).order_by(VerificationReceiptRow.created_at)
-            ).mappings().all()
-        return [
-            json.loads(str(row["payload_json"]))
-            | {"learning_active": bool(row["learning_active"]), "superseded_by_hash": row["superseded_by_hash"]}
-            for row in rows
-        ]
+            rows = (
+                connection.execute(
+                    select(
+                        VerificationReceiptRow.payload_json,
+                        VerificationReceiptRow.learning_active,
+                        VerificationReceiptRow.superseded_by_hash,
+                    )
+                    .where(VerificationReceiptRow.run_id == run_id)
+                    .order_by(VerificationReceiptRow.created_at)
+                )
+                .mappings()
+                .all()
+            )
+        return [json.loads(str(row["payload_json"])) | {"learning_active": bool(row["learning_active"]), "superseded_by_hash": row["superseded_by_hash"]} for row in rows]
 
     def receipt_exists(self, receipt_hash: str) -> bool:
         with self.engine.connect() as connection:
@@ -359,39 +377,45 @@ class SwarmStateStore:
         contributions from being double-counted.
         """
         with self.engine.begin() as connection:
-            attrs = connection.execute(
-                select(
-                    ReceiptAttributionRow.receipt_hash,
-                    ReceiptAttributionRow.run_id,
-                    ReceiptAttributionRow.fingerprint,
-                    ReceiptAttributionRow.domain,
-                    ReceiptAttributionRow.capability,
-                    ReceiptAttributionRow.outcome,
-                    ReceiptAttributionRow.cost_contribution,
-                    ReceiptAttributionRow.decisive_test_contribution,
+            attrs = (
+                connection.execute(
+                    select(
+                        ReceiptAttributionRow.receipt_hash,
+                        ReceiptAttributionRow.run_id,
+                        ReceiptAttributionRow.fingerprint,
+                        ReceiptAttributionRow.domain,
+                        ReceiptAttributionRow.capability,
+                        ReceiptAttributionRow.outcome,
+                        ReceiptAttributionRow.cost_contribution,
+                        ReceiptAttributionRow.decisive_test_contribution,
+                    )
+                    .join(VerificationReceiptRow, VerificationReceiptRow.receipt_hash == ReceiptAttributionRow.receipt_hash)
+                    .where(VerificationReceiptRow.accepted == 1, VerificationReceiptRow.learning_active == 1)
                 )
-                .join(VerificationReceiptRow, VerificationReceiptRow.receipt_hash == ReceiptAttributionRow.receipt_hash)
-                .where(VerificationReceiptRow.accepted == 1, VerificationReceiptRow.learning_active == 1)
-            ).mappings().all()
-            removals = connection.execute(
-                select(
-                    RemovalAttributionRow.receipt_hash,
-                    RemovalAttributionRow.run_id,
-                    RemovalAttributionRow.fingerprint,
-                    RemovalAttributionRow.domain,
-                    RemovalAttributionRow.capability,
-                    RemovalAttributionRow.marginal_delta,
+                .mappings()
+                .all()
+            )
+            removals = (
+                connection.execute(
+                    select(
+                        RemovalAttributionRow.receipt_hash,
+                        RemovalAttributionRow.run_id,
+                        RemovalAttributionRow.fingerprint,
+                        RemovalAttributionRow.domain,
+                        RemovalAttributionRow.capability,
+                        RemovalAttributionRow.marginal_delta,
+                    )
+                    .join(VerificationReceiptRow, VerificationReceiptRow.receipt_hash == RemovalAttributionRow.receipt_hash)
+                    .where(VerificationReceiptRow.accepted == 1, VerificationReceiptRow.learning_active == 1)
                 )
-                .join(VerificationReceiptRow, VerificationReceiptRow.receipt_hash == RemovalAttributionRow.receipt_hash)
-                .where(VerificationReceiptRow.accepted == 1, VerificationReceiptRow.learning_active == 1)
-            ).mappings().all()
+                .mappings()
+                .all()
+            )
             connection.execute(delete(PairEpisodeRow))
             connection.execute(delete(PairwiseCofailureRow))
             connection.execute(delete(AgentMarginalValueRow))
 
-            raw_groups: dict[tuple[str, str, str], dict[str, Any]] = defaultdict(
-                lambda: {"runs": set(), "successes": 0, "failures": 0, "cost": 0.0, "decisive": 0}
-            )
+            raw_groups: dict[tuple[str, str, str], dict[str, Any]] = defaultdict(lambda: {"runs": set(), "successes": 0, "failures": 0, "cost": 0.0, "decisive": 0})
             for row in attrs:
                 key = (str(row["fingerprint"]), str(row["domain"]), str(row["capability"]))
                 raw_groups[key]["runs"].add(str(row["run_id"]))
@@ -439,10 +463,10 @@ class SwarmStateStore:
                     for right in fps[index + 1 :]:
                         a, b = left, right
                         left_outcome, right_outcome = outcomes[a], outcomes[b]
-                        key = (a, b, domain, capability)
-                        pair_acc[key]["episodes"] += 1
-                        pair_acc[key]["cofailures"] += int(not left_outcome and not right_outcome)
-                        pair_acc[key]["independent"] += int(left_outcome != right_outcome)
+                        pair_key = (a, b, domain, capability)
+                        pair_acc[pair_key]["episodes"] += 1
+                        pair_acc[pair_key]["cofailures"] += int(not left_outcome and not right_outcome)
+                        pair_acc[pair_key]["independent"] += int(left_outcome != right_outcome)
                         episode_hash = sha256_obj({"run_id": run_id, "agents": (a, b), "domain": domain, "capability": capability})
                         connection.execute(insert(PairEpisodeRow).values(episode_hash=episode_hash, created_at=_now()))
                         pair_updates += 1
@@ -469,14 +493,18 @@ class SwarmStateStore:
         pair: dict[str, dict[str, float]] = {fp: {} for fp in fingerprints}
         marginal: dict[str, dict[str, float]] = {fp: {} for fp in fingerprints}
         with self.engine.connect() as connection:
-            pair_rows = connection.execute(
-                select(
-                    PairwiseCofailureRow.agent_a,
-                    PairwiseCofailureRow.agent_b,
-                    PairwiseCofailureRow.verified_episodes,
-                    PairwiseCofailureRow.cofailures,
-                ).where(PairwiseCofailureRow.domain == domain, PairwiseCofailureRow.capability.in_(list(capabilities)))
-            ).mappings().all()
+            pair_rows = (
+                connection.execute(
+                    select(
+                        PairwiseCofailureRow.agent_a,
+                        PairwiseCofailureRow.agent_b,
+                        PairwiseCofailureRow.verified_episodes,
+                        PairwiseCofailureRow.cofailures,
+                    ).where(PairwiseCofailureRow.domain == domain, PairwiseCofailureRow.capability.in_(list(capabilities)))
+                )
+                .mappings()
+                .all()
+            )
             for pair_row in pair_rows:
                 agent_a = str(pair_row["agent_a"])
                 agent_b = str(pair_row["agent_b"])
@@ -487,14 +515,18 @@ class SwarmStateStore:
                 penalty = (int(pair_row["cofailures"]) / max(1, episodes)) * confidence
                 pair[agent_a][agent_b] = max(pair[agent_a].get(agent_b, 0.0), penalty)
                 pair[agent_b][agent_a] = max(pair[agent_b].get(agent_a, 0.0), penalty)
-            marginal_rows = connection.execute(
-                select(
-                    AgentMarginalValueRow.fingerprint,
-                    AgentMarginalValueRow.capability,
-                    AgentMarginalValueRow.marginal_sum,
-                    AgentMarginalValueRow.verified_episodes,
-                ).where(AgentMarginalValueRow.domain == domain, AgentMarginalValueRow.fingerprint.in_(fingerprints))
-            ).mappings().all()
+            marginal_rows = (
+                connection.execute(
+                    select(
+                        AgentMarginalValueRow.fingerprint,
+                        AgentMarginalValueRow.capability,
+                        AgentMarginalValueRow.marginal_sum,
+                        AgentMarginalValueRow.verified_episodes,
+                    ).where(AgentMarginalValueRow.domain == domain, AgentMarginalValueRow.fingerprint.in_(fingerprints))
+                )
+                .mappings()
+                .all()
+            )
             for marginal_row in marginal_rows:
                 capability = str(marginal_row["capability"])
                 if capability not in capabilities:
@@ -508,14 +540,18 @@ class SwarmStateStore:
 
     def prior_failure_modes(self, domain: str) -> tuple[str, ...]:
         with self.engine.connect() as connection:
-            rows = connection.execute(
-                select(
-                    AgentMarginalValueRow.capability,
-                    AgentMarginalValueRow.verified_episodes,
-                    AgentMarginalValueRow.failures,
-                    AgentMarginalValueRow.successes,
-                ).where(AgentMarginalValueRow.domain == domain)
-            ).mappings().all()
+            rows = (
+                connection.execute(
+                    select(
+                        AgentMarginalValueRow.capability,
+                        AgentMarginalValueRow.verified_episodes,
+                        AgentMarginalValueRow.failures,
+                        AgentMarginalValueRow.successes,
+                    ).where(AgentMarginalValueRow.domain == domain)
+                )
+                .mappings()
+                .all()
+            )
         return tuple(sorted({str(row["capability"]) for row in rows if int(row["verified_episodes"]) >= 3 and int(row["failures"]) > int(row["successes"])}))
 
     def record_germinal_outcome(self, receipt_hash: str, status: str, payload: dict[str, Any]) -> None:
@@ -551,20 +587,24 @@ class SwarmStateStore:
             AgentMarginalValueRow.cost_sum,
             AgentMarginalValueRow.decisive_test_count,
         )
-        removal_query = select(
-            RemovalAttributionRow.receipt_hash,
-            RemovalAttributionRow.run_id,
-            RemovalAttributionRow.fingerprint,
-            RemovalAttributionRow.domain,
-            RemovalAttributionRow.capability,
-            RemovalAttributionRow.baseline_utility,
-            RemovalAttributionRow.without_agent_utility,
-            RemovalAttributionRow.marginal_delta,
-            RemovalAttributionRow.method,
-            RemovalAttributionRow.provenance_hash,
-        ).join(VerificationReceiptRow, VerificationReceiptRow.receipt_hash == RemovalAttributionRow.receipt_hash).where(
-            VerificationReceiptRow.accepted == 1,
-            VerificationReceiptRow.learning_active == 1,
+        removal_query = (
+            select(
+                RemovalAttributionRow.receipt_hash,
+                RemovalAttributionRow.run_id,
+                RemovalAttributionRow.fingerprint,
+                RemovalAttributionRow.domain,
+                RemovalAttributionRow.capability,
+                RemovalAttributionRow.baseline_utility,
+                RemovalAttributionRow.without_agent_utility,
+                RemovalAttributionRow.marginal_delta,
+                RemovalAttributionRow.method,
+                RemovalAttributionRow.provenance_hash,
+            )
+            .join(VerificationReceiptRow, VerificationReceiptRow.receipt_hash == RemovalAttributionRow.receipt_hash)
+            .where(
+                VerificationReceiptRow.accepted == 1,
+                VerificationReceiptRow.learning_active == 1,
+            )
         )
         if domain is not None:
             pair_query = pair_query.where(PairwiseCofailureRow.domain == domain)

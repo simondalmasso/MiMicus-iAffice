@@ -10,6 +10,8 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from mimicus.orchestration.engine import MiMicusEngine
+
 
 def _port() -> int:
     with socket.socket() as sock:
@@ -82,6 +84,13 @@ def run(output_dir: Path) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="order006-mcp-") as directory:
         database_url = f"sqlite:///{Path(directory) / 'mcp.db'}"
+        verifier_token = "order006-mcp-registry-token-v1"
+        MiMicusEngine(database_url).register_verifier_authority(
+            verifier_id="oracle:order006-mcp-registry",
+            authority_class="deterministic_oracle",
+            source_independence_cluster="order006-mcp-registry-v1",
+            auth_token=verifier_token,
+        )
         first_process, first_url = _start(database_url)
         try:
             first = asyncio.run(_call(first_url, "run_mimicus", _run_args()))
@@ -101,6 +110,7 @@ def run(output_dir: Path) -> dict[str, Any]:
                         "verified_status": "FALSIFIED",
                         "authority_class": "deterministic_oracle",
                         "verifier_id": "oracle:order006-mcp-registry",
+                        "auth_token": verifier_token,
                         "observed_at": "2026-08-18T13:00:00+00:00",
                         "source_independence_cluster": "order006-mcp-registry-v1",
                         "evidence_hashes": evidence_hashes,
