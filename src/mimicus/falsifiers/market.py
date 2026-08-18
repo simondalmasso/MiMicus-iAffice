@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from typing import Any
 
 from mimicus.canonical import sha256_obj
 from mimicus.falsifiers.spec import FalsifierSpec

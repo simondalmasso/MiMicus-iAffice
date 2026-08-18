@@ -69,12 +69,27 @@ class MorphologyPlan:
 
     @property
     def plan_hash(self) -> str:
-        return sha256_obj({"name": self.name.value, "nodes": [node.semantic_dict() for node in self.nodes], "edges": [asdict(edge) for edge in self.edges], "compiler_rationale": self.compiler_rationale})
+        return sha256_obj(
+            {
+                "name": self.name.value,
+                "nodes": [node.semantic_dict() for node in self.nodes],
+                "edges": [asdict(edge) for edge in self.edges],
+                "compiler_rationale": self.compiler_rationale,
+            }
+        )
 
     @property
     def structural_signature(self) -> str:
         normalized_nodes = sorted((node.kind.value, node.group or "", len(node.prerequisites)) for node in self.nodes)
-        normalized_edges = sorted((next(n.kind.value for n in self.nodes if n.node_id == edge.source), next(n.kind.value for n in self.nodes if n.node_id == edge.target), edge.semantics, edge.group or "") for edge in self.edges)
+        normalized_edges = sorted(
+            (
+                next(n.kind.value for n in self.nodes if n.node_id == edge.source),
+                next(n.kind.value for n in self.nodes if n.node_id == edge.target),
+                edge.semantics,
+                edge.group or "",
+            )
+            for edge in self.edges
+        )
         return sha256_obj({"nodes": normalized_nodes, "edges": normalized_edges})
 
     def validate(self) -> None:
@@ -108,7 +123,14 @@ class MorphologyPlan:
             raise ValueError("morphology DAG contains a cycle")
 
     def as_dict(self) -> dict[str, Any]:
-        return {"name": self.name.value, "plan_hash": self.plan_hash, "structural_signature": self.structural_signature, "nodes": [asdict(node) | {"kind": node.kind.value} for node in self.nodes], "edges": [asdict(edge) for edge in self.edges], "compiler_rationale": self.compiler_rationale}
+        return {
+            "name": self.name.value,
+            "plan_hash": self.plan_hash,
+            "structural_signature": self.structural_signature,
+            "nodes": [asdict(node) | {"kind": node.kind.value} for node in self.nodes],
+            "edges": [asdict(edge) for edge in self.edges],
+            "compiler_rationale": self.compiler_rationale,
+        }
 
 
 def _node_id(kind: NodeKind, index: int, identity: str | None = None) -> str:
@@ -154,13 +176,22 @@ def compile_morphology(
     if name == MorphologyName.HIERARCHICAL_FANOUT_FANIN:
         decompose = DagNode(_node_id(NodeKind.DECOMPOSE, 0, task_hash), NodeKind.DECOMPOSE, agent_parent_ids, input_hash=task_hash, group="hierarchy-root")
         nodes.append(decompose)
-        edges.extend([DagEdge(memory.node_id, decompose.node_id, "decomposition", "hierarchy-root"), DagEdge(audition.node_id, decompose.node_id, "decomposition", "hierarchy-root")])
+        edges.extend(
+            [DagEdge(memory.node_id, decompose.node_id, "decomposition", "hierarchy-root"), DagEdge(audition.node_id, decompose.node_id, "decomposition", "hierarchy-root")]
+        )
         agent_parent_ids = (decompose.node_id,)
 
     agent_nodes: list[DagNode] = []
     for index, fingerprint in enumerate(selected_fingerprints):
         group = "solo" if name == MorphologyName.SOLO else (f"subgroup-{index % 2}" if name == MorphologyName.HIERARCHICAL_FANOUT_FANIN else "fanout")
-        node = DagNode(_node_id(NodeKind.AGENT_TASK, index, fingerprint), NodeKind.AGENT_TASK, agent_parent_ids, identity=fingerprint, input_hash=sha256_obj({"task": task_hash, "agent": fingerprint}), group=group)
+        node = DagNode(
+            _node_id(NodeKind.AGENT_TASK, index, fingerprint),
+            NodeKind.AGENT_TASK,
+            agent_parent_ids,
+            identity=fingerprint,
+            input_hash=sha256_obj({"task": task_hash, "agent": fingerprint}),
+            group=group,
+        )
         agent_nodes.append(node)
         nodes.append(node)
         for parent in node.prerequisites:
@@ -168,7 +199,14 @@ def compile_morphology(
 
     falsifier_nodes: list[DagNode] = []
     for index, spec_hash in enumerate(falsifier_hashes):
-        node = DagNode(_node_id(NodeKind.FALSIFIER, index, spec_hash), NodeKind.FALSIFIER, (memory.node_id,), identity=spec_hash, input_hash=sha256_obj({"task": task_hash, "falsifier": spec_hash}), group="falsifier-fanout")
+        node = DagNode(
+            _node_id(NodeKind.FALSIFIER, index, spec_hash),
+            NodeKind.FALSIFIER,
+            (memory.node_id,),
+            identity=spec_hash,
+            input_hash=sha256_obj({"task": task_hash, "falsifier": spec_hash}),
+            group="falsifier-fanout",
+        )
         falsifier_nodes.append(node)
         nodes.append(node)
         edges.append(DagEdge(memory.node_id, node.node_id, "falsifier_fanout", "falsifier-fanout"))
@@ -179,7 +217,13 @@ def compile_morphology(
             members = [node for index, node in enumerate(agent_nodes) if index % 2 == group_index]
             if not members:
                 continue
-            subgroup = DagNode(_node_id(NodeKind.JOIN, group_index + 1, f"subgroup-{group_index}"), NodeKind.JOIN, tuple(node.node_id for node in members), input_hash=task_hash, group=f"subgroup-{group_index}-fanin")
+            subgroup = DagNode(
+                _node_id(NodeKind.JOIN, group_index + 1, f"subgroup-{group_index}"),
+                NodeKind.JOIN,
+                tuple(node.node_id for node in members),
+                input_hash=task_hash,
+                group=f"subgroup-{group_index}-fanin",
+            )
             subgroup_joins.append(subgroup)
             nodes.append(subgroup)
             for member in members:
@@ -190,7 +234,14 @@ def compile_morphology(
 
     if name in {MorphologyName.PAIRED_VERIFY, MorphologyName.SPARSE_GRAPH} and len(agent_nodes) >= 2:
         semantics = "peer_verification" if name == MorphologyName.PAIRED_VERIFY else "sparse_challenge_stage"
-        challenge = DagNode(_node_id(NodeKind.CHALLENGE, 0, name.value), NodeKind.CHALLENGE, tuple(agent.node_id for agent in agent_nodes), identity="sparse-policy", input_hash=sha256_obj({"task": task_hash, "morphology": name.value}), group=semantics)
+        challenge = DagNode(
+            _node_id(NodeKind.CHALLENGE, 0, name.value),
+            NodeKind.CHALLENGE,
+            tuple(agent.node_id for agent in agent_nodes),
+            identity="sparse-policy",
+            input_hash=sha256_obj({"task": task_hash, "morphology": name.value}),
+            group=semantics,
+        )
         nodes.append(challenge)
         for parent in challenge.prerequisites:
             edges.append(DagEdge(parent, challenge.node_id, semantics, semantics))
@@ -210,6 +261,18 @@ def compile_morphology(
         nodes.extend([learn_node, germinal])
         edges.extend([DagEdge(synthesis.node_id, learn_node.node_id), DagEdge(learn_node.node_id, germinal.node_id)])
 
-    plan = MorphologyPlan(name=name, nodes=nodes, edges=edges, compiler_rationale={"selected_agents": count, "falsifiers": len(falsifier_hashes), "complexity": complexity, "required_capabilities": list(required_capabilities), "max_concurrency": max_concurrency, "smallest_sufficient": True})
+    plan = MorphologyPlan(
+        name=name,
+        nodes=nodes,
+        edges=edges,
+        compiler_rationale={
+            "selected_agents": count,
+            "falsifiers": len(falsifier_hashes),
+            "complexity": complexity,
+            "required_capabilities": list(required_capabilities),
+            "max_concurrency": max_concurrency,
+            "smallest_sufficient": True,
+        },
+    )
     plan.validate()
     return plan

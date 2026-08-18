@@ -36,7 +36,10 @@ class AgentIdentity:
 
     @property
     def manifest_hash(self) -> str:
-        return sha256_obj(self.material_manifest | {"fingerprint": self.fingerprint, "lineage_id": self.lineage_id, "parent_fingerprint": self.parent_fingerprint, "revision_provenance": self.revision_provenance})
+        return sha256_obj(
+            self.material_manifest
+            | {"fingerprint": self.fingerprint, "lineage_id": self.lineage_id, "parent_fingerprint": self.parent_fingerprint, "revision_provenance": self.revision_provenance}
+        )
 
     @property
     def material_manifest(self) -> dict[str, str]:

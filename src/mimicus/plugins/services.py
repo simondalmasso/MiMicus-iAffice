@@ -43,7 +43,9 @@ class RepositoryStorage:
 
 @dataclass
 class BuiltinAgentFactory:
-    provider_capabilities: ProviderCapabilities = field(default_factory=lambda: ProviderCapabilities(provider_id="scripted", model_id="fixture-v2", version="2", known_zero_cost=True))
+    provider_capabilities: ProviderCapabilities = field(
+        default_factory=lambda: ProviderCapabilities(provider_id="scripted", model_id="fixture-v2", version="2", known_zero_cost=True)
+    )
     policy_version: str = "mimicus-v0.2.1-policy"
 
     _PHENOTYPES = (

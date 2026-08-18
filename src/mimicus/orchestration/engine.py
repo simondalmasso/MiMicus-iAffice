@@ -271,7 +271,9 @@ class MiMicusEngine:
             identity = self.services.agent_factory.identity_for(candidate)
             if isinstance(revisions, dict) and isinstance(revisions.get(candidate.name), dict):
                 revision = revisions[candidate.name]
-                revised_fp = str(revision.get("fingerprint") or _fingerprint(candidate.name, candidate.provider, candidate.model, prompt=str(revision.get("prompt_revision", "revision"))))
+                revised_fp = str(
+                    revision.get("fingerprint") or _fingerprint(candidate.name, candidate.provider, candidate.model, prompt=str(revision.get("prompt_revision", "revision")))
+                )
                 identity = make_identity(
                     fingerprint=revised_fp,
                     provider=candidate.provider,
@@ -319,18 +321,25 @@ class MiMicusEngine:
             if known_negative_lineage and current_state == "ACTIVE":
                 self.repository.set_bankruptcy_state(candidate.fingerprint, scoped_state_key, "PROBATION", "known lineage has unresolved domain bankruptcy")
                 current_state = "PROBATION"
-                ledger.append("bankruptcy_changed", {"fingerprint": candidate.fingerprint, "domain": domain, "capability": target_cap, "state": "PROBATION", "reason": "known-lineage whitewashing defense"})
+                ledger.append(
+                    "bankruptcy_changed",
+                    {"fingerprint": candidate.fingerprint, "domain": domain, "capability": target_cap, "state": "PROBATION", "reason": "known-lineage whitewashing defense"},
+                )
             forced_fail = candidate.fingerprint in failures or candidate.name in failures or target_cap in fail_caps
             passed_answer = "wrong" if forced_fail else expected_answer[category]
             audition_result = audition(candidate.fingerprint, domain, category, passed_answer, capability=target_cap, test_family=family, supported=True)
             assert audition_result.passed is not None
-            calibration = self.calibration.record_capability_verified(candidate.fingerprint, domain, target_cap, family, predicted_probability=0.8, outcome=audition_result.passed, canary=True)
+            calibration = self.calibration.record_capability_verified(
+                candidate.fingerprint, domain, target_cap, family, predicted_probability=0.8, outcome=audition_result.passed, canary=True
+            )
             # Keep the historical domain summary for ORDER-003 compatibility, but routing decisions below are capability-scoped.
             self.calibration.record_verified(candidate.fingerprint, domain, predicted_probability=0.8, outcome=audition_result.passed, canary=True)
             evaluated = evaluate_bankruptcy(calibration)
             recovery_requested = candidate.fingerprint in recovery or candidate.name in recovery
             if recovery_requested:
-                recovered = recover(BankruptcyRecord(candidate.fingerprint, scoped_state_key, BankruptcyState(current_state), "recovery path"), recovery_audition_passed=audition_result.passed)
+                recovered = recover(
+                    BankruptcyRecord(candidate.fingerprint, scoped_state_key, BankruptcyState(current_state), "recovery path"), recovery_audition_passed=audition_result.passed
+                )
                 next_state = recovered.state.value
                 reason = recovered.reason or "recovery audition"
             elif evaluated.state == BankruptcyState.BANKRUPT:
@@ -341,7 +350,10 @@ class MiMicusEngine:
                 reason = "direct verified capability calibration"
             if next_state != current_state:
                 self.repository.set_bankruptcy_state(candidate.fingerprint, scoped_state_key, next_state, reason)
-                ledger.append("bankruptcy_changed", {"fingerprint": candidate.fingerprint, "domain": domain, "capability": target_cap, "test_family": family, "state": next_state, "reason": reason})
+                ledger.append(
+                    "bankruptcy_changed",
+                    {"fingerprint": candidate.fingerprint, "domain": domain, "capability": target_cap, "test_family": family, "state": next_state, "reason": reason},
+                )
             if next_state == "BANKRUPT":
                 self.repository.set_bankruptcy_state(candidate.fingerprint, domain, "BANKRUPT", f"capability {target_cap}: {reason}")
             elif recovery_requested and next_state == "ACTIVE":
@@ -368,7 +380,9 @@ class MiMicusEngine:
                     "routing_state": state,
                 },
             )
-            audited.append(replace(candidate, audition_score=audition_result.score, calibration_score=calibration.trust, bankrupt=state == "BANKRUPT", probation=state == "PROBATION"))
+            audited.append(
+                replace(candidate, audition_score=audition_result.score, calibration_score=calibration.trust, bankrupt=state == "BANKRUPT", probation=state == "PROBATION")
+            )
         advance("AUDITION_CANDIDATES", 0.70)
 
         selected, rationale = self.services.coalition.select(profile, audited, request.max_agents)
@@ -432,7 +446,9 @@ class MiMicusEngine:
         market_budget = max(0.0, request.budget_usd - min(request.budget_usd, projected_agent_cost))
         max_tests = {"fast": 1, "normal": 3, "deep": 5}[request.depth]
         selected_specs, scores = FalsifierMarket().select(candidate_specs, budget_usd=market_budget, max_tests=max_tests, information_floor=0.05)
-        ledger.append("falsifier_market_scored", {"scores": [asdict(score) for score in scores], "budget_usd": market_budget, "hard_cap_usd": request.budget_usd, "max_tests": max_tests})
+        ledger.append(
+            "falsifier_market_scored", {"scores": [asdict(score) for score in scores], "budget_usd": market_budget, "hard_cap_usd": request.budget_usd, "max_tests": max_tests}
+        )
         if candidate_specs and not selected_specs:
             ledger.append("budget_exhausted", {"reason": "no candidate fits budget/information threshold"})
         for spec in selected_specs:
@@ -582,7 +598,9 @@ class MiMicusEngine:
                                     correlation=correlation(left_member, right_member),
                                     semantic_proximity=proximity.score,
                                     expected_information_gain=max(0.2, disagreement),
-                                    estimated_cost=float(fixture["challenge_cost"]) if "challenge_cost" in fixture else float(self.provider.capabilities.estimated_max_cost_per_call or 0.0),
+                                    estimated_cost=float(fixture["challenge_cost"])
+                                    if "challenge_cost" in fixture
+                                    else float(self.provider.capabilities.estimated_max_cost_per_call or 0.0),
                                 )
                             )
                     chosen = self.services.communication.select(candidates_for_edges, k=2)
