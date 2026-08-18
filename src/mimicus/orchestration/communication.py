@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -29,12 +29,14 @@ class ChallengeRequest(BaseModel):
 class ChallengeResponse(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    disposition: Literal["accepted", "rejected", "partial", "unchanged"]
+    disposition: Literal["accepted", "rejected", "partial", "unchanged", "inconclusive"]
     revised_probability: float = Field(ge=0.0, le=1.0)
     revised_status: ClaimStatus
     new_evidence_refs: list[str] = Field(default_factory=list)
     rationale_summary: str
     provider_call_id: str | None = None
+    cost: float | None = Field(default=None, ge=0.0)
+    usage: dict[str, Any] = Field(default_factory=dict)
 
     @property
     def hash(self) -> str:
