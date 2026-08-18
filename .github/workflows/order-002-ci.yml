@@ -27,7 +27,7 @@ jobs:
       - run: |
           ruff format src tests scripts
           ruff check --fix src tests scripts
-          git rm scripts/order004_cleanup_patch.py
+          git rm -f scripts/order004_cleanup_patch.py
           git diff --check
       - run: |
           git config user.name 'github-actions[bot]'
