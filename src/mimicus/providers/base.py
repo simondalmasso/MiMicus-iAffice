@@ -15,6 +15,7 @@ class ProviderCapabilities:
     supports_structured_output: bool = True
     supports_async: bool = True
     supports_tools: bool = False
+    supports_auditions: bool = False
     provider_id: str = "unknown"
     model_id: str = "unknown"
     version: str = "unknown"
