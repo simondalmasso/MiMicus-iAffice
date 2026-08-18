@@ -245,6 +245,29 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
             family = f"{capability}_canary"
             canary_prompt = CANARY_BANK[category][0]
             sealed = str(uuid5(NAMESPACE_URL, f"{run_id}:{candidate.fingerprint}:{capability}:audition"))
+            if not host.provider.capabilities.supports_auditions:
+                state_key = capability_scope(domain, capability, family)
+                current_state = host.repository.bankruptcy_state(candidate.fingerprint, state_key)
+                scores[capability] = 0.5
+                calibrations[capability] = _blend_verified_authority(host, candidate.fingerprint, domain, capability, 0.5)
+                states[capability] = current_state
+                audition_row = {
+                    "fingerprint": candidate.fingerprint,
+                    "phenotype": candidate.name,
+                    "capability": capability,
+                    "category": category,
+                    "test_family": family,
+                    "prompt_hash": sha256_obj(canary_prompt),
+                    "provider_trace_id": None,
+                    "provider_executed": False,
+                    "applicability": "PROVIDER_UNSUPPORTED",
+                    "passed": None,
+                    "score": 0.5,
+                    "routing_state": current_state,
+                }
+                audition_records.append(audition_row)
+                ledger.append("agent_audition_unsupported", audition_row)
+                continue
             audition_reservation = await budget.reserve(
                 "audition",
                 provider_estimate,
