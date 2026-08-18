@@ -114,7 +114,11 @@ def run_all(output_dir: Path) -> dict[str, Any]:
         mcp_seed = _run_stage("mcp", mcp_db)
         mcp_reuse = _run_stage("mcp", mcp_db)
         assert mcp_seed["run_id"] != mcp_reuse["run_id"]
-        assert mcp_reuse["persistent_memory_reused"]
+        # ORDER-006 F024 supersedes the old assumption that an unverified MCP run
+        # can manufacture its own ground truth and promote reusable memory.
+        # Historical compatibility now preserves restart/replay while explicitly
+        # proving the receipt gate remains fail-closed.
+        assert not mcp_reuse["persistent_memory_reused"]
         mcp = {
             "pass": True,
             "server_process_restarted": True,
@@ -127,6 +131,8 @@ def run_all(output_dir: Path) -> dict[str, Any]:
             "reuse_ledger_head": mcp_reuse["ledger_head"],
             "replay_verified_after_restart": mcp_reuse["replay_verified"],
             "persistent_memory_reused_after_restart": mcp_reuse["persistent_memory_reused"],
+            "unverified_self_promotion_blocked": True,
+            "receipt_gate_supersedes_legacy_auto_ground_truth": True,
             "plan_hash_after_restart": mcp_reuse["plan_hash"],
         }
 
@@ -155,6 +161,7 @@ def run_all(output_dir: Path) -> dict[str, Any]:
                 "semantic_proximity": True,
                 "germinal_integrated": True,
                 "mcp_restart": True,
+                "unverified_self_promotion_blocked": True,
             },
         }
         _write(output_dir / "ORDER003_E2E.json", report)
