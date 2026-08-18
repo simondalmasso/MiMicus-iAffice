@@ -40,7 +40,6 @@ _CANARY_FOR = {
     "source": "semantic_decoy",
     "critic": "capability_mirage",
 }
-_SPEC_FOR = {"numeric": "F1", "freshness": "F2", "independence": "F3", "source": "F3", "entailment": "F4", "counterexample": "F5"}
 
 
 def _core_node_id(kind: NodeKind, index: int, identity: str | None = None) -> str:
@@ -80,42 +79,69 @@ def _compile_core_plan(
         edges.extend([DagEdge(memory.node_id, decompose.node_id, "decomposition"), DagEdge(audition_node.node_id, decompose.node_id, "decomposition")])
         parent_ids = (decompose.node_id,)
     assignment: dict[str, Subtask] = {}
+    assignment_agents: dict[str, str] = {}
+    unresolved: list[str] = []
     agent_nodes: list[DagNode] = []
-    for index, member in enumerate(selected):
-        subtask = subtasks[index % len(subtasks)] if subtasks else None
-        group = f"subgroup-{index % 2}" if name == MorphologyName.HIERARCHICAL_FANOUT_FANIN else ("paired" if name == MorphologyName.PAIRED_VERIFY else "fanout")
-        node = DagNode(
-            _core_node_id(NodeKind.AGENT_TASK, index, member.fingerprint),
-            NodeKind.AGENT_TASK,
-            parent_ids,
-            identity=member.fingerprint,
-            input_hash=subtask.hash if subtask is not None else sha256_obj({"task": task_hash, "agent": member.fingerprint}),
-            group=group,
-        )
-        if subtask is not None:
+    if name == MorphologyName.HIERARCHICAL_FANOUT_FANIN:
+        loads = {member.fingerprint: 0 for member in selected}
+        for index, subtask in enumerate(subtasks):
+            qualified = [
+                member
+                for member in selected
+                if set(subtask.required_capabilities).issubset(member.capabilities)
+                and all(member.capability_states.get(capability, "ACTIVE") == "ACTIVE" for capability in subtask.required_capabilities)
+            ]
+            if not qualified:
+                unresolved.append(subtask.hash)
+                continue
+            member = min(qualified, key=lambda row: (loads[row.fingerprint], row.fingerprint))
+            loads[member.fingerprint] += 1
+            node = DagNode(
+                _core_node_id(NodeKind.AGENT_TASK, index, f"{member.fingerprint}:{subtask.hash}"),
+                NodeKind.AGENT_TASK,
+                parent_ids,
+                identity=member.fingerprint,
+                input_hash=subtask.hash,
+                group=subtask.dependency_group,
+            )
             assignment[node.node_id] = subtask
-        nodes.append(node)
-        agent_nodes.append(node)
-        for parent in parent_ids:
-            edges.append(DagEdge(parent, node.node_id, "subtask_fanout" if subtask else "worker_fanout", group))
+            assignment_agents[node.node_id] = member.fingerprint
+            nodes.append(node)
+            agent_nodes.append(node)
+            for parent in parent_ids:
+                edges.append(DagEdge(parent, node.node_id, "subtask_fanout", subtask.dependency_group))
+    else:
+        for index, member in enumerate(selected):
+            group = "paired" if name == MorphologyName.PAIRED_VERIFY else "fanout"
+            node = DagNode(
+                _core_node_id(NodeKind.AGENT_TASK, index, member.fingerprint),
+                NodeKind.AGENT_TASK,
+                parent_ids,
+                identity=member.fingerprint,
+                input_hash=sha256_obj({"task": task_hash, "agent": member.fingerprint}),
+                group=group,
+            )
+            nodes.append(node)
+            agent_nodes.append(node)
+            for parent in parent_ids:
+                edges.append(DagEdge(parent, node.node_id, "worker_fanout", group))
     post_first_pass: list[str]
     subgroup_joins: list[DagNode] = []
     if name == MorphologyName.HIERARCHICAL_FANOUT_FANIN:
-        for group_index in (0, 1):
-            members = [node for index, node in enumerate(agent_nodes) if index % 2 == group_index]
-            if not members:
-                continue
+        groups = sorted({str(node.group) for node in agent_nodes if node.group})
+        for group_index, group in enumerate(groups, start=1):
+            members = [node for node in agent_nodes if node.group == group]
             join = DagNode(
-                _core_node_id(NodeKind.JOIN, group_index + 1, f"subgroup-{group_index}"),
+                _core_node_id(NodeKind.JOIN, group_index, group),
                 NodeKind.JOIN,
                 tuple(node.node_id for node in members),
                 input_hash=sha256_obj([node.input_hash for node in members]),
-                group=f"subgroup-{group_index}-fanin",
+                group=f"subgroup:{group}",
             )
             nodes.append(join)
             subgroup_joins.append(join)
             for member_node in members:
-                edges.append(DagEdge(member_node.node_id, join.node_id, "nested_subtask_fanin", join.group))
+                edges.append(DagEdge(member_node.node_id, join.node_id, "nested_subtask_fanin", group))
         post_first_pass = [node.node_id for node in subgroup_joins]
     else:
         post_first_pass = [node.node_id for node in agent_nodes]
@@ -158,11 +184,13 @@ def _compile_core_plan(
         nodes=nodes,
         edges=edges,
         compiler_rationale={
-            "swarm_core": "ORDER-006",
+            "swarm_core": "ORDER-007",
             "selected_agents": count,
             "required_capabilities": list(caps),
             "subtask_hashes": [row.hash for row in subtasks],
             "subtask_assignments": {node_id: row.hash for node_id, row in assignment.items()},
+            "subtask_assignment_agents": assignment_agents,
+            "unresolved_subtasks": unresolved,
             "claim_aware_market_after_first_pass": True,
             "max_concurrency": max_concurrency,
         },
@@ -172,11 +200,12 @@ def _compile_core_plan(
 
 
 def _blend_verified_authority(host: Any, fingerprint: str, domain: str, capability: str, canary_trust: float) -> float:
-    verified = host.calibration.get_capability(fingerprint, domain, capability, f"{capability}_verified_task")
-    if verified.attempts == 0:
+    verified = SwarmStateStore(host.repository.engine).verified_authority(fingerprint, domain, capability)
+    attempts = int(verified["attempts"])
+    if attempts == 0:
         return canary_trust
-    weight = min(0.75, verified.attempts / (verified.attempts + 3.0))
-    return (1.0 - weight) * canary_trust + weight * verified.trust
+    weight = min(0.75, attempts / (attempts + 3.0))
+    return (1.0 - weight) * canary_trust + weight * float(verified["trust"])
 
 
 async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
@@ -201,7 +230,7 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
             "core": "ORDER-006",
         }
     )
-    ledger.append("run_started", {"task_hash": task_hash, "config_hash": config_hash, "plugin_hashes": host.plugin_hashes, "swarm_core": "ORDER-006"})
+    ledger.append("run_started", {"task_hash": task_hash, "config_hash": config_hash, "plugin_hashes": host.plugin_hashes, "swarm_core": "ORDER-007"})
     ledger.append("evidence_bundle_prepared", {"source_mode": request.source_mode, "evidence_hashes": list(evidence_bundle.hashes), "count": len(evidence_bundle.items)})
     retrieved_memory = host.services.memory.retrieve(domain)
     base_candidates = host.services.agent_factory.candidates()
@@ -413,12 +442,11 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
         injected_by_agent[member.fingerprint] = injected
 
     builtins = host.services.falsifiers.specs(domain)
-    spec_keys = list(dict.fromkeys(_SPEC_FOR[cap] for cap in profile.required_capabilities if cap in _SPEC_FOR))
-    base_specs = [builtins[key] for key in spec_keys]
     promoted = host.repository.promoted_falsifiers(domain)
-    promoted_by_primitive = {spec.primitive: spec for spec in promoted}
-    candidate_specs = [promoted_by_primitive.get(spec.primitive, spec) for spec in base_specs]
-    persistent_falsifiers_reused = [spec.hash for spec in candidate_specs if spec.hash in {row.hash for row in promoted}]
+    registry_by_hash = {spec.hash: spec for spec in [*builtins.values(), *promoted]}
+    candidate_specs = sorted(registry_by_hash.values(), key=lambda spec: spec.hash)
+    promoted_hashes = {row.hash for row in promoted}
+    persistent_falsifiers_reused = [spec.hash for spec in candidate_specs if spec.hash in promoted_hashes]
     if candidate_specs and not evidence_bundle.items:
         ledger.append(
             "evidence_missing",
@@ -471,11 +499,14 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
     pricing_preflight.setdefault("executed_members", [row.fingerprint for row in selected])
     selected_by_fp = {row.fingerprint: row for row in selected}
     spec_by_hash = {row.hash: row for row in candidate_specs}
-    claims_by_fp: dict[str, Claim] = {}
+    claims_by_node: dict[str, Claim] = {}
+    claim_owner_by_node: dict[str, str] = {}
     claim_trace_ids: dict[str, str | None] = {}
     provider_usages: list[dict[str, Any]] = []
     executions: list[FalsifierExecution] = []
     communications: list[dict[str, Any]] = []
+    subgroup_results: dict[str, dict[str, Any]] = {}
+    executed_subtask_hashes: set[str] = set()
     provider_call_count = 0
     market_lock = asyncio.Lock()
     market_selected: list[ClaimFalsifierBid] | None = None
@@ -501,6 +532,21 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
             node.output_hash = sha256_obj(payload)
             precompleted[node.node_id] = payload
 
+    def scoped_evidence_payload(subtask: Subtask | None) -> tuple[dict[str, Any], ...]:
+        if subtask is None:
+            return evidence_bundle.provider_payload()
+        scope = set(subtask.evidence_scope)
+        scoped: list[dict[str, Any]] = []
+        for item in evidence_bundle.items:
+            facts = {key: value for key, value in item.extracted_facts.items() if key in scope}
+            if not facts:
+                continue
+            payload = item.provider_payload()
+            payload["extracted_facts"] = facts
+            payload["content"] = ""
+            scoped.append(payload)
+        return tuple(scoped)
+
     async def ensure_market() -> list[ClaimFalsifierBid]:
         nonlocal market_selected, market_all
         async with market_lock:
@@ -510,7 +556,7 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
             market_budget = max(0.0, request.budget_usd - min(request.budget_usd, projected))
             market_selected, market_all = FalsifierMarket().select_for_claims(
                 candidate_specs,
-                [claims_by_fp[key] for key in sorted(claims_by_fp)],
+                [claims_by_node[key] for key in sorted(claims_by_node)],
                 evidence=evidence_context,
                 budget_usd=market_budget,
                 max_tests={"fast": 1, "normal": 3, "deep": 5}[request.depth],
@@ -520,6 +566,7 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
                 "falsifier_market_scored",
                 {
                     "phase": "after_sealed_first_pass",
+                    "registry_scope": "full_safe_registry_plus_promoted",
                     "selected": [asdict(row) for row in market_selected],
                     "candidates": [asdict(row) for row in market_all],
                 },
@@ -542,15 +589,17 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
                 return {"budget_exhausted": True}
             subtask = subtask_assignment.get(node.node_id)
             task_payload = subtask.objective if subtask is not None else request.task
+            runtime_payload = scoped_evidence_payload(subtask)
+            allowed_refs = {str(row["evidence_hash"]) for row in runtime_payload}
             sealed = str(uuid5(NAMESPACE_URL, f"{run_id}:{member.fingerprint}:{node.input_hash}:sealed"))
             provider_request = ProviderRequest(
                 task_payload,
                 domain,
                 member.name,
                 sealed,
-                fixture,
+                fixture if request.source_mode != "runtime" else {},
                 tuple(injected_by_agent.get(member.fingerprint, [])),
-                evidence_bundle.provider_payload(),
+                runtime_payload,
             )
             try:
                 response = await host.provider.generate_request_async(provider_request)
@@ -559,16 +608,19 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
                 raise
             reconciliation = await budget.reconcile(reservation, response.cost)
             provider_call_count += 1
-            allowed_refs = set(evidence_bundle.hashes)
             claimed_refs = list(dict.fromkeys(response.claim.evidence_refs))
             validated_refs = [ref for ref in claimed_refs if ref in allowed_refs]
             rejected_refs = [ref for ref in claimed_refs if ref not in allowed_refs]
             claim = response.claim.model_copy(update={"evidence_refs": validated_refs})
-            claims_by_fp[member.fingerprint] = claim
-            claim_trace_ids[member.fingerprint] = response.trace_id
+            claims_by_node[node.node_id] = claim
+            claim_owner_by_node[node.node_id] = member.fingerprint
+            claim_trace_ids[node.node_id] = response.trace_id
+            if subtask is not None:
+                executed_subtask_hashes.add(subtask.hash)
             provider_usages.append(
                 {
                     "fingerprint": member.fingerprint,
+                    "node_id": node.node_id,
                     "trace_id": response.trace_id,
                     "usage": dict(response.usage)
                     | {
@@ -577,6 +629,7 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
                         "evidence_refs_validated": validated_refs,
                         "evidence_refs_rejected": rejected_refs,
                         "subtask_hash": None if subtask is None else subtask.hash,
+                        "evidence_scope": [] if subtask is None else list(subtask.evidence_scope),
                     },
                     "budget": reconciliation,
                 }
@@ -584,13 +637,16 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
             if rejected_refs:
                 ledger.append(
                     "evidence_ref_rejected",
-                    {"fingerprint": member.fingerprint, "rejected_refs": rejected_refs, "allowed_refs": sorted(allowed_refs)},
+                    {"fingerprint": member.fingerprint, "node_id": node.node_id, "rejected_refs": rejected_refs, "allowed_refs": sorted(allowed_refs)},
                 )
             ledger.append(
                 "claim_proposed",
                 {
                     "claim_hash": claim.hash,
+                    "claim_identity_hash": claim.identity_hash,
+                    "claim_revision_hash": claim.revision_hash,
                     "fingerprint": member.fingerprint,
+                    "node_id": node.node_id,
                     "probability": claim.probability,
                     "provider_trace_id": response.trace_id,
                     "evidence_refs": validated_refs,
@@ -598,7 +654,7 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
                     "provider_task_hash": sha256_obj(task_payload),
                 },
             )
-            return {"claim": claim.model_dump(mode="json"), "subtask_hash": None if subtask is None else subtask.hash}
+            return {"claim": claim.model_dump(mode="json"), "claim_identity_hash": claim.identity_hash, "subtask_hash": None if subtask is None else subtask.hash}
         if node.kind == NodeKind.FALSIFIER:
             if node.identity is None or node.identity not in spec_by_hash:
                 return {"skipped": True}
@@ -622,13 +678,15 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
             ledger.append("falsifier_executed", execution.model_dump(mode="json"))
             return execution.model_dump(mode="json")
         if node.kind == NodeKind.CHALLENGE:
-            if len(claims_by_fp) < 2:
+            owner_to_node = {owner: node_id for node_id, owner in claim_owner_by_node.items()}
+            if len(owner_to_node) < 2:
                 return {"opened": 0}
-            fps = sorted(claims_by_fp)
+            fps = sorted(owner_to_node)
             edge_candidates: list[CommunicationCandidate] = []
             for index, left_fp in enumerate(fps):
                 for right_fp in fps[index + 1 :]:
-                    left, right = claims_by_fp[left_fp], claims_by_fp[right_fp]
+                    left = claims_by_node[owner_to_node[left_fp]]
+                    right = claims_by_node[owner_to_node[right_fp]]
                     disagreement = abs(left.probability - right.probability) + (0.25 if left.statement != right.statement else 0.0)
                     if disagreement < 0.10 and plan.name == MorphologyName.SPARSE_GRAPH:
                         continue
@@ -652,14 +710,17 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
                     )
             chosen = host.services.communication.select(edge_candidates, k=1 if plan.name == MorphologyName.PAIRED_VERIFY else 2)
             for edge in chosen:
-                target = claims_by_fp[edge.target]
+                target_node = owner_to_node[edge.target]
+                target = claims_by_node[target_node]
+                identity_before = target.identity_hash
+                revision_before = target.revision_hash
                 request_row = ChallengeRequest(
                     challenger_fingerprint=edge.challenger,
                     target_fingerprint=edge.target,
-                    target_claim_hash=target.hash,
+                    target_claim_hash=target.identity_hash,
                     target_statement_summary=target.statement[:500],
                     evidence_refs=list(target.evidence_refs),
-                    falsifier_observations=[row.model_dump(mode="json") for row in executions if target.hash in row.target_claim_hashes],
+                    falsifier_observations=[row.model_dump(mode="json") for row in executions if target.identity_hash in row.target_claim_hashes],
                     challenge_reason=f"residual uncertainty score={edge.score:.4f}",
                     round=1,
                 )
@@ -669,12 +730,17 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
                 response = await host.provider.challenge_async(request_row)
                 await budget.reconcile(reservation, response.cost)
                 provider_call_count += 1
-                claims_by_fp[edge.target] = target.model_copy(update={"probability": response.revised_probability, "status": response.revised_status})
+                revised = target.model_copy(update={"probability": response.revised_probability, "status": response.revised_status})
+                assert revised.identity_hash == identity_before
+                claims_by_node[target_node] = revised
                 comm = {
                     "round": 1,
                     "source_fp": edge.challenger,
                     "target_fp": edge.target,
-                    "target_claim_hash": target.hash,
+                    "target_node_id": target_node,
+                    "target_claim_hash": identity_before,
+                    "revision_before_hash": revision_before,
+                    "revision_after_hash": revised.revision_hash,
                     "reason": request_row.challenge_reason,
                     "score": edge.score,
                     "input_hash": request_row.hash,
@@ -685,21 +751,35 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
                 ledger.append("communication_edge_opened", comm)
             return {"opened": len(communications)}
         if node.kind == NodeKind.JOIN:
-            group_claims = {fp: claim.hash for fp, claim in claims_by_fp.items() if not node.group or not node.group.startswith("subgroup-") or selected_by_fp.get(fp) is not None}
-            return {"claims": group_claims, "executions": [row.execution_snapshot_hash for row in executions], "communications": len(communications)}
+            if node.group and node.group.startswith("subgroup:"):
+                visible = {parent: claims_by_node[parent].identity_hash for parent in node.prerequisites if parent in claims_by_node}
+                payload = {"claims": visible, "subtask_hashes": [subtask_assignment[parent].hash for parent in node.prerequisites if parent in subtask_assignment]}
+                subgroup_results[node.group] = payload
+                return payload
+            return {
+                "claims": {key: claim.identity_hash for key, claim in claims_by_node.items()},
+                "executions": [row.execution_snapshot_hash for row in executions],
+                "communications": len(communications),
+            }
         if node.kind == NodeKind.SYNTHESIS:
             claim_rows: list[tuple[str, Claim, float]] = []
-            for fp, claim in sorted(claims_by_fp.items()):
+            for node_id, claim in sorted(claims_by_node.items()):
+                fp = claim_owner_by_node[node_id]
                 member = selected_by_fp[fp]
-                relevant_caps = [cap for cap in profile.required_capabilities if cap in member.capabilities]
+                subtask = subtask_assignment.get(node_id)
+                relevant_caps = list(subtask.required_capabilities) if subtask is not None else [cap for cap in profile.required_capabilities if cap in member.capabilities]
                 authority = sum(member.capability_calibration_scores.get(cap, member.calibration_score) for cap in relevant_caps) / max(1, len(relevant_caps))
                 claim_rows.append((fp, claim, authority))
+            required_hashes = {row.hash for row in subtasks} if plan.name == MorphologyName.HIERARCHICAL_FANOUT_FANIN else set()
+            hierarchy_complete = plan.name != MorphologyName.HIERARCHICAL_FANOUT_FANIN or (
+                required_hashes <= executed_subtask_hashes and not plan.compiler_rationale.get("unresolved_subtasks")
+            )
             decision = synthesize_swarm(
                 claim_rows,
                 executions,
                 communications,
                 budget=budget.snapshot(),
-                coverage_complete=not bool(rationale.get("uncovered_capabilities")) and bool(evidence_bundle.items),
+                coverage_complete=not bool(rationale.get("uncovered_capabilities")) and bool(evidence_bundle.items) and hierarchy_complete,
             )
             ledger.append("swarm_decision_synthesized", decision.model_dump(mode="json") | {"decision_hash": decision.hash})
             return decision.model_dump(mode="json")
@@ -727,20 +807,26 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
         "INCONCLUSIVE": ClaimStatus.INCONCLUSIVE,
     }[decision.epistemic_status]
     final_claims: list[dict[str, Any]] = []
-    for fp, claim in sorted(claims_by_fp.items()):
+    for node_id, claim in sorted(claims_by_node.items()):
+        fp = claim_owner_by_node[node_id]
         member = selected_by_fp[fp]
-        relevant = [cap for cap in profile.required_capabilities if cap in member.capabilities]
-        immutable_claim_hash = claim.hash
+        subtask = subtask_assignment.get(node_id)
+        relevant = list(subtask.required_capabilities) if subtask is not None else [cap for cap in profile.required_capabilities if cap in member.capabilities]
+        immutable_claim_hash = claim.identity_hash
         persisted_status = selected_status if immutable_claim_hash in decision.selected_claim_hashes else claim.status
         final_claims.append(
             claim.model_dump(mode="json")
             | {
                 "status": persisted_status.value,
                 "claim_hash": immutable_claim_hash,
-                "provider_trace_id": claim_trace_ids.get(fp),
+                "claim_identity_hash": immutable_claim_hash,
+                "claim_revision_hash": claim.revision_hash,
+                "provider_trace_id": claim_trace_ids.get(node_id),
+                "contributor_node_id": node_id,
                 "contributor_fingerprint": fp,
                 "contributor_capabilities": relevant,
                 "contributor_test_families": [f"{cap}_verified_task" for cap in relevant],
+                "subtask_hash": None if subtask is None else subtask.hash,
             }
         )
     falsifier_rows = []
@@ -752,7 +838,7 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
         task=request.task,
         domain=domain,
         budget_usd=request.budget_usd,
-        constraints={"max_agents": request.max_agents, "max_concurrency": request.max_concurrency, "depth": request.depth, "swarm_core": "ORDER-006"},
+        constraints={"max_agents": request.max_agents, "max_concurrency": request.max_concurrency, "depth": request.depth, "swarm_core": "ORDER-007"},
         plan=[node.kind.value for node in plan.nodes],
     )
     ledger.append("run_completed", {"status": status, "plan_hash": plan.plan_hash, "decision_hash": decision.hash})
@@ -766,6 +852,16 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
         "rationale": rationale,
         "plan_hash": plan.plan_hash,
         "subtask_assignments": plan.compiler_rationale.get("subtask_assignments", {}),
+    }
+    required_subtask_hashes = {row.hash for row in subtasks} if plan.name == MorphologyName.HIERARCHICAL_FANOUT_FANIN else set()
+    unresolved_subtask_hashes = sorted(required_subtask_hashes - executed_subtask_hashes | set(plan.compiler_rationale.get("unresolved_subtasks", [])))
+    hierarchy_execution = {
+        "required_subtasks": sorted(required_subtask_hashes),
+        "assigned_subtasks": sorted(set(plan.compiler_rationale.get("subtask_assignments", {}).values())),
+        "executed_subtasks": sorted(executed_subtask_hashes),
+        "unresolved_subtasks": unresolved_subtask_hashes,
+        "subgroup_results": subgroup_results,
+        "complete": not unresolved_subtask_hashes if plan.name == MorphologyName.HIERARCHICAL_FANOUT_FANIN else True,
     }
     all_evidence_rows = evidence_bundle.persisted_rows() + execution_evidence_rows
     result = {
@@ -821,6 +917,7 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
         "swarm_decision": decision.model_dump(mode="json") | {"decision_hash": decision.hash},
         "subtasks": [row.model_dump(mode="json") | {"subtask_hash": row.hash} for row in subtasks],
         "threat_profile": profile.model_dump(mode="json"),
+        "hierarchy_execution": hierarchy_execution,
     }
     host.repository.save_run_bundle(
         run_id=run_id,
