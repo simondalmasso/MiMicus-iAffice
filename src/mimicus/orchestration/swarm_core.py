@@ -114,8 +114,8 @@ def _compile_core_plan(
             )
             nodes.append(join)
             subgroup_joins.append(join)
-            for member in members:
-                edges.append(DagEdge(member.node_id, join.node_id, "nested_subtask_fanin", join.group))
+            for member_node in members:
+                edges.append(DagEdge(member_node.node_id, join.node_id, "nested_subtask_fanin", join.group))
         post_first_pass = [node.node_id for node in subgroup_joins]
     else:
         post_first_pass = [node.node_id for node in agent_nodes]
@@ -634,8 +634,10 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
             claim_rows: list[tuple[str, Claim, float]] = []
             for fp, claim in sorted(claims_by_fp.items()):
                 member = selected_by_fp[fp]
-                relevant = [cap for cap in profile.required_capabilities if cap in member.capabilities]
-                authority = sum(member.capability_calibration_scores.get(cap, member.calibration_score) for cap in relevant) / max(1, len(relevant))
+                relevant_caps = [cap for cap in profile.required_capabilities if cap in member.capabilities]
+                authority = sum(
+                    member.capability_calibration_scores.get(cap, member.calibration_score) for cap in relevant_caps
+                ) / max(1, len(relevant_caps))
                 claim_rows.append((fp, claim, authority))
             decision = synthesize_swarm(
                 claim_rows,

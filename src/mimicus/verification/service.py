@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
-from typing import Any
+from typing import Any, cast
 
 from mimicus.canonical import sha256_obj
 from mimicus.falsifiers.spec import FalsifierSpec
@@ -76,7 +76,7 @@ def _process_verified_evasion(host: Any, receipt: VerificationReceipt, run: dict
         store.record_germinal_outcome(receipt.receipt_hash, "NO_SAFE_MUTATION_AVAILABLE", payload)
         return payload
     context = _falsifier_context(host, receipt.run_id)
-    current_tolerance = float(parent.params.get("relative_tolerance", 0.05))
+    current_tolerance = float(cast(Any, parent.params.get("relative_tolerance", 0.05)))
     params = dict(parent.params)
     if receipt.verified_status == "FALSIFIED" and row.get("verdict") == "PASS":
         params["relative_tolerance"] = max(1e-6, current_tolerance * 0.4)
@@ -105,7 +105,7 @@ def _process_verified_evasion(host: Any, receipt: VerificationReceipt, run: dict
             "verified_status": receipt.verified_status,
         }
     )
-    metrics = {
+    metrics: dict[str, Any] = {
         "reason": decision.reason,
         "parent": asdict(decision.parent_metrics),
         "candidate": asdict(decision.candidate_metrics),

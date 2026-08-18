@@ -221,20 +221,22 @@ class SwarmStateStore:
                 .scalars()
                 .all()
             )
-            for row in pair_rows:
-                if row.agent_a not in pair or row.agent_b not in pair:
+            for pair_row in pair_rows:
+                if pair_row.agent_a not in pair or pair_row.agent_b not in pair:
                     continue
-                confidence = row.verified_episodes / (row.verified_episodes + 5.0)
-                penalty = (row.cofailures / max(1, row.verified_episodes)) * confidence
-                pair[row.agent_a][row.agent_b] = max(pair[row.agent_a].get(row.agent_b, 0.0), penalty)
-                pair[row.agent_b][row.agent_a] = max(pair[row.agent_b].get(row.agent_a, 0.0), penalty)
+                confidence = pair_row.verified_episodes / (pair_row.verified_episodes + 5.0)
+                penalty = (pair_row.cofailures / max(1, pair_row.verified_episodes)) * confidence
+                pair[pair_row.agent_a][pair_row.agent_b] = max(pair[pair_row.agent_a].get(pair_row.agent_b, 0.0), penalty)
+                pair[pair_row.agent_b][pair_row.agent_a] = max(pair[pair_row.agent_b].get(pair_row.agent_a, 0.0), penalty)
             marginal_rows = (
                 connection.execute(select(AgentMarginalValueRow).where(AgentMarginalValueRow.domain == domain, AgentMarginalValueRow.fingerprint.in_(fingerprints))).scalars().all()
             )
-            for row in marginal_rows:
-                if row.capability not in capabilities:
+            for marginal_row in marginal_rows:
+                if marginal_row.capability not in capabilities:
                     continue
-                marginal[row.fingerprint][row.capability] = max(-1.0, min(1.0, row.marginal_sum / (row.verified_episodes + 4.0)))
+                marginal[marginal_row.fingerprint][marginal_row.capability] = max(
+                    -1.0, min(1.0, marginal_row.marginal_sum / (marginal_row.verified_episodes + 4.0))
+                )
         return pair, marginal
 
     def prior_failure_modes(self, domain: str) -> tuple[str, ...]:

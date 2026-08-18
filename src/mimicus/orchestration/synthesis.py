@@ -70,6 +70,7 @@ def synthesize_swarm(
     if len(distinct_statements) > 1 or span > 0.15:
         disagreements.append({"statements": distinct_statements, "probability_span": span, "challenge_edges": len(communications)})
     linked_best = execution_by_claim.get(best[2].hash, [])
+    status: Literal["SUPPORTED", "FALSIFIED", "INCONCLUSIVE"]
     if best[3] == "FALSIFIED":
         status = "FALSIFIED"
     elif best[3] == "SUPPORTED" and not disagreements and coverage_complete:
