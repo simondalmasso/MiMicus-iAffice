@@ -124,7 +124,7 @@ def _process_verified_evasion(host: Any, receipt: VerificationReceipt, run: dict
         metrics=metrics,
         domain=domain,
     )
-    payload = {
+    payload: dict[str, Any] = {
         "receipt_hash": receipt.receipt_hash,
         "evasion_hash": evasion_hash,
         "parent_hash": parent.hash,
