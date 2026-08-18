@@ -12,24 +12,30 @@ from mimicus.types import ClaimStatus
 
 
 class ScriptedProvider(Provider):
-    def __init__(self, provider_id: str = "scripted", model_id: str = "fixture-v2") -> None:
+    def __init__(self, provider_id: str = "scripted", model_id: str = "fixture-v2", *, default_cost: float = 0.0, challenge_cost: float = 0.0) -> None:
         self.provider_id = provider_id
         self.model_id = model_id
+        self.default_cost = max(0.0, float(default_cost))
+        self.challenge_cost = max(0.0, float(challenge_cost))
         self.generate_calls = 0
         self.challenge_calls = 0
         self.call_ids: list[str] = []
 
     @property
     def capabilities(self) -> ProviderCapabilities:
+        known_zero = self.default_cost == 0.0 and self.challenge_cost == 0.0
         return ProviderCapabilities(
             supports_structured_output=True,
             supports_async=True,
             supports_tools=False,
             provider_id=self.provider_id,
             model_id=self.model_id,
-            version="2",
+            version="2.1",
             usage_metadata_available=True,
             cancellation="asyncio-native",
+            known_zero_cost=known_zero,
+            estimated_max_cost_per_call=max(self.default_cost, self.challenge_cost),
+            pricing_metadata_authoritative=True,
         )
 
     @property
@@ -58,12 +64,13 @@ class ScriptedProvider(Provider):
         trace_id = str(uuid5(NAMESPACE_URL, f"{request.sealed_context_id}:{request.phenotype}:{request.task}:generate:{self.generate_calls}"))
         self.call_ids.append(trace_id)
         latency_ms = max(delay_ms, (perf_counter() - started) * 1000.0)
+        cost = float(fixture.get("agent_cost", self.default_cost))
         return ProviderResponse(
             claim=claim,
-            cost=float(fixture.get("agent_cost", 0.0)),
+            cost=cost,
             latency_ms=latency_ms,
             trace_id=trace_id,
-            usage={"simulated": True, "calls": 1, "verified_memory_items": len(request.verified_memory)},
+            usage={"simulated": True, "calls": 1, "verified_memory_items": len(request.verified_memory), "monetary_cost_status": "KNOWN", "monetary_cost_usd": cost},
         )
 
     async def challenge_async(self, request: ChallengeRequest) -> ChallengeResponse:
@@ -79,4 +86,6 @@ class ScriptedProvider(Provider):
             new_evidence_refs=list(request.evidence_refs),
             rationale_summary="structured challenge considered; probability revised without hidden reasoning exchange",
             provider_call_id=call_id,
+            cost=self.challenge_cost,
+            usage={"simulated": True, "calls": 1, "monetary_cost_status": "KNOWN", "monetary_cost_usd": self.challenge_cost},
         )
