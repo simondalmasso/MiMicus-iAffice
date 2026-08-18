@@ -75,9 +75,11 @@ class OpenAIAgentsProvider(Provider):
         allowed = {"private_verified", "shared_verified"}
         payload: list[dict[str, Any]] = []
         used_chars = 0
-        for item in memory[: self.max_memory_items]:
+        for item in memory:
             if str(item.get("status", "")) not in allowed:
                 continue
+            if len(payload) >= self.max_memory_items:
+                break
             content = str(item.get("content", ""))[:1200]
             row = {
                 "memory_id": str(item.get("memory_id", "")),

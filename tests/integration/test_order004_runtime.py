@@ -199,20 +199,14 @@ def test_openai_adapter_marks_monetary_cost_unknown_without_authoritative_pricin
     module.Agent = Agent
     module.Runner = Runner
     monkeypatch.setitem(sys.modules, "agents", module)
-    response = asyncio.run(
-        OpenAIAgentsProvider("gpt-test").generate_request_async(
-            ProviderRequest("task", "test", "critic-1", "sealed", {}, ())
-        )
-    )
+    response = asyncio.run(OpenAIAgentsProvider("gpt-test").generate_request_async(ProviderRequest("task", "test", "critic-1", "sealed", {}, ())))
     assert response.cost is None
     assert response.usage["monetary_cost_status"] == "UNKNOWN"
 
 
 def test_budget_zero_blocks_paid_provider_work(tmp_path: Path) -> None:
     provider = ScriptedProvider(default_cost=0.01, challenge_cost=0.01)
-    result = MiMicusEngine(_db(tmp_path, "zero-budget.db"), provider=provider).run(
-        RunRequest(task="numeric consistency", domain="finance", scenario="tam_12x", budget_usd=0.0)
-    )
+    result = MiMicusEngine(_db(tmp_path, "zero-budget.db"), provider=provider).run(RunRequest(task="numeric consistency", domain="finance", scenario="tam_12x", budget_usd=0.0))
     assert provider.total_calls == 0
     assert result.provider_call_count == 0
     assert result.status == "inconclusive"

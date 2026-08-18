@@ -51,9 +51,7 @@ def test_capability_calibration_is_not_domain_collapsed() -> None:
     assert freshness.failures == 3
     assert entailment.attempts == 0
     assert entailment.trust == 0.5
-    assert capability_scope("research", "freshness", "freshness_canary") != capability_scope(
-        "research", "entailment", "entailment_canary"
-    )
+    assert capability_scope("research", "freshness", "freshness_canary") != capability_scope("research", "entailment", "entailment_canary")
 
 
 def _fingerprint(**updates: str) -> str:

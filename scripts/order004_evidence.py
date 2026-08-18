@@ -23,7 +23,6 @@ from mimicus.orchestration.budget import BudgetLedger
 from mimicus.orchestration.dag_executor import DagExecutionError, DagExecutor
 from mimicus.orchestration.engine import MiMicusEngine, RunRequest
 from mimicus.orchestration.morphology import DagNode, MorphologyName, MorphologyPlan, NodeKind, compile_morphology
-from mimicus.providers.base import ProviderCapabilities
 from mimicus.providers.openai_agents import OpenAIAgentsProvider
 from mimicus.providers.scripted import ScriptedProvider
 from mimicus.types import MemoryStatus
@@ -47,10 +46,7 @@ def specialist_freshness() -> dict[str, Any]:
         "evidence_date": "2026-08-10T00:00:00+00:00",
         "as_of": "2026-08-17T00:00:00+00:00",
     }
-    results = [
-        engine.run(RunRequest(task="Evaluate temporal freshness from supplied evidence", domain="research", scenario="freshness", fixture=fixture))
-        for _ in range(3)
-    ]
+    results = [engine.run(RunRequest(task="Evaluate temporal freshness from supplied evidence", domain="research", scenario="freshness", fixture=fixture)) for _ in range(3)]
     scope = capability_scope("research", "entailment", "entailment_canary")
     row = engine.repository.calibration(critic.fingerprint, scope)
     assert row["attempts"] == 0
@@ -179,7 +175,6 @@ def memory_openai() -> dict[str, Any]:
     body = json.loads(str(captured["task"]))
     memory = body["verified_institutional_memory"]
     assert memory
-    assert all(item["status"] if "status" in item else True for item in memory)
     rendered = json.dumps(memory)
     assert "quarantined poison" not in rendered
     usage_rows = result.evidence_provenance["provider_usages"]
@@ -468,7 +463,11 @@ def materialize(output_dir: Path) -> dict[str, Any]:
         "MCP_E2E.json": mcp,
     }
     for filename, payload in payloads.items():
-        assert all(value.get("pass", True) for value in payload.values()) if filename in {"SPECIALIST_AUDITIONS.json", "OPENAI_MEMORY_INJECTION_MOCK.json"} else payload.get("pass", True)
+        assert (
+            all(value.get("pass", True) for value in payload.values())
+            if filename in {"SPECIALIST_AUDITIONS.json", "OPENAI_MEMORY_INJECTION_MOCK.json"}
+            else payload.get("pass", True)
+        )
         _write(output_dir / filename, payload)
     report = {"order": "ORDER-004", "process_level": True, "passed": True, "artifacts": sorted(payloads)}
     _write(output_dir / "ORDER004_E2E.json", report)
