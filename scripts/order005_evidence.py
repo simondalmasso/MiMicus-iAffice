@@ -171,7 +171,9 @@ def identity_recompute(root: Path) -> dict[str, Any]:
 
 def provider_binding(root: Path) -> dict[str, Any]:
     evidence = [
-        EvidenceInput(origin="caller://report-a", independence_cluster="publisher-a", content="Report A", extracted_facts={"clusters": ["publisher-a", "publisher-b"], "texts": ["A", "B"]}),
+        EvidenceInput(
+            origin="caller://report-a", independence_cluster="publisher-a", content="Report A", extracted_facts={"clusters": ["publisher-a", "publisher-b"], "texts": ["A", "B"]}
+        ),
         EvidenceInput(origin="caller://report-b", independence_cluster="publisher-b", content="Report B"),
     ]
     with tempfile.TemporaryDirectory(prefix="order005-binding-") as directory:
