@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from typing import Any
 
 from mimicus.canonical import sha256_obj
+from mimicus.claims.models import Claim
 from mimicus.falsifiers.spec import FalsifierSpec
 
 
@@ -77,6 +79,19 @@ class CandidateScore:
     signature_hash: str = ""
 
 
+@dataclass(frozen=True)
+class ClaimFalsifierBid:
+    target_claim_hash: str
+    spec_hash: str
+    utility: float
+    expected_information_gain: float
+    applicability: float
+    evidence_quality: float
+    uncertainty: float
+    disagreement: float
+    selection_reason: str
+
+
 class FalsifierMarket:
     def score(self, spec: FalsifierSpec, *, applicability: float = 1.0, evidence_quality: float = 1.0, risk_cost: float = 0.0) -> CandidateScore:
         latency_cost = spec.estimated_latency / 100_000.0
@@ -94,6 +109,81 @@ class FalsifierMarket:
             base_utility=utility,
             signature_hash=falsifier_signature(spec).hash,
         )
+
+    @staticmethod
+    def _applicability(spec: FalsifierSpec, claim: Claim, evidence: dict[str, Any]) -> float:
+        keys = set(evidence)
+        if spec.primitive == "numeric_invariant":
+            if claim.claim_type == "numeric":
+                return 1.0
+            return 0.7 if claim.claim_type in {"factual", "other"} and {"price", "users", "claimed"}.issubset(keys) else 0.0
+        if spec.primitive == "freshness":
+            if claim.claim_type == "temporal":
+                return 1.0
+            return 0.7 if claim.claim_type in {"factual", "other"} and {"evidence_date", "as_of"}.issubset(keys) else 0.0
+        if spec.primitive == "source_independence":
+            return 0.9 if "clusters" in keys and claim.claim_type in {"factual", "causal", "comparative", "other"} else 0.0
+        if spec.primitive == "citation_entailment":
+            return 1.0 if {"claim_figure", "evidence_spans"}.issubset(keys) and claim.claim_type in {"numeric", "factual", "other"} else 0.0
+        if spec.primitive == "counterexample_search":
+            return 1.0 if {"absence_key", "registry"}.issubset(keys) and claim.claim_type in {"factual", "other"} else 0.0
+        return 0.0
+
+    def select_for_claims(
+        self,
+        specs: list[FalsifierSpec],
+        claims: list[Claim],
+        *,
+        evidence: dict[str, Any],
+        budget_usd: float,
+        max_tests: int,
+        evidence_quality: float = 1.0,
+    ) -> tuple[list[ClaimFalsifierBid], list[ClaimFalsifierBid]]:
+        if not claims:
+            return [], []
+        probabilities = [claim.probability for claim in claims]
+        span = max(probabilities) - min(probabilities) if len(probabilities) > 1 else 0.0
+        candidates: list[ClaimFalsifierBid] = []
+        for claim in claims:
+            uncertainty = 1.0 - abs(claim.probability - 0.5) * 2.0
+            for spec in specs:
+                applicability = self._applicability(spec, claim, evidence)
+                if applicability <= 0.0:
+                    continue
+                eig = spec.expected_information_gain * (0.55 + 0.35 * uncertainty + 0.25 * span)
+                denominator = max(1e-9, spec.estimated_cost + spec.estimated_latency / 100_000.0)
+                utility = eig * applicability * evidence_quality / denominator
+                candidates.append(
+                    ClaimFalsifierBid(
+                        target_claim_hash=claim.hash,
+                        spec_hash=spec.hash,
+                        utility=utility,
+                        expected_information_gain=eig,
+                        applicability=applicability,
+                        evidence_quality=evidence_quality,
+                        uncertainty=uncertainty,
+                        disagreement=span,
+                        selection_reason=f"claim-aware applicability={applicability:.2f}; uncertainty={uncertainty:.2f}; disagreement={span:.2f}",
+                    )
+                )
+        candidates.sort(key=lambda row: (-row.utility, row.target_claim_hash, row.spec_hash))
+        selected: list[ClaimFalsifierBid] = []
+        spent = 0.0
+        selected_pairs: set[tuple[str, str]] = set()
+        spec_by_hash = {spec.hash: spec for spec in specs}
+        for bid in candidates:
+            if len(selected) >= max_tests:
+                break
+            pair = (bid.target_claim_hash, bid.spec_hash)
+            if pair in selected_pairs:
+                continue
+            spec = spec_by_hash[bid.spec_hash]
+            if spent + spec.estimated_cost > budget_usd + 1e-12:
+                continue
+            selected.append(bid)
+            selected_pairs.add(pair)
+            spent += spec.estimated_cost
+        return selected, candidates
 
     def select(self, specs: list[FalsifierSpec], *, budget_usd: float, max_tests: int, information_floor: float = 0.0) -> tuple[list[FalsifierSpec], list[CandidateScore]]:
         base = [(spec, self.score(spec)) for spec in specs]

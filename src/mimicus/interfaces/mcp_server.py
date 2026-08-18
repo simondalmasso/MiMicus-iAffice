@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import os
+from datetime import datetime
 from typing import Any, Literal
 
 from mimicus.claims.evidence_bundle import EvidenceInput
 from mimicus.config import Settings
 from mimicus.orchestration.engine import MiMicusEngine, RunRequest
+from mimicus.verification.models import VerificationSubmission
 
 _ENGINES: dict[tuple[str, str], MiMicusEngine] = {}
 
@@ -24,13 +26,13 @@ def create_mcp_server(profile: str = "offline") -> Any:
 
     server = MCPServer(
         "MiMicus",
-        version="0.2.2",
-        description="Persistent auditable agentic immune swarm with executable morphology DAGs and bounded parallelism.",
+        version="0.3.0",
+        description="Persistent auditable immune swarm with real microauditions, verified adjudication and learned coalition state.",
     )
-    run_annotations = ToolAnnotations.model_validate({"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": profile == "openai"})
+    write_annotations = ToolAnnotations.model_validate({"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": profile == "openai"})
     get_annotations = ToolAnnotations.model_validate({"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False})
 
-    @server.tool(annotations=run_annotations)
+    @server.tool(annotations=write_annotations)
     def run_mimicus(
         task: str,
         domain: str | None = None,
@@ -41,7 +43,6 @@ def create_mcp_server(profile: str = "offline") -> Any:
         learn: bool = False,
         max_concurrency: int = 4,
     ) -> dict[str, Any]:
-        """Run MiMicus with persistent immune state, a hashed execution DAG and bounded concurrency."""
         request = RunRequest(
             task=task,
             domain=domain,
@@ -54,9 +55,37 @@ def create_mcp_server(profile: str = "offline") -> Any:
         )
         return _engine(profile).run(request).model_dump(mode="json")
 
+    @server.tool(annotations=write_annotations)
+    def submit_verification(
+        run_id: str,
+        claim_hash: str,
+        verified_status: Literal["SUPPORTED", "FALSIFIED"],
+        authority_class: str,
+        verifier_id: str,
+        observed_at: str,
+        source_independence_cluster: str,
+        evidence_hashes: list[str] | None = None,
+        snapshot_hashes: list[str] | None = None,
+        supersedes_receipt_hash: str | None = None,
+        appeal_of_receipt_hash: str | None = None,
+    ) -> dict[str, Any]:
+        submission = VerificationSubmission(
+            run_id=run_id,
+            claim_hash=claim_hash,
+            verified_status=verified_status,
+            authority_class=authority_class,
+            verifier_id=verifier_id,
+            observed_at=datetime.fromisoformat(observed_at.replace("Z", "+00:00")),
+            source_independence_cluster=source_independence_cluster,
+            evidence_hashes=tuple(evidence_hashes or []),
+            snapshot_hashes=tuple(snapshot_hashes or []),
+            supersedes_receipt_hash=supersedes_receipt_hash,
+            appeal_of_receipt_hash=appeal_of_receipt_hash,
+        )
+        return _engine(profile).submit_verification(submission)
+
     @server.tool(annotations=get_annotations)
     def get_mimicus_run(run_id: str) -> dict[str, Any]:
-        """Read a persisted MiMicus run, replay state, DAG summaries and immune-state audit context."""
         result = _engine(profile).get_run(run_id)
         if result is None:
             return {"found": False, "run_id": run_id}

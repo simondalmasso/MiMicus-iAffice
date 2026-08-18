@@ -19,6 +19,7 @@ class AgentCandidate:
     calibration_score: float = 0.5
     bankrupt: bool = False
     historical_cofailure: dict[str, float] = field(default_factory=dict)
+    historical_marginal_value: dict[str, float] = field(default_factory=dict)
     lineage_id: str | None = None
     probation: bool = False
     phenotype_version: str = "v1"
@@ -31,8 +32,6 @@ class AgentCandidate:
 
 
 def correlation(a: AgentCandidate, b: AgentCandidate) -> float:
-    # Runtime provider/model sameness dominates correlation. Prompt/tool diversity
-    # still matters but cannot manufacture fake model diversity.
     shared_policy = bool(a.policy_hash) and a.policy_hash == b.policy_hash
     shared = (
         0.35 * float(a.provider == b.provider)
@@ -99,7 +98,9 @@ def select_coalition(profile: ThreatProfile, candidates: list[AgentCandidate], m
                 proximity_reason = closest.reason
             capability_trust = {cap: _capability_trust(candidate, cap) for cap in sorted(useful_caps)}
             authority = sum(capability_trust.values())
-            score = authority * (1.0 - 0.8 * corr_penalty) * max(0.05, 1.0 - proximity_penalty)
+            marginal = sum(candidate.historical_marginal_value.get(cap, 0.0) for cap in useful_caps) / max(1, len(useful_caps))
+            secondary_multiplier = 1.0 + 0.08 * max(-1.0, min(1.0, marginal))
+            score = authority * (1.0 - 0.8 * corr_penalty) * max(0.05, 1.0 - proximity_penalty) * secondary_multiplier
             proximity_log.append(
                 {
                     "candidate": candidate.fingerprint,
@@ -107,6 +108,7 @@ def select_coalition(profile: ThreatProfile, candidates: list[AgentCandidate], m
                     "capability_trust": capability_trust,
                     "correlation_penalty": corr_penalty,
                     "proximity_penalty": proximity_penalty,
+                    "verified_marginal_secondary": marginal,
                     "reason": proximity_reason,
                     "marginal_score": score,
                 }
@@ -131,6 +133,7 @@ def select_coalition(profile: ThreatProfile, candidates: list[AgentCandidate], m
                     "audition_score": candidate.capability_audition_scores.get(cap, candidate.audition_score),
                     "calibration_score": candidate.capability_calibration_scores.get(cap, candidate.calibration_score),
                     "direct_trust": _capability_trust(candidate, cap),
+                    "verified_marginal_secondary": candidate.historical_marginal_value.get(cap, 0.0),
                 }
                 for cap in sorted(required & set(candidate.capabilities))
             }

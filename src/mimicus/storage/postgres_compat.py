@@ -4,6 +4,7 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy.schema import CreateTable
 
 from mimicus.storage.models import Base
+import mimicus.storage.swarm_models  # noqa: F401  # register ORDER-006 tables on shared metadata
 
 
 def compile_postgres_schema() -> dict[str, str]:

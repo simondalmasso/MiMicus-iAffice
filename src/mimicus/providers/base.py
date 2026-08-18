@@ -52,6 +52,28 @@ class ProviderResponse:
     usage: dict[str, Any] = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
+class AuditionRequest:
+    fingerprint: str
+    domain: str
+    phenotype: str
+    capability: str
+    test_family: str
+    category: str
+    prompt: str
+    sealed_context_id: str
+
+
+@dataclass(frozen=True)
+class ProviderAuditionResponse:
+    answer: str
+    supported: bool
+    cost: float | None
+    latency_ms: float
+    trace_id: str | None = None
+    usage: dict[str, Any] = field(default_factory=dict)
+
+
 class Provider(ABC):
     @property
     def capabilities(self) -> ProviderCapabilities:
@@ -63,6 +85,17 @@ class Provider(ABC):
     @abstractmethod
     async def generate_request_async(self, request: ProviderRequest) -> ProviderResponse:
         raise RuntimeError("abstract async provider generate invoked")
+
+    async def audition_async(self, request: AuditionRequest) -> ProviderAuditionResponse:
+        """Provider-agnostic canary path. Unsupported adapters stay neutral, never auto-pass."""
+        return ProviderAuditionResponse(
+            answer="",
+            supported=False,
+            cost=0.0 if self.capabilities.known_zero_cost else None,
+            latency_ms=0.0,
+            trace_id=None,
+            usage={"provider": self.capabilities.provider_id, "audition_supported": False},
+        )
 
     async def challenge_async(self, request: ChallengeRequest) -> ChallengeResponse:
         return ChallengeResponse(

@@ -58,3 +58,5 @@ class FalsifierExecution(BaseModel):
     cost: float = 0.0
     latency_ms: float = 0.0
     reason: str | None = None
+    target_claim_hashes: tuple[str, ...] = ()
+    selection_reason: str | None = None

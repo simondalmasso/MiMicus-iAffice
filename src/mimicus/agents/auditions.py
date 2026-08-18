@@ -39,6 +39,7 @@ def audition(
     test_family: str | None = None,
     supported: bool = True,
 ) -> AuditionResult:
+    """Deterministically score an answer that was produced by a provider execution."""
     if category not in CANARY_BANK:
         raise KeyError(category)
     if not supported:
