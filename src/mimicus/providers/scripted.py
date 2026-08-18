@@ -46,6 +46,7 @@ class ScriptedProvider(Provider):
             supports_structured_output=True,
             supports_async=True,
             supports_tools=False,
+            supports_auditions=True,
             provider_id=self.provider_id,
             model_id=self.model_id,
             version="fixture-v2",
