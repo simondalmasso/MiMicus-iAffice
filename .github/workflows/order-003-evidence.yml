@@ -1,4 +1,4 @@
-name: ORDER-003 evidence materializer
+name: ORDER-004 evidence materializer
 
 on:
   pull_request:
@@ -8,7 +8,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: order-003-evidence-${{ github.event.pull_request.number || github.ref }}
+  group: order-004-evidence-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -20,16 +20,17 @@ jobs:
         with:
           ref: order-002-mimicus-v01
           fetch-depth: 0
-      - name: Detect existing final evidence
+      - name: Detect final ORDER-004 evidence
         id: evidence_state
         shell: bash
         run: |
-          if [[ -f evidence/ORDER-003/MANIFEST.sha256 ]]; then
+          if [[ -f evidence/ORDER-004/MANIFEST.sha256 ]]; then
             echo "generate=false" >> "$GITHUB_OUTPUT"
-            echo "ORDER003_EVIDENCE_ALREADY_PRESENT=YES"
+            (cd evidence/ORDER-004 && sha256sum -c MANIFEST.sha256)
+            echo "ORDER004_EVIDENCE_ALREADY_PRESENT=YES"
           else
             echo "generate=true" >> "$GITHUB_OUTPUT"
-            echo "ORDER003_EVIDENCE_GENERATION=REQUIRED"
+            echo "ORDER004_EVIDENCE_GENERATION=REQUIRED"
           fi
       - uses: actions/setup-python@v5
         if: ${{ steps.evidence_state.outputs.generate == 'true' }}
@@ -37,158 +38,120 @@ jobs:
           python-version: "3.12"
       - name: Install exact environment
         if: ${{ steps.evidence_state.outputs.generate == 'true' }}
-        shell: bash
         run: |
           python -m pip install -r requirements.lock
           python -m pip install --no-deps -e .
           python -m pip check
-      - name: Record environment and commands
+      - name: Quality and regression evidence
         if: ${{ steps.evidence_state.outputs.generate == 'true' }}
         shell: bash
         run: |
           set -Eeuo pipefail
-          mkdir -p evidence/ORDER-003
-          SOURCE_HEAD="$(git rev-parse HEAD)"
-          cat > evidence/ORDER-003/ENVIRONMENT.md <<EOF
-          # ORDER-003 environment
-
-          - Evidence source head before evidence commit: \`$SOURCE_HEAD\`
-          - Branch: \`order-002-mimicus-v01\`
-          - PR: \`#3\`
-          - Runner OS: Ubuntu 24.04 GitHub-hosted
-          - Python: \`$(python --version 2>&1)\`
-          - Pip: \`$(python -m pip --version)\`
-          - Package: \`mimicus-swarm 0.2.0\`
-          - OpenAI live credential: not supplied; live smoke status is \`NOT_RUN_NO_CREDENTIAL\`.
-          - Offline scripted provider is the normative reproducibility path.
-          EOF
-          cat > evidence/ORDER-003/COMMANDS.md <<'EOF'
-          # ORDER-003 exact evidence commands
-
-          ```bash
-          python -m pip install -r requirements.lock
-          python -m pip install --no-deps -e .
-          python -m pip check
-          ruff format --check .
-          ruff check .
-          mypy src/mimicus
-          pytest tests/unit tests/integration --cov=mimicus --cov-report=term-missing --cov-fail-under=90
-          python scripts/check_security.py
-          python scripts/check_ledger.py
-          python -m mimicus.validation.order003_e2e evidence/ORDER-003
-          mimicus benchmark --profile offline --episodes 200 --output-dir evidence/ORDER-003
-          MIMICUS_DATABASE_URL=sqlite:///<clean.db> mimicus db upgrade
-          MIMICUS_DATABASE_URL=sqlite:///<order002.db> alembic upgrade 0001_order002
-          MIMICUS_DATABASE_URL=sqlite:///<order002.db> alembic upgrade head
-          python -m build
-          python scripts/verify_evidence.py ORDER-003
-          ```
-
-          Normal exact-head CI additionally reruns ORDER-002 process compatibility and real MCP transport without an OpenAI key.
-          EOF
-      - name: Quality, coverage and security evidence
-        if: ${{ steps.evidence_state.outputs.generate == 'true' }}
-        shell: bash
-        run: |
-          set -Eeuo pipefail
+          mkdir -p evidence/ORDER-004
           {
-            echo "ORDER_003_TEST_RESULTS"
+            echo "ORDER_004_TEST_RESULTS"
             echo "SOURCE_HEAD=$(git rev-parse HEAD)"
             ruff format --check .
             ruff check .
             mypy src/mimicus
             pytest tests/unit tests/integration --cov=mimicus --cov-report=term-missing --cov-fail-under=90
             python scripts/check_security.py
-          } 2>&1 | tee evidence/ORDER-003/TEST_RESULTS.txt
-          python scripts/check_ledger.py > evidence/ORDER-003/LEDGER_VERIFY.json
-      - name: Process restart and swarm-grade E2E evidence
+            python scripts/check_ledger.py
+            python -m mimicus.validation.order003_e2e "$RUNNER_TEMP/ORDER-003"
+          } 2>&1 | tee evidence/ORDER-004/TEST_RESULTS.txt
+      - name: Materialize ORDER-004 process evidence
         if: ${{ steps.evidence_state.outputs.generate == 'true' }}
         env:
           OPENAI_API_KEY: ""
-        run: python -m mimicus.validation.order003_e2e evidence/ORDER-003
-      - name: Execution-derived benchmark evidence
+        run: python scripts/order004_evidence.py evidence/ORDER-004
+      - name: Materialize neutral 200-per-architecture benchmark
         if: ${{ steps.evidence_state.outputs.generate == 'true' }}
-        run: mimicus benchmark --profile offline --episodes 200 --output-dir evidence/ORDER-003
-      - name: Migration evidence
+        run: mimicus benchmark --profile offline --episodes 200 --output-dir evidence/ORDER-004
+      - name: Migration and package evidence
         if: ${{ steps.evidence_state.outputs.generate == 'true' }}
         shell: bash
         run: |
           set -Eeuo pipefail
           {
-            echo "ORDER_003_MIGRATION_VERIFY"
-            export MIMICUS_DATABASE_URL="sqlite:///$RUNNER_TEMP/order003-clean.db"
+            export MIMICUS_DATABASE_URL="sqlite:///$RUNNER_TEMP/order004-clean.db"
             mimicus db upgrade
             echo "CLEAN_DB_UPGRADE=PASS"
-            export MIMICUS_DATABASE_URL="sqlite:///$RUNNER_TEMP/order003-from-order002.db"
+            export MIMICUS_DATABASE_URL="sqlite:///$RUNNER_TEMP/order004-from-order002.db"
             alembic upgrade 0001_order002
-            echo "ORDER002_BASELINE_CREATED=PASS"
             alembic upgrade head
-            echo "ORDER002_TO_ORDER003_UPGRADE=PASS"
-            python - <<'PY'
-          from mimicus.storage.postgres_compat import compile_postgres_schema
-          ddl = compile_postgres_schema()
-          assert len(ddl) >= 19
-          assert "CREATE TABLE runs" in ddl["runs"]
-          print("POSTGRESQL_SCHEMA_COMPILE=PASS")
-          PY
-          } 2>&1 | tee evidence/ORDER-003/MIGRATION_VERIFY.txt
-      - name: Package evidence
-        if: ${{ steps.evidence_state.outputs.generate == 'true' }}
-        shell: bash
-        run: |
-          set -Eeuo pipefail
+            echo "ORDER002_TO_HEAD_UPGRADE=PASS"
+            python -c "from mimicus.storage.postgres_compat import compile_postgres_schema; d=compile_postgres_schema(); assert len(d)>=19 and 'CREATE TABLE runs' in d['runs']; print('POSTGRESQL_SCHEMA_COMPILE=PASS')"
+          } 2>&1 | tee evidence/ORDER-004/MIGRATION_VERIFY.txt
           {
             python -m build
-            python -m venv "$RUNNER_TEMP/order003-wheel"
-            "$RUNNER_TEMP/order003-wheel/bin/python" -m pip install -r requirements.lock
-            "$RUNNER_TEMP/order003-wheel/bin/python" -m pip install dist/*.whl
-            "$RUNNER_TEMP/order003-wheel/bin/mimicus" doctor --profile offline
-            "$RUNNER_TEMP/order003-wheel/bin/python" - <<'PY'
-          import mimicus
-          assert mimicus.__version__ == "0.2.0"
-          print("PACKAGE_VERSION_0_2_0=PASS")
-          PY
-          } 2>&1 | tee evidence/ORDER-003/PACKAGE_VERIFY.txt
-      - name: Findings closure matrix
-        if: ${{ steps.evidence_state.outputs.generate == 'true' }}
-        shell: bash
-        run: |
-          cat > evidence/ORDER-003/AUD_FINDINGS_CLOSURE.md <<'EOF'
-          # ORDER-003 AUD findings closure
-
-          | Finding | Integrated implementation | Direct tests | Exact evidence |
-          |---|---|---|---|
-          | F001 persistent immune state | `src/mimicus/storage/models.py`, `storage/repository.py`, `plugins/services.py`, `orchestration/engine.py`, Alembic `0002_order003_runtime.py` | `test_repository_persists_calibration_memory_falsifier_and_identity`, restart integration tests | `PERSISTENCE_RESTART.json`, `MIGRATION_VERIFY.txt` |
-          | F002 memory retrieval/reuse | `memory/gates.py`, `memory/retrieval.py`, repository memory transitions, engine run-start retrieval and CROSS-AGENT gating | `test_engine_restart_memory_reuse_and_falsifier_germinal_reuse`, process memory seed/reuse | `MEMORY_REUSE.json`, `PERSISTENCE_RESTART.json` |
-          | F003 bankruptcy enforcement | `agents/calibration.py`, `agents/bankruptcy.py`, `agents/identity.py`, repository lineage state, engine pre-selection exclusions/recovery | `test_bankruptcy_enforcement_whitewash_probation_and_recovery` | `BANKRUPTCY_LINEAGE.json` |
-          | F004 real sparse communication | `orchestration/communication.py`, provider `ChallengeRequest/ChallengeResponse`, engine challenge rounds/persistence | `test_sparse_communication_is_real_provider_work_and_plan_changes` | `SPARSE_COMMUNICATION.json` |
-          | F005 executable morphology | `orchestration/morphology.py`, `orchestration/dag_executor.py`, engine plan compilation/execution | `test_morphology_compiles_distinct_executable_dags`, concurrent-delay test | `MORPHOLOGY_DAG.json`, `PARALLELISM.json` |
-          | F006 functional plugin runtime | `plugins/api.py`, `plugins/registry.py`, `plugins/services.py`, `plugins/profiles.py`; engine consumes `RuntimeServices` | `test_plugin_runtime_services_are_functional` | `TEST_RESULTS.txt` |
-          | F007 execution-derived benchmark | `src/mimicus/benchmark.py`: actual A/B/C/D/E runners plus architecture-blind common grader and anti-rigging probe | benchmark integration tests and exact-head 200/arch job | `BENCHMARK_RAW.jsonl`, `BENCHMARK.json`, `BENCHMARK_ANTI_RIGGING.json` |
-          | F008 integrated germinal learning | `germinal/center.py`, `germinal/promote.py`, repository persisted candidates/specs/fossils, engine learn path | restart germinal promotion/reuse integration and process stages | `GERMINAL_INTEGRATED.json` |
-
-          Swarm-grade additions are also exercised by the same normal engine: deterministic semantic proximity, exact fingerprint vs lineage probation, real fan-out/fan-in, bounded async execution and critical-path telemetry. No second orchestration control plane or generated-code execution path was added.
-          EOF
-      - name: Build manifest and self-verify
+            python -m pip check
+            mimicus doctor --profile offline
+          } 2>&1 | tee evidence/ORDER-004/PACKAGE_VERIFY.txt
+      - name: Metadata and findings closure
         if: ${{ steps.evidence_state.outputs.generate == 'true' }}
         shell: bash
         run: |
           set -Eeuo pipefail
+          SOURCE_HEAD="$(git rev-parse HEAD)"
+          cat > evidence/ORDER-004/ENVIRONMENT.md <<EOF
+          # ORDER-004 environment
+
+          - Evidence source head before evidence commit: \`$SOURCE_HEAD\`
+          - Audited starting head: \`bd9281cdc0a227c0e3ac2b1f62ba5b4c2f3562e8\`
+          - Branch: \`order-002-mimicus-v01\`
+          - PR: \`#3\`
+          - Main baseline: \`2d50fd91f4346618acfa87928987e131f54159c7\`
+          - Python: \`$(python --version 2>&1)\`
+          - OpenAI live smoke: \`NOT_RUN_NO_CREDENTIAL\`
+          EOF
+          cat > evidence/ORDER-004/COMMANDS.md <<'EOF'
+          # ORDER-004 exact validation commands
+
+          `ruff format --check .`; `ruff check .`; `mypy src/mimicus`; `pytest tests/unit tests/integration --cov=mimicus --cov-report=term-missing --cov-fail-under=90`; `python scripts/check_security.py`; `python scripts/check_ledger.py`; `python -m mimicus.validation.order003_e2e`; `python scripts/order004_evidence.py`; `mimicus benchmark --profile offline --episodes 200`; SQLite migration from clean and ORDER-002 baseline; PostgreSQL schema compile; `python -m build`; final manifest verification.
+          EOF
+          cat > evidence/ORDER-004/OPENAI_LIVE_SMOKE.txt <<'EOF'
+          OPENAI_LIVE_SMOKE=NOT_RUN_NO_CREDENTIAL
+          Mocked OpenAI Agents adapter is exercised with bounded verified-memory injection and truthful UNKNOWN monetary cost when authoritative pricing is unavailable.
+          EOF
+          cat > evidence/ORDER-004/AUD_FINDINGS_CLOSURE.md <<'EOF'
+          # ORDER-004 findings closure
+
+          | Finding | Closure | Evidence |
+          |---|---|---|
+          | F009 specialist-safe auditions | capability/test-family-scoped persistent calibration and bankruptcy; NOT_APPLICABLE is neutral; restart/recovery verified | `SPECIALIST_AUDITIONS.json` |
+          | F010 runtime-truth identity/correlation | exact fingerprint binds runtime provider/model/version plus phenotype/prompt/tools/policy/adapter; same runtime model is correlation-penalized | `RUNTIME_IDENTITY_CORRELATION.json` |
+          | F011 verified memory reaches online model | bounded eligible verified memory is serialized into sealed OpenAI structured input; quarantined memory excluded; usage counts consumed items | `OPENAI_MEMORY_INJECTION_MOCK.json` |
+          | F012 unified budget | one async-lock ledger reserves/reconciles agents, challenges and falsifiers; unknown/overrun fail closed; cancellation releases; zero budget blocks paid calls | `BUDGET_LEDGER.json` |
+          | F013 evidence persistence | run-scoped immutable evidence rows, canonical snapshot provenance, claim refs resolve after restart and replay | `EVIDENCE_PERSISTENCE.json` |
+          | F014 falsifier proximity | deterministic signatures and redundancy penalty suppress near duplicates while retaining complementary tests | `FALSIFIER_PROXIMITY.json` |
+          | F015 distinct morphologies | solo, paired verify, parallel fanout, sparse graph and hierarchical nested fanout/fanin compile to distinct structural signatures | `MORPHOLOGY_CLASSES.json`, `BENCHMARK_MORPHOLOGY_DISTRIBUTION.json` |
+          | F016 structured cancellation | task-group fatal fault cancels and awaits sibling; no delayed side effect survives | `STRUCTURED_CANCELLATION.json` |
+          | F017 neutral benchmark | 200 episodes/architecture on identical neutral public structured facts; common grader; anti-rigging and leakage rename probes; actual morphology/agent/challenge distributions | `BENCHMARK.json`, `BENCHMARK_RAW.jsonl`, `BENCHMARK_ANTI_RIGGING.json`, `BENCHMARK_LEAKAGE.json`, `BENCHMARK_MORPHOLOGY_DISTRIBUTION.json` |
+
+          F001..F008 regression is rerun through the ORDER-003 process E2E in `TEST_RESULTS.txt` and again by exact-head CI. No new PR and no merge.
+          EOF
+      - name: Validate required evidence and build manifest
+        if: ${{ steps.evidence_state.outputs.generate == 'true' }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          for file in REMOTE_TRUTH.md AUD_FINDINGS_CLOSURE.md SPECIALIST_AUDITIONS.json RUNTIME_IDENTITY_CORRELATION.json OPENAI_MEMORY_INJECTION_MOCK.json BUDGET_LEDGER.json EVIDENCE_PERSISTENCE.json FALSIFIER_PROXIMITY.json MORPHOLOGY_CLASSES.json STRUCTURED_CANCELLATION.json BENCHMARK.json BENCHMARK_RAW.jsonl BENCHMARK_ANTI_RIGGING.json BENCHMARK_MORPHOLOGY_DISTRIBUTION.json MCP_E2E.json; do
+            test -s "evidence/ORDER-004/$file"
+          done
+          python -c "import json; r=json.load(open('evidence/ORDER-004/BENCHMARK.json')); assert r['episodes_per_architecture']==200 and r['total_architecture_episodes']==1000 and r['anti_rigging']['passed'] and r['leakage_probe']['passed'] and r['metrics']['E']['avg_simulated_cost']>0"
           (
-            cd evidence/ORDER-003
-            find . -maxdepth 1 -type f ! -name MANIFEST.sha256 -printf '%P\n' | LC_ALL=C sort | while read -r file; do
-              sha256sum "$file"
-            done
-          ) > evidence/ORDER-003/MANIFEST.sha256
-          python scripts/verify_evidence.py ORDER-003
-      - name: Commit exact-head evidence to the same branch
+            cd evidence/ORDER-004
+            find . -maxdepth 1 -type f ! -name MANIFEST.sha256 -printf '%P\n' | LC_ALL=C sort | while read -r file; do sha256sum "$file"; done
+          ) > evidence/ORDER-004/MANIFEST.sha256
+          (cd evidence/ORDER-004 && sha256sum -c MANIFEST.sha256)
+      - name: Commit ORDER-004 evidence on same branch
         if: ${{ steps.evidence_state.outputs.generate == 'true' }}
         shell: bash
         run: |
           set -Eeuo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add evidence/ORDER-003
+          git add evidence/ORDER-004
           git diff --cached --check
-          git commit -m 'ORDER-003: materialize exact-head audit evidence'
+          git commit -m 'ORDER-004: materialize exact audit evidence'
           git push origin HEAD:order-002-mimicus-v01
