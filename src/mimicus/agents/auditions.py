@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
 
 CANARY_BANK: dict[str, tuple[str, str]] = {
     "semantic_decoy": ("Choose relevant evidence, ignore topical decoy.", "relevant"),
@@ -17,13 +18,49 @@ class AuditionResult:
     fingerprint: str
     domain: str
     category: str
-    passed: bool
+    passed: bool | None
     score: float
+    capability: str = "generic"
+    test_family: str = "canary"
+    applicability: Literal["APPLICABLE", "NOT_APPLICABLE"] = "APPLICABLE"
+
+    @property
+    def affects_trust(self) -> bool:
+        return self.applicability == "APPLICABLE" and self.passed is not None
 
 
-def audition(fingerprint: str, domain: str, category: str, scripted_answer: str) -> AuditionResult:
+def audition(
+    fingerprint: str,
+    domain: str,
+    category: str,
+    scripted_answer: str,
+    *,
+    capability: str = "generic",
+    test_family: str | None = None,
+    supported: bool = True,
+) -> AuditionResult:
     if category not in CANARY_BANK:
         raise KeyError(category)
+    if not supported:
+        return AuditionResult(
+            fingerprint,
+            domain,
+            category,
+            None,
+            0.5,
+            capability=capability,
+            test_family=test_family or category,
+            applicability="NOT_APPLICABLE",
+        )
     expected = CANARY_BANK[category][1]
     passed = expected.lower() in scripted_answer.lower()
-    return AuditionResult(fingerprint, domain, category, passed, 1.0 if passed else 0.0)
+    return AuditionResult(
+        fingerprint,
+        domain,
+        category,
+        passed,
+        1.0 if passed else 0.0,
+        capability=capability,
+        test_family=test_family or category,
+        applicability="APPLICABLE",
+    )
