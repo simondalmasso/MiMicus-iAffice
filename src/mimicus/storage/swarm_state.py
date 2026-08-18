@@ -234,9 +234,7 @@ class SwarmStateStore:
             for marginal_row in marginal_rows:
                 if marginal_row.capability not in capabilities:
                     continue
-                marginal[marginal_row.fingerprint][marginal_row.capability] = max(
-                    -1.0, min(1.0, marginal_row.marginal_sum / (marginal_row.verified_episodes + 4.0))
-                )
+                marginal[marginal_row.fingerprint][marginal_row.capability] = max(-1.0, min(1.0, marginal_row.marginal_sum / (marginal_row.verified_episodes + 4.0)))
         return pair, marginal
 
     def prior_failure_modes(self, domain: str) -> tuple[str, ...]:

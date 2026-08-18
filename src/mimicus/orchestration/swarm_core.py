@@ -635,9 +635,7 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
             for fp, claim in sorted(claims_by_fp.items()):
                 member = selected_by_fp[fp]
                 relevant_caps = [cap for cap in profile.required_capabilities if cap in member.capabilities]
-                authority = sum(
-                    member.capability_calibration_scores.get(cap, member.calibration_score) for cap in relevant_caps
-                ) / max(1, len(relevant_caps))
+                authority = sum(member.capability_calibration_scores.get(cap, member.calibration_score) for cap in relevant_caps) / max(1, len(relevant_caps))
                 claim_rows.append((fp, claim, authority))
             decision = synthesize_swarm(
                 claim_rows,
