@@ -30,12 +30,13 @@ class AgentCandidate:
 def correlation(a: AgentCandidate, b: AgentCandidate) -> float:
     # Runtime provider/model sameness dominates correlation. Prompt/tool diversity
     # still matters but cannot manufacture fake model diversity.
+    shared_policy = bool(a.policy_hash) and a.policy_hash == b.policy_hash
     shared = (
         0.35 * float(a.provider == b.provider)
         + 0.35 * float(a.model == b.model and a.runtime_model_version == b.runtime_model_version)
         + 0.15 * float(a.prompt_hash == b.prompt_hash)
         + 0.10 * float(a.tool_hash == b.tool_hash)
-        + 0.05 * float(a.policy_hash == b.policy_hash)
+        + 0.05 * float(shared_policy)
     )
     empirical = max(a.historical_cofailure.get(b.fingerprint, 0.0), b.historical_cofailure.get(a.fingerprint, 0.0))
     return min(1.0, 0.80 * shared + 0.20 * empirical)
