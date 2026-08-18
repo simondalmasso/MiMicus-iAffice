@@ -1,0 +1,34 @@
+name: ORDER-006 audition capability patch
+on:
+  push:
+    branches: [order-002-mimicus-v01]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: order-002-mimicus-v01
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: python -m pip install ruff==0.16.3
+      - run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/mimicus/orchestration/swarm_core.py')
+          s = p.read_text()
+          old = '''            audition_reservation = await budget.reserve(\n                "audition",\n                provider_estimate,\n                known_zero_cost=host.provider.capabilities.known_zero_cost,\n            )\n            if audition_reservation is None:\n'''
+          new = '''            if not host.provider.capabilities.supports_auditions:\n                state_key = capability_scope(domain, capability, family)\n                current_state = host.repository.bankruptcy_state(candidate.fingerprint, state_key)\n                scores[capability] = 0.5\n                calibrations[capability] = _blend_verified_authority(\n                    host, candidate.fingerprint, domain, capability, 0.5\n                )\n                states[capability] = current_state\n                audition_row = {\n                    "fingerprint": candidate.fingerprint,\n                    "phenotype": candidate.name,\n                    "capability": capability,\n                    "category": category,\n                    "test_family": family,\n                    "prompt_hash": sha256_obj(canary_prompt),\n                    "provider_trace_id": None,\n                    "provider_executed": False,\n                    "applicability": "PROVIDER_UNSUPPORTED",\n                    "passed": None,\n                    "score": 0.5,\n                    "routing_state": current_state,\n                }\n                audition_records.append(audition_row)\n                ledger.append("agent_audition_unsupported", audition_row)\n                continue\n            audition_reservation = await budget.reserve(\n                "audition",\n                provider_estimate,\n                known_zero_cost=host.provider.capabilities.known_zero_cost,\n            )\n            if audition_reservation is None:\n'''
+          assert old in s
+          p.write_text(s.replace(old, new, 1))
+          PY
+      - run: ruff format src/mimicus/orchestration/swarm_core.py src/mimicus/providers/base.py src/mimicus/providers/scripted.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/mimicus
+          git commit -m "ORDER-006: route auditions by provider capability"
+          git push origin HEAD:order-002-mimicus-v01
