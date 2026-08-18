@@ -7,7 +7,6 @@ BASE = "1622a67b69737f4dc623bf7df0b9dfb6ac9d77da"
 PATH = "src/mimicus/validation/order003_worker.py"
 text = subprocess.check_output(["git", "show", f"{BASE}:{PATH}"], text=True)
 
-# ORDER-005 explicit evidence semantics: historical fixture-driven probes stay explicit.
 tam = '{"claim_statement": "TAM", "claim_type": "numeric", "price": 10.0, "users": 100.0, "price_period": "monthly", "claimed": 1000.0}'
 text = text.replace(
     'result = engine.run(RunRequest(task="K3 TAM 12x mismatch", domain="finance", learn=True))',
@@ -20,31 +19,12 @@ text = text.replace(
     1,
 )
 
-# ORDER-005 identity integrity: whitewashing probes must use a real material revision,
-# not a forged arbitrary fingerprint. The forged path has its own rejection tests.
 text = text.replace(
     "from mimicus.memory.gates import write_gate\n",
     "from mimicus.agents.identity import make_identity\nfrom mimicus.memory.gates import write_gate\n",
     1,
 )
-old_white = '''    child = "c" * 64
-    fixture = {
-        "claim_statement": "revised identity",
-        "claim_type": "numeric",
-        "price": 1.0,
-        "users": 1.0,
-        "claimed": 10.0,
-        "identity_revisions": {
-            base.name: {
-                "fingerprint": child,
-                "lineage_id": base_identity.lineage_id,
-                "parent_fingerprint": base.fingerprint,
-                "provenance": "ORDER-003 process whitewash probe",
-            }
-        },
-    }
-'''
-new_white = '''    child_identity = make_identity(
+child_block = '''    child_identity = make_identity(
         provider=base.provider,
         model_family=base.model,
         phenotype=base.name,
@@ -59,29 +39,15 @@ new_white = '''    child_identity = make_identity(
         declared_lineage_id=base_identity.lineage_id,
     )
     child = child_identity.fingerprint
-    fixture = {
-        "claim_statement": "revised identity",
-        "claim_type": "numeric",
-        "price": 1.0,
-        "users": 1.0,
-        "claimed": 10.0,
-        "identity_revisions": {
-            base.name: {
-                "system_prompt_hash": "c" * 64,
-                "lineage_id": base_identity.lineage_id,
-                "parent_fingerprint": base.fingerprint,
-                "provenance": "ORDER-003 process whitewash probe",
-            }
-        },
-    }
 '''
-if text.count(old_white) != 2:
-    raise SystemExit(f"expected 2 whitewash/recovery anchors, got {text.count(old_white)}")
-text = text.replace(old_white, new_white, 2)
+if text.count('    child = "c" * 64\n') != 2:
+    raise SystemExit("expected two child fingerprint anchors")
+text = text.replace('    child = "c" * 64\n', child_block, 2)
+if text.count('                "fingerprint": child,\n') != 2:
+    raise SystemExit("expected two identity revision fingerprint anchors")
+text = text.replace('                "fingerprint": child,\n', '                "system_prompt_hash": "c" * 64,\n', 2)
 Path(PATH).write_text(text, encoding="utf-8")
 
-# The shared historical MCP helper now supplies structured evidence through the
-# public MCP contract rather than relying on task words to synthesize a fixture.
 worker = Path("src/mimicus/validation/worker.py")
 w = worker.read_text(encoding="utf-8")
 old = '''                        "domain": "finance",
