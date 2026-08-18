@@ -185,7 +185,7 @@ def recovery() -> dict[str, Any]:
                 "fingerprint": child,
                 "lineage_id": base_identity.lineage_id,
                 "parent_fingerprint": base.fingerprint,
-                "provenance": "ORDER-003 process recovery probe",
+                "provenance": "ORDER-003 process whitewash probe",
             }
         },
     }
