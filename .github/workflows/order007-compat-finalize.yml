@@ -1,0 +1,64 @@
+name: ORDER-007 authenticated compatibility finalize
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  fix:
+    if: github.event.pull_request.head.ref == 'order-002-mimicus-v01' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: order-002-mimicus-v01
+          fetch-depth: 0
+      - name: Apply canonical compatibility plus type fixes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import textwrap
+          source = Path('.github/workflows/order007-compat-fix.yml').read_text()
+          marker = "          python - <<'PY'\n"
+          body = source.split(marker, 1)[1].split("\n          PY\n", 1)[0]
+          exec(compile(textwrap.dedent(body), 'order007-compat-fix', 'exec'))
+          for name in ('scripts/order006_evidence.py', 'tests/integration/test_order006_runtime.py'):
+              path = Path(name)
+              text = path.read_text().replace('for index, claim in enumerate(result.final_claims):', 'for claim in result.final_claims:')
+              path.write_text(text)
+
+          p = Path('src/mimicus/storage/swarm_state.py')
+          s = p.read_text()
+          s = s.replace('                        key = (a, b, domain, capability)\n                        pair_acc[key]["episodes"] += 1\n                        pair_acc[key]["cofailures"] += int(not left_outcome and not right_outcome)\n                        pair_acc[key]["independent"] += int(left_outcome != right_outcome)\n', '                        pair_key = (a, b, domain, capability)\n                        pair_acc[pair_key]["episodes"] += 1\n                        pair_acc[pair_key]["cofailures"] += int(not left_outcome and not right_outcome)\n                        pair_acc[pair_key]["independent"] += int(left_outcome != right_outcome)\n')
+          p.write_text(s)
+
+          p = Path('src/mimicus/orchestration/swarm_core.py')
+          s = p.read_text()
+          old = '                payload = {"claims": visible, "subtask_hashes": [subtask_assignment[parent].hash for parent in node.prerequisites if parent in subtask_assignment]}\n                subgroup_results[node.group] = payload\n                return payload\n'
+          new = '                subgroup_payload: dict[str, Any] = {"claims": visible, "subtask_hashes": [subtask_assignment[parent].hash for parent in node.prerequisites if parent in subtask_assignment]}\n                subgroup_results[node.group] = subgroup_payload\n                return subgroup_payload\n'
+          assert old in s
+          p.write_text(s.replace(old, new, 1))
+          PY
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python -m pip install -r requirements.lock && python -m pip install --no-deps -e .
+      - name: Static and targeted gates
+        shell: bash
+        run: |
+          ruff format src/mimicus tests scripts
+          ruff check src/mimicus tests scripts
+          mypy src/mimicus
+          pytest tests/unit/test_order007_correctness.py tests/integration/test_order006_runtime.py
+          python -m mimicus.validation.order003_e2e "$RUNNER_TEMP/ORDER-003"
+          python scripts/order006_evidence.py "$RUNNER_TEMP/ORDER-006"
+          python scripts/order006_mcp_e2e.py "$RUNNER_TEMP/ORDER-006-MCP"
+      - name: Commit verified compatibility fixes
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/mimicus tests scripts
+          git diff --cached --check
+          git commit -m 'ORDER-007: authenticate historical verification regressions'
+          git push origin HEAD:order-002-mimicus-v01
