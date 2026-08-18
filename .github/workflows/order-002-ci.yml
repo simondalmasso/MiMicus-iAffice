@@ -23,8 +23,9 @@ jobs:
       - run: python scripts/order005_mcp_e2e.py "$RUNNER_TEMP/ORDER-005"
       - run: |
           python - <<'PY'
+          import os
           from pathlib import Path
-          root = Path("${RUNNER_TEMP}/ORDER-005")
+          root = Path(os.environ["RUNNER_TEMP"]) / "ORDER-005"
           required = {
               "NO_SYNTHETIC_RUNTIME_EVIDENCE.json",
               "IDENTITY_FINGERPRINT_RECOMPUTE.json",
