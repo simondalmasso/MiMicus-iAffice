@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import NAMESPACE_URL, uuid5
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from mimicus.canonical import sha256_obj
 
@@ -24,19 +24,30 @@ class VerificationSubmission(BaseModel):
     supersedes_receipt_hash: str | None = None
     appeal_of_receipt_hash: str | None = None
 
+    @field_validator("evidence_hashes", "snapshot_hashes")
+    @classmethod
+    def validate_hashes(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        if any(len(item) != 64 for item in value):
+            raise ValueError("verification evidence/snapshot hashes must be sha256 hex-length")
+        return value
+
     @property
     def origin_key_hash(self) -> str:
+        """Deduplicate paraphrases from the same verifier/origin for one target.
+
+        Evidence wording, snapshot ordering and observed timestamp are deliberately
+        excluded so repeated reports cannot multiply authority. A formal
+        supersession/appeal is a distinct origin key because it is an explicit
+        immutable lineage operation.
+        """
         return sha256_obj(
             {
                 "run_id": self.run_id,
                 "claim_hash": self.claim_hash,
                 "verified_status": self.verified_status,
                 "authority_class": self.authority_class,
-                "evidence_hashes": sorted(set(self.evidence_hashes)),
-                "snapshot_hashes": sorted(set(self.snapshot_hashes)),
                 "verifier_id": self.verifier_id,
                 "source_cluster": self.source_independence_cluster,
-                "observed_at": self.observed_at.isoformat(),
                 "supersedes": self.supersedes_receipt_hash,
                 "appeal_of": self.appeal_of_receipt_hash,
             }

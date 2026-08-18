@@ -11,8 +11,11 @@ class VerificationReceiptRow(Base):
     receipt_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
     receipt_id: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     origin_key_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
-    run_id: Mapped[str] = mapped_column(ForeignKey("runs.run_id"), nullable=False, index=True)
-    claim_hash: Mapped[str] = mapped_column(ForeignKey("claims.claim_hash"), nullable=False, index=True)
+    # Rejected receipts are intentionally retained too, so these are hash-bound
+    # identifiers rather than relational FKs. Accepted receipts are validated
+    # against persisted run/claim rows before insertion.
+    run_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    claim_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     verified_status: Mapped[str] = mapped_column(String(32), nullable=False)
     authority_class: Mapped[str] = mapped_column(String(64), nullable=False)
     verifier_id: Mapped[str] = mapped_column(String(256), nullable=False)
