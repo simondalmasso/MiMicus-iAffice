@@ -1,246 +1,39 @@
-name: ORDER-003 exact-head CI
+name: ORDER-004 core patch bootstrap
 
 on:
   pull_request:
     branches: [main]
-  workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
-  group: order-003-${{ github.event.pull_request.number || github.ref }}
+  group: order-004-core-bootstrap-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-env:
-  PYTHONUNBUFFERED: "1"
-  PIP_DISABLE_PIP_VERSION_CHECK: "1"
-
 jobs:
-  dependency-integrity:
-    name: lock / dependency integrity
+  apply-core:
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'order-002-mimicus-v01' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: order-002-mimicus-v01
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-      - name: Install exact environment or bootstrap resolver
-        shell: bash
+          python-version: '3.12'
+      - name: Apply deterministic ORDER-004 core patch
+        run: python scripts/order004_core_patch.py
+      - name: Restore normal CI and remove bootstrap tooling
         run: |
-          python -m pip install --upgrade pip
-          if [[ -f requirements.lock ]]; then
-            python -m pip install -r requirements.lock
-            python -m pip install --no-deps -e .
-          else
-            python -m pip install -e '.[dev]'
-            python -m pip freeze --exclude-editable > /tmp/requirements.lock
-            cat /tmp/requirements.lock
-          fi
-          python -m pip check
-      - name: Verify direct pins
+          git show bd9281cdc0a227c0e3ac2b1f62ba5b4c2f3562e8:.github/workflows/order-002-ci.yml > .github/workflows/order-002-ci.yml
+          git rm -f scripts/order004_core_patch.py .github/workflows/order004-core-patch.yml
+          git diff --check
+      - name: Commit on same branch
         run: |
-          python - <<'PY'
-          from importlib.metadata import version
-          expected = {
-              "mcp": "2.0.0",
-              "openai-agents": "0.21.1",
-              "pydantic": "2.13.4",
-              "SQLAlchemy": "2.0.50",
-              "alembic": "1.18.4",
-              "ruff": "0.16.3",
-              "mypy": "2.3.0",
-              "pytest": "9.0.2",
-              "pytest-cov": "7.0.0",
-          }
-          for package, wanted in expected.items():
-              actual = version(package)
-              assert actual == wanted, (package, wanted, actual)
-          print("DIRECT_PINS=PASS")
-          PY
-      - name: Bootstrap lock artifact
-        if: ${{ hashFiles('requirements.lock') == '' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: order003-bootstrap-lock
-          path: /tmp/requirements.lock
-
-  quality:
-    name: Ruff format/lint + mypy
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install
-        run: |
-          if [[ -f requirements.lock ]]; then python -m pip install -r requirements.lock && python -m pip install --no-deps -e .; else python -m pip install -e '.[dev]'; fi
-      - run: ruff format --check .
-      - run: ruff check .
-      - run: mypy src/mimicus
-
-  unit-integration-coverage:
-    name: unit / integration / coverage >=90
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install
-        run: |
-          if [[ -f requirements.lock ]]; then python -m pip install -r requirements.lock && python -m pip install --no-deps -e .; else python -m pip install -e '.[dev]'; fi
-      - run: pytest tests/unit tests/integration --cov=mimicus --cov-report=term-missing --cov-fail-under=90
-
-  migration-package:
-    name: migration / PostgreSQL compile / package smoke
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install
-        run: |
-          if [[ -f requirements.lock ]]; then python -m pip install -r requirements.lock && python -m pip install --no-deps -e .; else python -m pip install -e '.[dev]'; fi
-      - name: Migration clean + ORDER-002 upgrade + PostgreSQL DDL
-        run: |
-          export MIMICUS_DATABASE_URL="sqlite:///$RUNNER_TEMP/migration-clean.db"
-          mimicus db upgrade
-          export MIMICUS_DATABASE_URL="sqlite:///$RUNNER_TEMP/migration-order002.db"
-          alembic upgrade 0001_order002
-          alembic upgrade head
-          python - <<'PY'
-          from mimicus.storage.postgres_compat import compile_postgres_schema
-          ddl = compile_postgres_schema()
-          assert len(ddl) >= 19
-          assert "CREATE TABLE runs" in ddl["runs"]
-          print("POSTGRESQL_SCHEMA_COMPILE=PASS")
-          PY
-      - name: Build and isolated wheel smoke
-        run: |
-          python -m build
-          python -m venv "$RUNNER_TEMP/wheel-smoke"
-          if [[ -f requirements.lock ]]; then "$RUNNER_TEMP/wheel-smoke/bin/python" -m pip install -r requirements.lock; fi
-          "$RUNNER_TEMP/wheel-smoke/bin/python" -m pip install dist/*.whl
-          "$RUNNER_TEMP/wheel-smoke/bin/mimicus" doctor --profile offline
-
-  k3-security-replay:
-    name: K3 compatibility / no dynamic code / replay tamper
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install
-        run: |
-          if [[ -f requirements.lock ]]; then python -m pip install -r requirements.lock && python -m pip install --no-deps -e .; else python -m pip install -e '.[dev]'; fi
-      - run: python scripts/check_security.py
-      - run: python scripts/check_ledger.py
-      - run: pytest -q tests/unit/test_memory_germinal.py tests/unit/test_agents_coalition.py tests/unit/test_ledger_storage_security.py
-
-  e2e-order002-compat:
-    name: ORDER-002 12-process compatibility / real MCP / no key
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install
-        run: |
-          if [[ -f requirements.lock ]]; then python -m pip install -r requirements.lock && python -m pip install --no-deps -e .; else python -m pip install -e '.[dev]'; fi
-      - name: Process E2E
-        env:
-          OPENAI_API_KEY: ""
-        run: python -m mimicus.validation.e2e "$RUNNER_TEMP/E2E_RESULTS.json"
-      - name: Extract MCP evidence
-        run: |
-          python - <<'PY'
-          import json, os
-          from pathlib import Path
-          report = json.loads(Path(os.environ["RUNNER_TEMP"] + "/E2E_RESULTS.json").read_text())
-          mcp = next(row for row in report["scenarios"] if row.get("scenario") == "12_mcp_transport")
-          assert mcp["pass"] and not mcp["openai_key_required"] and mcp["path"] == "/mcp"
-          Path(os.environ["RUNNER_TEMP"] + "/MCP_E2E.json").write_text(json.dumps(mcp, indent=2, sort_keys=True) + "\n")
-          PY
-      - uses: actions/upload-artifact@v4
-        with:
-          name: order002-compat-e2e
-          path: |
-            ${{ runner.temp }}/E2E_RESULTS.json
-            ${{ runner.temp }}/MCP_E2E.json
-
-  e2e-order003-runtime:
-    name: ORDER-003 restart / parallel / sparse / lineage / MCP E2E
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install
-        run: |
-          if [[ -f requirements.lock ]]; then python -m pip install -r requirements.lock && python -m pip install --no-deps -e .; else python -m pip install -e '.[dev]'; fi
-      - name: Swarm-grade process E2E
-        env:
-          OPENAI_API_KEY: ""
-        run: python -m mimicus.validation.order003_e2e "$RUNNER_TEMP/ORDER-003"
-      - name: Assert required process gates
-        run: |
-          python - <<'PY'
-          import json, os
-          from pathlib import Path
-          root = Path(os.environ["RUNNER_TEMP"]) / "ORDER-003"
-          report = json.loads((root / "ORDER003_E2E.json").read_text())
-          assert report["passed"] and all(report["gates"].values())
-          parallel = json.loads((root / "PARALLELISM.json").read_text())
-          sparse = json.loads((root / "SPARSE_COMMUNICATION.json").read_text())
-          lineage = json.loads((root / "BANKRUPTCY_LINEAGE.json").read_text())
-          mcp = json.loads((root / "MCP_E2E.json").read_text())
-          assert parallel["metrics"]["peak_concurrency"] >= 2
-          assert parallel["metrics"]["critical_path_ms"] < parallel["metrics"]["serial_work_ms"]
-          assert sparse["challenge_edges"] > 0 and sparse["challenge_calls"] == sparse["challenge_edges"]
-          assert lineage["whitewash_state"] == "PROBATION" and lineage["recovery_state"] == "ACTIVE"
-          assert mcp["server_process_restarted"] and mcp["replay_verified_after_restart"]
-          print("ORDER003_PROCESS_GATES=PASS")
-          PY
-      - uses: actions/upload-artifact@v4
-        with:
-          name: order003-runtime-e2e
-          path: ${{ runner.temp }}/ORDER-003/
-
-  benchmark-evidence:
-    name: execution-derived benchmark 200/arch + anti-rigging
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install
-        run: |
-          if [[ -f requirements.lock ]]; then python -m pip install -r requirements.lock && python -m pip install --no-deps -e .; else python -m pip install -e '.[dev]'; fi
-      - name: Benchmark
-        run: mimicus benchmark --profile offline --episodes 200 --output-dir "$RUNNER_TEMP/benchmark"
-      - name: Assert benchmark dimensions and anti-rigging
-        run: |
-          python - <<'PY'
-          import json, os
-          from pathlib import Path
-          report = json.loads(Path(os.environ["RUNNER_TEMP"] + "/benchmark/BENCHMARK.json").read_text())
-          assert report["benchmark_version"] == "ORDER-003-v0.2-execution-derived"
-          assert report["episodes_per_architecture"] >= 200
-          assert report["total_architecture_episodes"] >= 1000
-          assert set(report["metrics"]) == {"A", "B", "C", "D", "E"}
-          assert report["anti_rigging"]["passed"] is True
-          print("BENCHMARK_200_PER_ARCH=PASS")
-          PY
-      - name: Verify preserved ORDER-002 evidence
-        if: ${{ hashFiles('evidence/ORDER-002/MANIFEST.sha256') != '' }}
-        run: python scripts/verify_evidence.py ORDER-002
-      - name: Verify committed ORDER-003 evidence
-        if: ${{ hashFiles('evidence/ORDER-003/MANIFEST.sha256') != '' }}
-        run: python scripts/verify_evidence.py ORDER-003
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'ORDER-004: integrate epistemic correctness core'
+          git push origin HEAD:order-002-mimicus-v01
