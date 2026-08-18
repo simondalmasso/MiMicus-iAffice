@@ -1,0 +1,53 @@
+{
+  "openai_restart": {
+    "blocked_content_absent": true,
+    "memory_ids": [
+      "d446a94c-1d38-487a-9b9d-ae06b1ce8df8"
+    ],
+    "memory_items_consumed": 1,
+    "monetary_cost_status": "UNKNOWN",
+    "pass": true,
+    "peer_outputs_included": false,
+    "run_budget": {
+      "actual_usd": "UNKNOWN",
+      "by_category": {
+        "agent_generation": {
+          "actual_known_usd": 0.0,
+          "cancelled_or_released_calls": 0,
+          "estimated_max_usd": 1.0,
+          "reconciled_calls": 1,
+          "reserved_usd": 0.0,
+          "unknown_cost_calls": 1
+        },
+        "falsifier": {
+          "actual_known_usd": 0.0,
+          "cancelled_or_released_calls": 0,
+          "estimated_max_usd": 0.0,
+          "reconciled_calls": 1,
+          "reserved_usd": 0.0,
+          "unknown_cost_calls": 0
+        }
+      },
+      "estimated_or_reserved_usd": 1.0,
+      "fail_closed": false,
+      "known_actual_usd": 0.0,
+      "latency_ms": 1.0,
+      "limit_usd": 1.0,
+      "max_concurrency": 4,
+      "max_tests": 3,
+      "outstanding_reserved_usd": 0,
+      "provider_overrun_usd": 0.0,
+      "remaining_usd": 0.0,
+      "reserved_usd": 1.0,
+      "spent_usd": 0.0,
+      "unknown_cost_reserved_usd": 1.0
+    },
+    "sealed_first_pass": true
+  },
+  "seed": {
+    "blocked_memory_id": "ef24092d-e1ea-4059-9d5c-faac133cba56",
+    "pass": true,
+    "run_id": "a552700d-d6f9-4a8d-b7e9-4244659e4c87",
+    "trusted_memory_id": "d446a94c-1d38-487a-9b9d-ae06b1ce8df8"
+  }
+}

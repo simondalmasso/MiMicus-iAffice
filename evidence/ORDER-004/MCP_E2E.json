@@ -1,0 +1,13 @@
+{
+  "ledger_head": "3d30e995906c0553360282a9324ad21cdbfde66c7e38268155446b68c2763774",
+  "morphology": "solo",
+  "openai_key_required": false,
+  "pass": true,
+  "path": "/mcp",
+  "persistent_memory_reused": [],
+  "plan_hash": "17a3cbb9c815538b722fcbe604cbad37f5009266896ef767b25b19b337af4148",
+  "replay_verified": true,
+  "run_id": "01115baf-726c-471b-a99b-02315026e926",
+  "stage": "mcp",
+  "transport": "streamable-http"
+}

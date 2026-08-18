@@ -1,0 +1,38 @@
+{
+  "bankrupt": {
+    "capability_scope": "research::cap=entailment::family=entailment_canary",
+    "capability_state": "BANKRUPT",
+    "critic_fingerprint": "836b4d16b60f69cbac8612c11c58a36bda3d0bf7e7b7ce0b140dbf8714450b03",
+    "legacy_domain_projection": "BANKRUPT",
+    "pass": true
+  },
+  "entailment": {
+    "critic_fingerprint": "836b4d16b60f69cbac8612c11c58a36bda3d0bf7e7b7ce0b140dbf8714450b03",
+    "pass": true,
+    "run_id": "7c7fd1ed-f327-4895-ae6f-cdb06df61a3d",
+    "selected": true
+  },
+  "freshness": {
+    "critic_entailment_attempts": 0,
+    "critic_fingerprint": "836b4d16b60f69cbac8612c11c58a36bda3d0bf7e7b7ce0b140dbf8714450b03",
+    "freshness_coalitions": [
+      [
+        "8e28edf330b55c0e80c2e2db3a17498d1d5d9d37fc83d81bdd7ad7e4bde3d022"
+      ],
+      [
+        "8e28edf330b55c0e80c2e2db3a17498d1d5d9d37fc83d81bdd7ad7e4bde3d022"
+      ],
+      [
+        "8e28edf330b55c0e80c2e2db3a17498d1d5d9d37fc83d81bdd7ad7e4bde3d022"
+      ]
+    ],
+    "pass": true
+  },
+  "recovery": {
+    "active_after_recovery": true,
+    "excluded_before_recovery": true,
+    "pass": true,
+    "recovery_run_id": "64a22b3d-19ba-409a-9eca-e48324fa73d1",
+    "selected_after_recovery": true
+  }
+}

@@ -1,0 +1,99 @@
+{
+  "complementary_scores": [
+    {
+      "applicability": 1.0,
+      "base_utility": 90000.0,
+      "closest_proximity": 0.0,
+      "evidence_quality": 1.0,
+      "expected_information_gain": 0.9,
+      "latency_cost": 1e-05,
+      "monetary_cost": 0.0,
+      "novelty_bonus": 0.0,
+      "redundancy_penalty": 0.0,
+      "retention_reason": "first_high_utility",
+      "risk_cost": 0.0,
+      "signature_hash": "6cc904918a364dce1879ab7ed2ae9048780a9a801e4f6baf5c9e5c0b98aab601",
+      "spec_hash": "aa5dd061ebfe9bdb5219602551d53120ffe950278b92f326847698d7fcace30b",
+      "utility": 90000.0
+    },
+    {
+      "applicability": 1.0,
+      "base_utility": 90000.0,
+      "closest_proximity": 0.1,
+      "evidence_quality": 1.0,
+      "expected_information_gain": 0.9,
+      "latency_cost": 1e-05,
+      "monetary_cost": 0.0,
+      "novelty_bonus": 8100.000000000001,
+      "redundancy_penalty": 3149.9999999999995,
+      "retention_reason": "complementary_or_novel",
+      "risk_cost": 0.0,
+      "signature_hash": "73f15201aab918dfeb92cc8833f65d521100174e2c1b2f6460324a9ae3ec403b",
+      "spec_hash": "ce6a8b96e60e9d93b7b7f00414aba2e338169748f2027984b0dd1f7be8aa51a2",
+      "utility": 94950.0
+    }
+  ],
+  "complementary_selected": [
+    "aa5dd061ebfe9bdb5219602551d53120ffe950278b92f326847698d7fcace30b",
+    "ce6a8b96e60e9d93b7b7f00414aba2e338169748f2027984b0dd1f7be8aa51a2"
+  ],
+  "near_duplicate_proximity": 1.0,
+  "near_duplicate_scores": [
+    {
+      "applicability": 1.0,
+      "base_utility": 90000.0,
+      "closest_proximity": 0.0,
+      "evidence_quality": 1.0,
+      "expected_information_gain": 0.9,
+      "latency_cost": 1e-05,
+      "monetary_cost": 0.0,
+      "novelty_bonus": 0.0,
+      "redundancy_penalty": 0.0,
+      "retention_reason": "first_high_utility",
+      "risk_cost": 0.0,
+      "signature_hash": "73f15201aab918dfeb92cc8833f65d521100174e2c1b2f6460324a9ae3ec403b",
+      "spec_hash": "c437cd343fa5f8d8374bc9b939f8c8a76c605b31918aa7b61ac865a77039a757",
+      "utility": 90000.0
+    },
+    {
+      "applicability": 1.0,
+      "base_utility": 90000.0,
+      "closest_proximity": 1.0,
+      "evidence_quality": 1.0,
+      "expected_information_gain": 0.9,
+      "latency_cost": 1e-05,
+      "monetary_cost": 0.0,
+      "novelty_bonus": 0.0,
+      "redundancy_penalty": 85500.0,
+      "retention_reason": "near_duplicate_substitute",
+      "risk_cost": 0.0,
+      "signature_hash": "73f15201aab918dfeb92cc8833f65d521100174e2c1b2f6460324a9ae3ec403b",
+      "spec_hash": "ce6a8b96e60e9d93b7b7f00414aba2e338169748f2027984b0dd1f7be8aa51a2",
+      "utility": 4500.0
+    }
+  ],
+  "near_duplicate_selected": [
+    "c437cd343fa5f8d8374bc9b939f8c8a76c605b31918aa7b61ac865a77039a757"
+  ],
+  "pass": true,
+  "signature": {
+    "evidence_targets": [
+      "unit"
+    ],
+    "oracle_kind": "deterministic",
+    "parameter_bands": [
+      [
+        "relative_tolerance",
+        "5.0e0.01"
+      ]
+    ],
+    "primitive": "numeric_invariant",
+    "trigger_tokens": [
+      "arithmetic",
+      "claim",
+      "numeric",
+      "period",
+      "unit"
+    ]
+  }
+}

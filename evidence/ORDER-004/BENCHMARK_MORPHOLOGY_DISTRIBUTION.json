@@ -1,0 +1,16 @@
+{
+  "agent_counts": {
+    "1": 155,
+    "2": 30,
+    "3": 15
+  },
+  "challenge_edges": {
+    "0": 185,
+    "3": 15
+  },
+  "classes": {
+    "parallel_fanout": 30,
+    "solo": 155,
+    "sparse_graph": 15
+  }
+}
