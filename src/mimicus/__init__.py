@@ -1,3 +1,3 @@
-"""MiMicus V0.1 agentic immune swarm."""
+"""MiMicus V0.2 agentic immune swarm runtime."""
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
