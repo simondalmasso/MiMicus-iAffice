@@ -48,4 +48,4 @@ ORDER-004 uses the same ordered public structured-evidence stream for architectu
 
 Semantic identities, plan hashes, claim/falsifier/evidence hashes and the event chain are deterministic inputs to replay verification. Monotonic duration and wall timing are preserved as evidence but are not treated as semantic truth. No arbitrary generated code execution path is introduced by V0.2.1.
 
-ORDER-002 and ORDER-003 evidence remain historical. ORDER-004 closes the audited correctness findings without replacing the single MiMicus control plane.
+ORDER-002 and ORDER-003 evidence remain historical. ORDER-004 closes the audited correctness findings without replacing the single MiMicus control plane. The checksummed ORDER-004 audit bundle is committed at `evidence/ORDER-004/` and is revalidated by exact-head CI.
