@@ -414,6 +414,8 @@ class MiMicusEngine:
             # Historical domain state remains inspection-only and cannot grant authority.
             if cap_states and all(state == "BANKRUPT" for state in cap_states.values()):
                 self.repository.set_bankruptcy_state(candidate.fingerprint, domain, "BANKRUPT", "all relevant capabilities bankrupt")
+            elif any(state == "PROBATION" for state in cap_states.values()):
+                self.repository.set_bankruptcy_state(candidate.fingerprint, domain, "PROBATION", "one or more relevant capabilities on probation")
             elif cap_states and all(state == "ACTIVE" for state in cap_states.values()):
                 self.repository.set_bankruptcy_state(candidate.fingerprint, domain, "ACTIVE", "all relevant capabilities active")
             audited.append(

@@ -87,13 +87,8 @@ def test_repository_persists_calibration_memory_falsifier_and_identity(tmp_path:
     url = f"sqlite:///{tmp_path / 'state.db'}"
     repo = Repository(url)
     candidate = default_candidates()[0]
-    identity = make_identity(
-        fingerprint=candidate.fingerprint,
-        provider=candidate.provider,
-        model_family=candidate.model,
-        phenotype=candidate.name,
-        tool_policy_hash=candidate.tool_hash,
-    )
+    factory = MiMicusEngine(url).services.agent_factory
+    identity = factory.identity_for(candidate)
     repo.register_identity(identity)
     row = {}
     for _ in range(3):
@@ -101,11 +96,16 @@ def test_repository_persists_calibration_memory_falsifier_and_identity(tmp_path:
     assert row["attempts"] == 3 and row["canary_failure_streak"] == 3
     repo.set_bankruptcy_state(candidate.fingerprint, "finance", "BANKRUPT", "test")
     child = make_identity(
-        fingerprint="f" * 64,
         provider=candidate.provider,
         model_family=candidate.model,
         phenotype=candidate.name,
         tool_policy_hash=candidate.tool_hash,
+        runtime_model_version=candidate.runtime_model_version,
+        phenotype_version=candidate.phenotype_version,
+        system_prompt_hash="f" * 64,
+        tool_manifest_hash=candidate.tool_hash,
+        policy_hash=candidate.policy_hash,
+        provider_adapter_version=candidate.provider_adapter_version,
         parent_fingerprint=candidate.fingerprint,
         declared_lineage_id=identity.lineage_id,
     )
@@ -136,10 +136,11 @@ def test_repository_persists_calibration_memory_falsifier_and_identity(tmp_path:
 def test_engine_restart_memory_reuse_and_falsifier_germinal_reuse(tmp_path: Path) -> None:
     url = f"sqlite:///{tmp_path / 'restart.db'}"
     engine1 = MiMicusEngine(url)
-    first = engine1.run(RunRequest(task="K3 TAM 12x mismatch", domain="finance", learn=True))
+    base_fixture = {"claim_statement": "TAM", "claim_type": "numeric", "price": 10.0, "users": 100.0, "price_period": "monthly", "claimed": 1000.0}
+    first = engine1.run(RunRequest(task="K3 TAM 12x mismatch", domain="finance", scenario="tam_12x", fixture=base_fixture, learn=True))
     assert first.memory_changes and first.memory_changes[0]["status"] == "shared_verified"
     engine2 = MiMicusEngine(url)
-    second = engine2.run(RunRequest(task="K3 TAM 12x mismatch", domain="finance"))
+    second = engine2.run(RunRequest(task="K3 TAM 12x mismatch", domain="finance", scenario="tam_12x", fixture=base_fixture))
     assert first.memory_changes[0]["memory_id"] in second.persistent_memory_reused
     fetched = engine2.get_run(first.run_id)
     assert fetched is not None and fetched["replay_state"]["verified"] is True
@@ -174,14 +175,28 @@ def test_bankruptcy_enforcement_whitewash_probation_and_recovery(tmp_path: Path)
     for _ in range(3):
         probe.run(RunRequest(task="numeric mismatch", domain="finance", scenario="tam_12x", fixture=fail_fixture))
     assert probe.repository.bankruptcy_state(base.fingerprint, "finance") == "BANKRUPT"
-    child_fp = "c" * 64
+    child_identity = make_identity(
+        provider=base.provider,
+        model_family=base.model,
+        phenotype=base.name,
+        tool_policy_hash=base.tool_hash,
+        runtime_model_version=base.runtime_model_version,
+        phenotype_version=base.phenotype_version,
+        system_prompt_hash="c" * 64,
+        tool_manifest_hash=base.tool_hash,
+        policy_hash=base.policy_hash,
+        provider_adapter_version=base.provider_adapter_version,
+        parent_fingerprint=base.fingerprint,
+        declared_lineage_id=identity.lineage_id,
+    )
+    child_fp = child_identity.fingerprint
     revision = {
         "claim_statement": "x",
         "claim_type": "numeric",
         "price": 1,
         "users": 1,
         "claimed": 10,
-        "identity_revisions": {base.name: {"fingerprint": child_fp, "lineage_id": identity.lineage_id, "parent_fingerprint": base.fingerprint}},
+        "identity_revisions": {base.name: {"system_prompt_hash": "c" * 64, "lineage_id": identity.lineage_id, "parent_fingerprint": base.fingerprint}},
     }
     whitewash = MiMicusEngine(url).run(RunRequest(task="numeric mismatch", domain="finance", scenario="tam_12x", fixture=revision))
     assert child_fp in whitewash.lineage_exclusions["probation"]

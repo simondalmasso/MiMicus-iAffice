@@ -32,8 +32,28 @@ def _engine(provider: ScriptedProvider | None = None) -> MiMicusEngine:
 def seed_memory() -> dict[str, Any]:
     engine = _engine()
     owner = engine.services.agent_factory.candidates()[0].fingerprint
-    verified = MemoryItem(claim_hash="a" * 64, content="persistent verified memory", owner_fingerprint=owner, domain="finance", origin_clusters=["independent-a", "independent-b"], authority=0.92, status=MemoryStatus.SHARED_VERIFIED, deterministic_verification=True, verified_clusters=["independent-a", "independent-b"])
-    rejected = MemoryItem(claim_hash="b" * 64, content="quarantined poison", owner_fingerprint=owner, domain="finance", origin_clusters=["poison"], authority=0.99, status=MemoryStatus.QUARANTINED, deterministic_verification=False, verified_clusters=[])
+    verified = MemoryItem(
+        claim_hash="a" * 64,
+        content="persistent verified memory",
+        owner_fingerprint=owner,
+        domain="finance",
+        origin_clusters=["independent-a", "independent-b"],
+        authority=0.92,
+        status=MemoryStatus.SHARED_VERIFIED,
+        deterministic_verification=True,
+        verified_clusters=["independent-a", "independent-b"],
+    )
+    rejected = MemoryItem(
+        claim_hash="b" * 64,
+        content="quarantined poison",
+        owner_fingerprint=owner,
+        domain="finance",
+        origin_clusters=["poison"],
+        authority=0.99,
+        status=MemoryStatus.QUARANTINED,
+        deterministic_verification=False,
+        verified_clusters=[],
+    )
     assert write_gate(verified).allowed
     engine.repository.save_memory_transition(verified, reason="ORDER-003 process seed", from_status="private_verified")
     engine.repository.save_memory_transition(rejected, reason="ORDER-003 process quarantine", from_status="candidate")
@@ -42,7 +62,14 @@ def seed_memory() -> dict[str, Any]:
 
 def reuse_memory() -> dict[str, Any]:
     engine = _engine()
-    result = engine.run(RunRequest(task="K3 TAM 12x mismatch", domain="finance", scenario="tam_12x", fixture={"claim_statement": "TAM", "claim_type": "numeric", "price": 10.0, "users": 100.0, "price_period": "monthly", "claimed": 1000.0}))
+    result = engine.run(
+        RunRequest(
+            task="K3 TAM 12x mismatch",
+            domain="finance",
+            scenario="tam_12x",
+            fixture={"claim_statement": "TAM", "claim_type": "numeric", "price": 10.0, "users": 100.0, "price_period": "monthly", "claimed": 1000.0},
+        )
+    )
     reused = set(result.persistent_memory_reused)
     assert reused
     assert all("quarantined" not in memory_id for memory_id in reused)
@@ -149,7 +176,21 @@ def whitewash() -> dict[str, Any]:
     engine = _engine()
     base = engine.services.agent_factory.candidates()[0]
     base_identity = engine.services.agent_factory.identity_for(base)
-    child = "c" * 64
+    child_identity = make_identity(
+        provider=base.provider,
+        model_family=base.model,
+        phenotype=base.name,
+        tool_policy_hash=base.tool_hash,
+        runtime_model_version=base.runtime_model_version,
+        phenotype_version=base.phenotype_version,
+        system_prompt_hash="c" * 64,
+        tool_manifest_hash=base.tool_hash,
+        policy_hash=base.policy_hash,
+        provider_adapter_version=base.provider_adapter_version,
+        parent_fingerprint=base.fingerprint,
+        declared_lineage_id=base_identity.lineage_id,
+    )
+    child = child_identity.fingerprint
     fixture = {
         "claim_statement": "revised identity",
         "claim_type": "numeric",
@@ -158,7 +199,7 @@ def whitewash() -> dict[str, Any]:
         "claimed": 10.0,
         "identity_revisions": {
             base.name: {
-                "fingerprint": child,
+                "system_prompt_hash": "c" * 64,
                 "lineage_id": base_identity.lineage_id,
                 "parent_fingerprint": base.fingerprint,
                 "provenance": "ORDER-003 process whitewash probe",
@@ -175,7 +216,21 @@ def recovery() -> dict[str, Any]:
     engine = _engine()
     base = engine.services.agent_factory.candidates()[0]
     base_identity = engine.services.agent_factory.identity_for(base)
-    child = "c" * 64
+    child_identity = make_identity(
+        provider=base.provider,
+        model_family=base.model,
+        phenotype=base.name,
+        tool_policy_hash=base.tool_hash,
+        runtime_model_version=base.runtime_model_version,
+        phenotype_version=base.phenotype_version,
+        system_prompt_hash="c" * 64,
+        tool_manifest_hash=base.tool_hash,
+        policy_hash=base.policy_hash,
+        provider_adapter_version=base.provider_adapter_version,
+        parent_fingerprint=base.fingerprint,
+        declared_lineage_id=base_identity.lineage_id,
+    )
+    child = child_identity.fingerprint
     fixture = {
         "claim_statement": "revised identity",
         "claim_type": "numeric",
@@ -185,7 +240,7 @@ def recovery() -> dict[str, Any]:
         "recovery_names": [base.name],
         "identity_revisions": {
             base.name: {
-                "fingerprint": child,
+                "system_prompt_hash": "c" * 64,
                 "lineage_id": base_identity.lineage_id,
                 "parent_fingerprint": base.fingerprint,
                 "provenance": "ORDER-003 process whitewash probe",
@@ -220,7 +275,15 @@ def sparse() -> dict[str, Any]:
     assert provider.challenge_calls == result.challenge_edge_count
     persisted = engine.get_run(result.run_id)
     assert persisted is not None and persisted["persistent_state"]["communications"]
-    return {"stage": "sparse", "pass": True, "run_id": result.run_id, "morphology": result.morphology, "challenge_edges": result.challenge_edge_count, "provider_calls": result.provider_call_count, "persisted": persisted["persistent_state"]["communications"]}
+    return {
+        "stage": "sparse",
+        "pass": True,
+        "run_id": result.run_id,
+        "morphology": result.morphology,
+        "challenge_edges": result.challenge_edge_count,
+        "provider_calls": result.provider_call_count,
+        "persisted": persisted["persistent_state"]["communications"],
+    }
 
 
 def mcp_restart() -> dict[str, Any]:

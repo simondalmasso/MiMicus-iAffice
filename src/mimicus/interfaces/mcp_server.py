@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from typing import Any, Literal
 
+from mimicus.claims.evidence_bundle import EvidenceInput
 from mimicus.config import Settings
 from mimicus.orchestration.engine import MiMicusEngine, RunRequest
 
@@ -44,7 +45,7 @@ def create_mcp_server(profile: str = "offline") -> Any:
         request = RunRequest(
             task=task,
             domain=domain,
-            evidence=evidence or [],
+            evidence=[EvidenceInput.model_validate(item) for item in (evidence or [])],
             budget_usd=budget_usd,
             max_agents=max_agents,
             max_concurrency=max_concurrency,

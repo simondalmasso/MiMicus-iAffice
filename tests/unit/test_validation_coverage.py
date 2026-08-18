@@ -114,7 +114,7 @@ def test_mcp_server_with_fake_sdk(monkeypatch) -> None:
     server = mcp_server.create_mcp_server("offline")
     run_fn = server.tools["run_mimicus"][0]
     get_fn = server.tools["get_mimicus_run"][0]
-    result = run_fn("K3 TAM 12x mismatch", "finance", 0.0, 4, "normal", True)
+    result = run_fn("K3 TAM 12x mismatch", domain="finance", evidence=None, budget_usd=0.0, max_agents=4, depth="normal", learn=True)
     fetched = get_fn(result["run_id"])
     assert fetched["found"] is True
     assert get_fn("missing")["found"] is False
