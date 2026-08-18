@@ -58,7 +58,11 @@ class SwarmStateStore:
 
     def receipts_for_run(self, run_id: str) -> list[dict[str, Any]]:
         with self.engine.connect() as connection:
-            rows = connection.execute(select(VerificationReceiptRow.payload_json).where(VerificationReceiptRow.run_id == run_id).order_by(VerificationReceiptRow.created_at)).scalars().all()
+            rows = (
+                connection.execute(select(VerificationReceiptRow.payload_json).where(VerificationReceiptRow.run_id == run_id).order_by(VerificationReceiptRow.created_at))
+                .scalars()
+                .all()
+            )
         return [json.loads(row) for row in rows]
 
     def receipt_exists(self, receipt_hash: str) -> bool:
@@ -212,7 +216,11 @@ class SwarmStateStore:
         pair: dict[str, dict[str, float]] = {fp: {} for fp in fingerprints}
         marginal: dict[str, dict[str, float]] = {fp: {} for fp in fingerprints}
         with self.engine.connect() as connection:
-            pair_rows = connection.execute(select(PairwiseCofailureRow).where(PairwiseCofailureRow.domain == domain, PairwiseCofailureRow.capability.in_(list(capabilities)))).scalars().all()
+            pair_rows = (
+                connection.execute(select(PairwiseCofailureRow).where(PairwiseCofailureRow.domain == domain, PairwiseCofailureRow.capability.in_(list(capabilities))))
+                .scalars()
+                .all()
+            )
             for row in pair_rows:
                 if row.agent_a not in pair or row.agent_b not in pair:
                     continue
@@ -220,7 +228,9 @@ class SwarmStateStore:
                 penalty = (row.cofailures / max(1, row.verified_episodes)) * confidence
                 pair[row.agent_a][row.agent_b] = max(pair[row.agent_a].get(row.agent_b, 0.0), penalty)
                 pair[row.agent_b][row.agent_a] = max(pair[row.agent_b].get(row.agent_a, 0.0), penalty)
-            marginal_rows = connection.execute(select(AgentMarginalValueRow).where(AgentMarginalValueRow.domain == domain, AgentMarginalValueRow.fingerprint.in_(fingerprints))).scalars().all()
+            marginal_rows = (
+                connection.execute(select(AgentMarginalValueRow).where(AgentMarginalValueRow.domain == domain, AgentMarginalValueRow.fingerprint.in_(fingerprints))).scalars().all()
+            )
             for row in marginal_rows:
                 if row.capability not in capabilities:
                     continue

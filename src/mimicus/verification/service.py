@@ -63,8 +63,7 @@ def _process_verified_evasion(host: Any, receipt: VerificationReceipt, run: dict
     contradictions = [
         row
         for row in relevant
-        if (receipt.verified_status == "SUPPORTED" and row.get("verdict") == "FAIL")
-        or (receipt.verified_status == "FALSIFIED" and row.get("verdict") == "PASS")
+        if (receipt.verified_status == "SUPPORTED" and row.get("verdict") == "FAIL") or (receipt.verified_status == "FALSIFIED" and row.get("verdict") == "PASS")
     ]
     if not contradictions:
         return None

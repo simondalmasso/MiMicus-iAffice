@@ -34,7 +34,9 @@ class RunResult(LegacyRunResult):
 
 class MiMicusEngine(LegacyMiMicusEngine):
     async def run_async(self, request: RunRequest) -> RunResult:
-        use_core = request.core_semantics if request.core_semantics is not None else request.source_mode in {"runtime", "benchmark"}
+        use_core = (
+            request.core_semantics if request.core_semantics is not None else request.source_mode == "benchmark" or (request.source_mode == "runtime" and not request.fixture)
+        )
         if use_core:
             return RunResult.model_validate(await execute_swarm_core(self, request))
         legacy = await super().run_async(request)

@@ -191,7 +191,16 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
     evidence_context = evidence_bundle.falsifier_context()
     ledger = EventLedger(run_id)
     task_hash = sha256_obj({"task": request.task, "domain": domain, "source_mode": request.source_mode, "evidence_hashes": evidence_bundle.hashes})
-    config_hash = sha256_obj({"budget_usd": request.budget_usd, "max_agents": request.max_agents, "max_concurrency": request.max_concurrency, "depth": request.depth, "learn": request.learn, "core": "ORDER-006"})
+    config_hash = sha256_obj(
+        {
+            "budget_usd": request.budget_usd,
+            "max_agents": request.max_agents,
+            "max_concurrency": request.max_concurrency,
+            "depth": request.depth,
+            "learn": request.learn,
+            "core": "ORDER-006",
+        }
+    )
     ledger.append("run_started", {"task_hash": task_hash, "config_hash": config_hash, "plugin_hashes": host.plugin_hashes, "swarm_core": "ORDER-006"})
     ledger.append("evidence_bundle_prepared", {"source_mode": request.source_mode, "evidence_hashes": list(evidence_bundle.hashes), "count": len(evidence_bundle.items)})
     retrieved_memory = host.services.memory.retrieve(domain)
@@ -307,15 +316,17 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
 
     fingerprints = [candidate.fingerprint for candidate in audited]
     pair_signals, marginal_signals = store.signals(fingerprints, domain, profile.required_capabilities)
-    audited = [replace(candidate, historical_cofailure=pair_signals.get(candidate.fingerprint, {}), historical_marginal_value=marginal_signals.get(candidate.fingerprint, {})) for candidate in audited]
+    audited = [
+        replace(candidate, historical_cofailure=pair_signals.get(candidate.fingerprint, {}), historical_marginal_value=marginal_signals.get(candidate.fingerprint, {}))
+        for candidate in audited
+    ]
     selected, rationale = host.services.coalition.select(profile, audited, request.max_agents)
     required = set(profile.required_capabilities)
     if len(selected) == 1 and len(selected) < request.max_agents:
         overlap_candidates = [
             candidate
             for candidate in audited
-            if candidate not in selected
-            and any(cap in required and candidate.capability_states.get(cap, "ACTIVE") == "ACTIVE" for cap in candidate.capabilities)
+            if candidate not in selected and any(cap in required and candidate.capability_states.get(cap, "ACTIVE") == "ACTIVE" for cap in candidate.capabilities)
         ]
         if profile.required_capabilities == ("synthesize",) or len(required) >= 2:
             if overlap_candidates:
@@ -348,6 +359,15 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
     promoted_by_primitive = {spec.primitive: spec for spec in promoted}
     candidate_specs = [promoted_by_primitive.get(spec.primitive, spec) for spec in base_specs]
     persistent_falsifiers_reused = [spec.hash for spec in candidate_specs if spec.hash in {row.hash for row in promoted}]
+    if candidate_specs and not evidence_bundle.items:
+        ledger.append(
+            "evidence_missing",
+            {
+                "reason": "evidence_required_falsifier_has_no_structured_evidence",
+                "source_mode": request.source_mode,
+                "falsifier_primitives": [spec.primitive for spec in candidate_specs],
+            },
+        )
     subtasks = decompose_task(task_hash, profile, evidence_context)
     plan, subtask_assignment = _compile_core_plan(
         task_hash=task_hash,
@@ -357,20 +377,42 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
         subtasks=subtasks,
         max_concurrency=request.max_concurrency,
     )
-    ledger.append("morphology_compiled", {"plan_hash": plan.plan_hash, "morphology": plan.name.value, "structural_signature": plan.structural_signature, "subtask_hashes": [row.hash for row in subtasks]})
+    ledger.append(
+        "morphology_compiled",
+        {"plan_hash": plan.plan_hash, "morphology": plan.name.value, "structural_signature": plan.structural_signature, "subtask_hashes": [row.hash for row in subtasks]},
+    )
 
     budget = BudgetLedger(request.budget_usd)
     provider_estimate = host.provider.capabilities.estimated_max_cost_per_call
     if provider_estimate is None and host.provider.capabilities.known_zero_cost:
         provider_estimate = 0.0
+    planned_members = [row.fingerprint for row in selected]
+    pricing_preflight: dict[str, Any] = {
+        "status": "READY",
+        "planned_paid_calls": len(selected),
+        "estimated_max_cost_per_call": provider_estimate,
+        "configured_budget_usd": request.budget_usd,
+        "planned_members": planned_members,
+    }
     if selected and not host.provider.capabilities.known_zero_cost and provider_estimate is None and len(selected) > 1:
         selected = []
-        rationale["pricing_preflight"] = {"status": "PRICING_PREFLIGHT_REQUIRED", "executed_members": []}
+        pricing_preflight.update({"status": "PRICING_PREFLIGHT_REQUIRED", "reason": "pricing_preflight_required", "executed_members": []})
+        rationale["pricing_preflight"] = pricing_preflight
+        ledger.append("pricing_preflight_required", pricing_preflight)
     elif provider_estimate is not None and provider_estimate > 0.0:
         affordable = int((request.budget_usd + 1e-12) // provider_estimate)
         if affordable < len(selected):
             selected = selected[: max(0, affordable)]
-            rationale["pricing_preflight"] = {"status": "DEGRADED_BEFORE_EXECUTION", "executed_members": [row.fingerprint for row in selected]}
+            pricing_preflight.update(
+                {
+                    "status": "DEGRADED_BEFORE_EXECUTION" if selected else "INSUFFICIENT_BUDGET",
+                    "reason": "insufficient_preflight_budget",
+                    "executed_members": [row.fingerprint for row in selected],
+                }
+            )
+            rationale["pricing_preflight"] = pricing_preflight
+            ledger.append("pricing_preflight_degraded", pricing_preflight)
+    pricing_preflight.setdefault("executed_members", [row.fingerprint for row in selected])
     selected_by_fp = {row.fingerprint: row for row in selected}
     spec_by_hash = {row.hash: row for row in candidate_specs}
     claims_by_fp: dict[str, Claim] = {}
@@ -464,6 +506,7 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
             allowed_refs = set(evidence_bundle.hashes)
             claimed_refs = list(dict.fromkeys(response.claim.evidence_refs))
             validated_refs = [ref for ref in claimed_refs if ref in allowed_refs]
+            rejected_refs = [ref for ref in claimed_refs if ref not in allowed_refs]
             claim = response.claim.model_copy(update={"evidence_refs": validated_refs})
             claims_by_fp[member.fingerprint] = claim
             claim_trace_ids[member.fingerprint] = response.trace_id
@@ -476,12 +519,17 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
                         "evidence_hashes_supplied": sorted(allowed_refs),
                         "evidence_refs_claimed": claimed_refs,
                         "evidence_refs_validated": validated_refs,
-                        "evidence_refs_rejected": [ref for ref in claimed_refs if ref not in allowed_refs],
+                        "evidence_refs_rejected": rejected_refs,
                         "subtask_hash": None if subtask is None else subtask.hash,
                     },
                     "budget": reconciliation,
                 }
             )
+            if rejected_refs:
+                ledger.append(
+                    "evidence_ref_rejected",
+                    {"fingerprint": member.fingerprint, "rejected_refs": rejected_refs, "allowed_refs": sorted(allowed_refs)},
+                )
             ledger.append(
                 "claim_proposed",
                 {
@@ -581,11 +629,7 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
                 ledger.append("communication_edge_opened", comm)
             return {"opened": len(communications)}
         if node.kind == NodeKind.JOIN:
-            group_claims = {
-                fp: claim.hash
-                for fp, claim in claims_by_fp.items()
-                if not node.group or not node.group.startswith("subgroup-") or selected_by_fp.get(fp) is not None
-            }
+            group_claims = {fp: claim.hash for fp, claim in claims_by_fp.items() if not node.group or not node.group.startswith("subgroup-") or selected_by_fp.get(fp) is not None}
             return {"claims": group_claims, "executions": [row.execution_snapshot_hash for row in executions], "communications": len(communications)}
         if node.kind == NodeKind.SYNTHESIS:
             claim_rows: list[tuple[str, Claim, float]] = []
@@ -646,10 +690,7 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
     falsifier_rows = []
     for execution in ordered_executions:
         spec = spec_by_hash[execution.spec_hash]
-        falsifier_rows.append(
-            execution.model_dump(mode="json")
-            | {"id": spec.id, "primitive": spec.primitive, "persistent_reuse": spec.hash in persistent_falsifiers_reused}
-        )
+        falsifier_rows.append(execution.model_dump(mode="json") | {"id": spec.id, "primitive": spec.primitive, "persistent_reuse": spec.hash in persistent_falsifiers_reused})
     ledger.append("final_verified", {"status": decision.epistemic_status, "decision_hash": decision.hash, "confidence": decision.confidence})
     task_ledger = TaskLedger(
         task=request.task,
@@ -686,6 +727,7 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
             "falsifier_execution_evidence_hashes": sorted(str(row["evidence_hash"]) for row in execution_evidence_rows),
             "provider": host.provider.capabilities.__dict__,
             "provider_usages": provider_usages,
+            "pricing_preflight": pricing_preflight,
             "claim_aware_market": {"selected": [asdict(row) for row in market_selected or []], "candidates": [asdict(row) for row in market_all]},
             "auditions": audition_records,
             "swarm_decision": decision.model_dump(mode="json") | {"decision_hash": decision.hash},
