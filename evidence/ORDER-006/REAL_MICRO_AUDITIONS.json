@@ -9,12 +9,12 @@
       "phenotype": "numeric-1",
       "prompt_hash": "7a4f90e4a80a1ddaa0b1ccdb4b65eacf59347307b638b51112b1ee58ed4ae00d",
       "provider_executed": true,
-      "provider_trace_id": "4ebca858-e639-53a9-b03e-fdbb60418857",
+      "provider_trace_id": "fc0be3ae-a0e4-53d3-8435-0b4d78cd2d18",
       "routing_state": "ACTIVE",
       "score": 1.0,
       "test_family": "numeric_canary"
     },
-    "run_id": "ec30e4f7-d496-49bf-8173-cbd0e5a8be7f",
+    "run_id": "addfa394-6978-4e1a-a3b8-516281894a72",
     "selected": true
   },
   "incompetent": {
@@ -27,16 +27,16 @@
       "phenotype": "numeric-1",
       "prompt_hash": "7a4f90e4a80a1ddaa0b1ccdb4b65eacf59347307b638b51112b1ee58ed4ae00d",
       "provider_executed": true,
-      "provider_trace_id": "1e93ee0f-5c65-50fb-9754-214c11d3fc13",
+      "provider_trace_id": "2221e59d-929c-53e8-bef2-b062d92389c5",
       "routing_state": "BANKRUPT",
       "score": 0.0,
       "test_family": "numeric_canary"
     },
     "fingerprint": "7b92ac4afcb66cec6a35dac51f59eb4f75770b47ca7ccb251214a1d53192a950",
     "run_ids": [
-      "305fe404-9e16-4020-852c-4237c1224b61",
-      "6b5e0639-abd8-42e9-af6c-8cb26adfe892",
-      "58e39784-2285-481e-8e6d-b8b0046833bd"
+      "f01b0858-b8fd-4f95-975e-3e5c9ae92628",
+      "a5879222-3501-4256-ac73-c3b3e4b6979a",
+      "a517a734-234e-4e0f-81e0-3f154c5afd66"
     ],
     "state": "BANKRUPT"
   },

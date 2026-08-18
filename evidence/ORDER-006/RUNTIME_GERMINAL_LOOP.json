@@ -1,8 +1,8 @@
 {
   "generated_executable_code": false,
   "germinal": {
-    "candidate_hash": "523134620267b2be5cdb8b7d5ba11706d0f028b80801dd1800394fd3cbe53a34",
-    "evasion_hash": "76bbf95c7c569cc2257f9bb29a8197f9ee95d8a8d49a418ed5ca371144097154",
+    "candidate_hash": "c11ef5ab7c8c63afebaf411e3212c40b8768bea5fd2f2b836b9af3b4764b1245",
+    "evasion_hash": "60cc1bc45e941eea19ee2dfbd2b3dddf7a6559357a1162e71d32e461d65425ca",
     "germinal_entry_state": "GERMINAL_QUARANTINE",
     "metrics": {
       "candidate": {
@@ -32,10 +32,10 @@
         "tp": 10
       },
       "reason": "deterministic promotion gate passed",
-      "receipt_hash": "f9e3a89d41563dc13817ceb3545917685a1c21363a84a24c179a767459c2e1fa"
+      "receipt_hash": "147dd46a6dd3df0ddc7de43a02a643a2b93353dfaac8dadf56886d26ab104443"
     },
     "parent_hash": "70723980fce09fad9eb891385d274cc1c7a088dc82689cff95a64edad380cfe4",
-    "receipt_hash": "f9e3a89d41563dc13817ceb3545917685a1c21363a84a24c179a767459c2e1fa",
+    "receipt_hash": "147dd46a6dd3df0ddc7de43a02a643a2b93353dfaac8dadf56886d26ab104443",
     "status": "PROMOTE"
   },
   "later_verdict": "FAIL",
@@ -57,30 +57,30 @@
     "selection_reason": "claim-aware applicability=0.70; uncertainty=0.40; disagreement=0.00",
     "spec_hash": "70723980fce09fad9eb891385d274cc1c7a088dc82689cff95a64edad380cfe4",
     "target_claim_hashes": [
-      "eeaabd6b6a494606f3137c1b11a6f3864dd3d06897ababa17cc30ee03febf0a5"
+      "88b11bf99260d31e327a61a40a34917c8436e0e32c9ad09273778f333ab22a32"
     ],
     "verdict": "PASS"
   },
   "pass": true,
   "promoted_reused": [
-    "523134620267b2be5cdb8b7d5ba11706d0f028b80801dd1800394fd3cbe53a34"
+    "c11ef5ab7c8c63afebaf411e3212c40b8768bea5fd2f2b836b9af3b4764b1245"
   ],
-  "restart_run_id": "66b5812a-8b64-4053-b11f-c54540995bfd",
+  "restart_run_id": "bf24e93f-6eb0-4a15-9767-8532d895c3d8",
   "verified_contradiction": {
     "accepted": true,
     "appeal_of_receipt_hash": null,
     "authority_class": "deterministic_oracle",
-    "claim_hash": "eeaabd6b6a494606f3137c1b11a6f3864dd3d06897ababa17cc30ee03febf0a5",
-    "created_at": "2026-08-18T13:21:52.650591Z",
+    "claim_hash": "88b11bf99260d31e327a61a40a34917c8436e0e32c9ad09273778f333ab22a32",
+    "created_at": "2026-08-18T13:26:10.789497Z",
     "evidence_hashes": [
-      "7f05e2982b9814808350f60bca6c39d55535b936fde9400cc9ede8d127c587f8"
+      "709897779e330ccf9fd3b233da2e19614739a23eeaa2bbe80e04dae4ac3f8d42"
     ],
     "observed_at": "2026-08-18T11:00:00Z",
-    "origin_key_hash": "ac8a76d8a28341b1fc6c7273b8a47bd10a5216ed6c39f56a8dc0488a37bdc462",
-    "receipt_hash": "f9e3a89d41563dc13817ceb3545917685a1c21363a84a24c179a767459c2e1fa",
-    "receipt_id": "3cd8c6ba-d0ea-5f1b-877c-6c814a39579b",
+    "origin_key_hash": "a663fad0ca3eaba53fec176cc4459a13be35c0f56a05b1a77039c61ac07e7d62",
+    "receipt_hash": "147dd46a6dd3df0ddc7de43a02a643a2b93353dfaac8dadf56886d26ab104443",
+    "receipt_id": "17c1039a-3c3f-57e9-b812-7a8b89959620",
     "rejection_reason": null,
-    "run_id": "64a06a39-4662-49c2-b60d-a91245bd0c68",
+    "run_id": "161b9370-e39f-4bec-98c7-5d3a6c5a95af",
     "snapshot_hashes": [
       "6f7bae866c419498c5a566ec8743eaddd98d360045ca40f78d2d73d6fe04c1e0"
     ],

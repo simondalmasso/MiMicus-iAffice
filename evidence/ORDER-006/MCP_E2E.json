@@ -1,12 +1,12 @@
 {
   "first_run": {
-    "claim_hash": "1768ca2aa1ced19c80064e4937699a93b514623bca34cb82f775a7c108a7ff7a",
+    "claim_hash": "5788521b8b94a1ff319a07222d6ca1da5ba8926f93815fae83233e0bafcf11a9",
     "evidence_hashes": [
-      "1fdc4a2a0843af9ba6865b00c2cb3974bfc78c7f06aa68b4b1f3f5c05d3137f1"
+      "01ae9f634e98723c06daf4d0141f4424bb9be33d4e0ec3a91547cf1d6ef8d43d"
     ],
     "execution_snapshot_hash": "6f7bae866c419498c5a566ec8743eaddd98d360045ca40f78d2d73d6fe04c1e0",
     "parent_falsifier_verdict": "PASS",
-    "run_id": "d4afa5f6-36b8-4aa9-ad79-3e433d237d35"
+    "run_id": "0d65dd5a-610d-43c9-97b4-e23a4ec6b1b9"
   },
   "openai_key_required": false,
   "pass": true,
@@ -15,11 +15,11 @@
     "later_verdict": "FAIL",
     "learned_state_reused": true,
     "promoted_falsifier_reused": [
-      "bc44daf5618d37ac03287a52fad7a091ad756a9dcaf8178fb655b2ec6829ecff"
+      "6341d8d65e1f272d426cdc739bca3634a3d93998b4eba0deddc80d5c6298f83f"
     ],
     "receipt_persisted": true,
     "replay_verified": true,
-    "rerun_id": "89cb63d4-47e3-48d9-9c72-535ddf116143"
+    "rerun_id": "440e0f28-018c-4752-9792-3c746827c5de"
   },
   "server_process_restarted": true,
   "transport": "streamable-http",
@@ -34,8 +34,8 @@
       }
     ],
     "germinal": {
-      "candidate_hash": "bc44daf5618d37ac03287a52fad7a091ad756a9dcaf8178fb655b2ec6829ecff",
-      "evasion_hash": "e84043245ff330a9956f6bfed79c3262c2decaeb7a7101c3fdcba439d82b5f02",
+      "candidate_hash": "6341d8d65e1f272d426cdc739bca3634a3d93998b4eba0deddc80d5c6298f83f",
+      "evasion_hash": "70ed0c9c654b2eadef5000c14208c9381af1a0ac68ff6b46d6e00510580089e7",
       "germinal_entry_state": "GERMINAL_QUARANTINE",
       "metrics": {
         "candidate": {
@@ -65,12 +65,12 @@
           "tp": 10
         },
         "reason": "deterministic promotion gate passed",
-        "receipt_hash": "eb6bbf4220cb7286eeb2105bf06f190f440d11399c38c1c729c000c77f726ce7"
+        "receipt_hash": "b0b26799cd4ee2133593ae507b378eb1e2ef9c32457661b7454824932be24338"
       },
       "parent_hash": "70723980fce09fad9eb891385d274cc1c7a088dc82689cff95a64edad380cfe4",
-      "receipt_hash": "eb6bbf4220cb7286eeb2105bf06f190f440d11399c38c1c729c000c77f726ce7",
+      "receipt_hash": "b0b26799cd4ee2133593ae507b378eb1e2ef9c32457661b7454824932be24338",
       "status": "PROMOTE"
     },
-    "receipt_hash": "eb6bbf4220cb7286eeb2105bf06f190f440d11399c38c1c729c000c77f726ce7"
+    "receipt_hash": "b0b26799cd4ee2133593ae507b378eb1e2ef9c32457661b7454824932be24338"
   }
 }

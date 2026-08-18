@@ -7,13 +7,13 @@
     ],
     "early_stop_reason": "residual disagreement",
     "epistemic_status": "FALSIFIED",
-    "hash": "7a87bba0efa26718bd82815cc0750e4fd9ac92ba4e67df4ad4a708d91ea22914",
+    "hash": "c2a698e6b4d86ead2260f4571d601724caae6fa98cceef4fe2215e63881b4319",
     "provenance_hashes": [
-      "c2c53b9b49c3a70e276bbc2ecc2712f2471e72bea4fb65300fa3edfc218bb557",
-      "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "d5156a2ade8557ac05c603445b6e9fc44a4707d76a4cdf2c117b71f728c6f739"
     ],
     "selected_claim_hashes": [
-      "c2c53b9b49c3a70e276bbc2ecc2712f2471e72bea4fb65300fa3edfc218bb557"
+      "d5156a2ade8557ac05c603445b6e9fc44a4707d76a4cdf2c117b71f728c6f739"
     ],
     "unresolved_disagreements": [
       {
@@ -36,13 +36,13 @@
     ],
     "early_stop_reason": "residual disagreement",
     "epistemic_status": "INCONCLUSIVE",
-    "hash": "121614150ff6f9cc49143eb036a1a4c5a3e201c3f111b2ec315f2720f676e429",
+    "hash": "947aa4638ca1460e15994909f8a762a147bae9ad486eed3ae33e75640012e37d",
     "provenance_hashes": [
       "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-      "c2c53b9b49c3a70e276bbc2ecc2712f2471e72bea4fb65300fa3edfc218bb557"
+      "d5156a2ade8557ac05c603445b6e9fc44a4707d76a4cdf2c117b71f728c6f739"
     ],
     "selected_claim_hashes": [
-      "c2c53b9b49c3a70e276bbc2ecc2712f2471e72bea4fb65300fa3edfc218bb557"
+      "d5156a2ade8557ac05c603445b6e9fc44a4707d76a4cdf2c117b71f728c6f739"
     ],
     "unresolved_disagreements": [
       {

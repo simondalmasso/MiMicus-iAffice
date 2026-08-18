@@ -3,17 +3,17 @@
     "accepted": true,
     "appeal_of_receipt_hash": null,
     "authority_class": "deterministic_oracle",
-    "claim_hash": "eeaabd6b6a494606f3137c1b11a6f3864dd3d06897ababa17cc30ee03febf0a5",
-    "created_at": "2026-08-18T13:21:52.650591Z",
+    "claim_hash": "88b11bf99260d31e327a61a40a34917c8436e0e32c9ad09273778f333ab22a32",
+    "created_at": "2026-08-18T13:26:10.789497Z",
     "evidence_hashes": [
-      "7f05e2982b9814808350f60bca6c39d55535b936fde9400cc9ede8d127c587f8"
+      "709897779e330ccf9fd3b233da2e19614739a23eeaa2bbe80e04dae4ac3f8d42"
     ],
     "observed_at": "2026-08-18T11:00:00Z",
-    "origin_key_hash": "ac8a76d8a28341b1fc6c7273b8a47bd10a5216ed6c39f56a8dc0488a37bdc462",
-    "receipt_hash": "f9e3a89d41563dc13817ceb3545917685a1c21363a84a24c179a767459c2e1fa",
-    "receipt_id": "3cd8c6ba-d0ea-5f1b-877c-6c814a39579b",
+    "origin_key_hash": "a663fad0ca3eaba53fec176cc4459a13be35c0f56a05b1a77039c61ac07e7d62",
+    "receipt_hash": "147dd46a6dd3df0ddc7de43a02a643a2b93353dfaac8dadf56886d26ab104443",
+    "receipt_id": "17c1039a-3c3f-57e9-b812-7a8b89959620",
     "rejection_reason": null,
-    "run_id": "64a06a39-4662-49c2-b60d-a91245bd0c68",
+    "run_id": "161b9370-e39f-4bec-98c7-5d3a6c5a95af",
     "snapshot_hashes": [
       "6f7bae866c419498c5a566ec8743eaddd98d360045ca40f78d2d73d6fe04c1e0"
     ],
@@ -30,7 +30,7 @@
       "test_family": "numeric_verified_task"
     }
   ],
-  "claim_hash": "eeaabd6b6a494606f3137c1b11a6f3864dd3d06897ababa17cc30ee03febf0a5",
+  "claim_hash": "88b11bf99260d31e327a61a40a34917c8436e0e32c9ad09273778f333ab22a32",
   "duplicate_same_origin_blocked": true,
   "mismatched_claim_fail_closed": "claim_hash_not_bound_to_run",
   "pass": true,
@@ -40,17 +40,17 @@
       "accepted": true,
       "appeal_of_receipt_hash": null,
       "authority_class": "deterministic_oracle",
-      "claim_hash": "eeaabd6b6a494606f3137c1b11a6f3864dd3d06897ababa17cc30ee03febf0a5",
-      "created_at": "2026-08-18T13:21:52.650591Z",
+      "claim_hash": "88b11bf99260d31e327a61a40a34917c8436e0e32c9ad09273778f333ab22a32",
+      "created_at": "2026-08-18T13:26:10.789497Z",
       "evidence_hashes": [
-        "7f05e2982b9814808350f60bca6c39d55535b936fde9400cc9ede8d127c587f8"
+        "709897779e330ccf9fd3b233da2e19614739a23eeaa2bbe80e04dae4ac3f8d42"
       ],
       "observed_at": "2026-08-18T11:00:00Z",
-      "origin_key_hash": "ac8a76d8a28341b1fc6c7273b8a47bd10a5216ed6c39f56a8dc0488a37bdc462",
-      "receipt_hash": "f9e3a89d41563dc13817ceb3545917685a1c21363a84a24c179a767459c2e1fa",
-      "receipt_id": "3cd8c6ba-d0ea-5f1b-877c-6c814a39579b",
+      "origin_key_hash": "a663fad0ca3eaba53fec176cc4459a13be35c0f56a05b1a77039c61ac07e7d62",
+      "receipt_hash": "147dd46a6dd3df0ddc7de43a02a643a2b93353dfaac8dadf56886d26ab104443",
+      "receipt_id": "17c1039a-3c3f-57e9-b812-7a8b89959620",
       "rejection_reason": null,
-      "run_id": "64a06a39-4662-49c2-b60d-a91245bd0c68",
+      "run_id": "161b9370-e39f-4bec-98c7-5d3a6c5a95af",
       "snapshot_hashes": [
         "6f7bae866c419498c5a566ec8743eaddd98d360045ca40f78d2d73d6fe04c1e0"
       ],
@@ -64,16 +64,16 @@
       "appeal_of_receipt_hash": null,
       "authority_class": "deterministic_oracle",
       "claim_hash": "0000000000000000000000000000000000000000000000000000000000000000",
-      "created_at": "2026-08-18T13:21:52.708949Z",
+      "created_at": "2026-08-18T13:26:10.923553Z",
       "evidence_hashes": [
-        "7f05e2982b9814808350f60bca6c39d55535b936fde9400cc9ede8d127c587f8"
+        "709897779e330ccf9fd3b233da2e19614739a23eeaa2bbe80e04dae4ac3f8d42"
       ],
       "observed_at": "2026-08-18T11:00:00Z",
-      "origin_key_hash": "f31ec10680056f950e3bd82318b044753b9713a49293fc9dd32f7b2d12aa40dd",
-      "receipt_hash": "a9a80687debd9cf68f572266e550aeb16ef9db178cfe6011eeeec20ec3b1a10d",
-      "receipt_id": "09220ec9-8889-5cb7-b7e4-c3185410d3e5",
+      "origin_key_hash": "cf2dc5b0c23caa172b56b99f1643750e0e5aca716222a4f9d6ef8b9906810b23",
+      "receipt_hash": "e573d0f4dd32d5b595bccccc3f272700e411f6bd1f95761b184fde63c191aa5e",
+      "receipt_id": "910f0809-8f86-5ec1-beea-c5a424a84ce3",
       "rejection_reason": "claim_hash_not_bound_to_run",
-      "run_id": "64a06a39-4662-49c2-b60d-a91245bd0c68",
+      "run_id": "161b9370-e39f-4bec-98c7-5d3a6c5a95af",
       "snapshot_hashes": [
         "6f7bae866c419498c5a566ec8743eaddd98d360045ca40f78d2d73d6fe04c1e0"
       ],
@@ -83,5 +83,5 @@
       "verifier_id": "oracle:order006-other"
     }
   ],
-  "run_id": "64a06a39-4662-49c2-b60d-a91245bd0c68"
+  "run_id": "161b9370-e39f-4bec-98c7-5d3a6c5a95af"
 }

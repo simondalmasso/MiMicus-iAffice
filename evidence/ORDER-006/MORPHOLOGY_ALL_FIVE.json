@@ -11,105 +11,105 @@
       "challenge_edges": 0,
       "concurrency": {
         "avoidable_serialization_count": 0,
-        "parallel_efficiency": 0.8565458266051702,
-        "parallel_speedup_estimate": 0.8565458266051702,
+        "parallel_efficiency": 0.8599144065761825,
+        "parallel_speedup_estimate": 0.8599144065761825,
         "peak_concurrency": 1,
         "subtask_finish_rate": 1.0
       },
       "critical_path": {
-        "critical_path_ms": 3.342725999971208,
+        "critical_path_ms": 2.85285699996507,
         "critical_steps": 8,
-        "observed_wall_ms": 6.435420999991948,
-        "serial_work_ms": 5.512232999990374,
+        "observed_wall_ms": 5.076324999976123,
+        "serial_work_ms": 4.365204999942307,
         "work_steps": 17
       },
       "members": 4,
-      "plan_hash": "797b4520a6c3cb2eb704215c8548055d5cc5ceb95b1de47b9bc31168341b6353",
-      "run_id": "c7a045af-df87-445d-b112-d05b89f63fd9",
+      "plan_hash": "f15f368efde815dd9bd146dbbd4715486cec3b2a8a714ed14cb9dcffecccd35b",
+      "run_id": "32897651-b91d-47df-9309-a422a4b221d1",
       "subtasks": 6
     },
     "paired_verify": {
       "challenge_edges": 1,
       "concurrency": {
         "avoidable_serialization_count": 0,
-        "parallel_efficiency": 0.8181423432903667,
-        "parallel_speedup_estimate": 0.8181423432903667,
+        "parallel_efficiency": 0.820246018508491,
+        "parallel_speedup_estimate": 0.820246018508491,
         "peak_concurrency": 1,
         "subtask_finish_rate": 1.0
       },
       "critical_path": {
-        "critical_path_ms": 1.3942040000358702,
+        "critical_path_ms": 1.1768429999676755,
         "critical_steps": 6,
-        "observed_wall_ms": 2.0196950000013203,
-        "serial_work_ms": 1.6523980000329175,
+        "observed_wall_ms": 1.6590620000158651,
+        "serial_work_ms": 1.3608389999717474,
         "work_steps": 8
       },
       "members": 2,
       "plan_hash": "11a81fc3c982ed356ee750ce228948623656e1e011be9b0e9c3e5d17737d7b10",
-      "run_id": "83adebbd-2721-463d-9769-040f171946f3",
+      "run_id": "b9e9a701-299d-45aa-83c4-58cf6067acd0",
       "subtasks": 0
     },
     "parallel_fanout": {
       "challenge_edges": 0,
       "concurrency": {
         "avoidable_serialization_count": 0,
-        "parallel_efficiency": 0.8455546953849425,
-        "parallel_speedup_estimate": 0.8455546953849425,
+        "parallel_efficiency": 0.8390340587761193,
+        "parallel_speedup_estimate": 0.8390340587761193,
         "peak_concurrency": 1,
         "subtask_finish_rate": 1.0
       },
       "critical_path": {
-        "critical_path_ms": 1.7770110000014938,
+        "critical_path_ms": 1.3615930000128174,
         "critical_steps": 6,
-        "observed_wall_ms": 3.0174759999965772,
-        "serial_work_ms": 2.551441000008481,
+        "observed_wall_ms": 2.335463000008531,
+        "serial_work_ms": 1.9595330000186095,
         "work_steps": 9
       },
       "members": 2,
-      "plan_hash": "1dfa76f187c5e55b694b9ec34a2de52233972c4618feaf5aaf8666db7d166266",
-      "run_id": "182f01df-fc40-4724-9f68-f97d40a8e27b",
+      "plan_hash": "7d7dac8ecc948c26f21b23603b472c044b59d58d4fe302335834703ead09473a",
+      "run_id": "8a1645d4-d62f-4368-a412-f596990f17f8",
       "subtasks": 2
     },
     "solo": {
       "challenge_edges": 0,
       "concurrency": {
         "avoidable_serialization_count": 0,
-        "parallel_efficiency": 0.8193204924218034,
-        "parallel_speedup_estimate": 0.8193204924218034,
+        "parallel_efficiency": 0.8138856974665037,
+        "parallel_speedup_estimate": 0.8138856974665037,
         "peak_concurrency": 1,
         "subtask_finish_rate": 1.0
       },
       "critical_path": {
-        "critical_path_ms": 1.4300509999998212,
+        "critical_path_ms": 1.1341310000432259,
         "critical_steps": 6,
-        "observed_wall_ms": 1.7454110000016954,
-        "serial_work_ms": 1.4300509999998212,
+        "observed_wall_ms": 1.3934769999934815,
+        "serial_work_ms": 1.1341310000432259,
         "work_steps": 7
       },
       "members": 1,
-      "plan_hash": "714ccc47b545d193cc5dcc63a52d17f5a8e09c4b65c53d10602b6343354bd07c",
-      "run_id": "5c1d82d9-f7a5-428f-b9f4-db53b40983c7",
+      "plan_hash": "d05444b623c783dee4fbc5804ab4beac83464acc0c389c35b862b33c9484f224",
+      "run_id": "7abebd1b-bf50-4542-b08a-bf4b23156801",
       "subtasks": 0
     },
     "sparse_graph": {
       "challenge_edges": 3,
       "concurrency": {
         "avoidable_serialization_count": 0,
-        "parallel_efficiency": 0.8943935089612659,
-        "parallel_speedup_estimate": 0.8943935089612659,
+        "parallel_efficiency": 0.8950876734379778,
+        "parallel_speedup_estimate": 0.8950876734379778,
         "peak_concurrency": 1,
         "subtask_finish_rate": 1.0
       },
       "critical_path": {
-        "critical_path_ms": 3.737494000006336,
+        "critical_path_ms": 2.9180120000091847,
         "critical_steps": 7,
-        "observed_wall_ms": 5.766227000009394,
-        "serial_work_ms": 5.157276000005595,
+        "observed_wall_ms": 4.42197800001054,
+        "serial_work_ms": 3.9580580000233567,
         "work_steps": 12
       },
       "members": 3,
-      "plan_hash": "ff6ce0f40f1d8e048bef1271799884f4a62ae9bf2e77f63871bf2d3a43892af0",
-      "run_id": "bfde4680-3746-401f-ae92-09441dcc6b5f",
+      "plan_hash": "e742bbd6e279f9ee65efecc6b8bbb20be3ccf9133ef1872a564c481722e82374",
+      "run_id": "4beefa1a-0ef2-4240-9bbe-2f43c069bcb8",
       "subtasks": 3
     }
   },
