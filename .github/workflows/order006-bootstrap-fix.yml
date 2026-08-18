@@ -1,0 +1,75 @@
+name: ORDER-006 bootstrap compatibility formatter
+
+on:
+  push:
+    branches: [order-002-mimicus-v01]
+
+permissions:
+  contents: write
+
+jobs:
+  patch-format:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: order-002-mimicus-v01
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: python -m pip install ruff==0.16.3
+      - name: Patch compatibility invariants
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          engine = Path("src/mimicus/orchestration/engine.py")
+          text = engine.read_text()
+          old = '        use_core = request.core_semantics if request.core_semantics is not None else request.source_mode in {"runtime", "benchmark"}\n'
+          new = '''        use_core = (\n            request.core_semantics\n            if request.core_semantics is not None\n            else request.source_mode == "benchmark" or (request.source_mode == "runtime" and not request.fixture)\n        )\n'''
+          assert old in text
+          engine.write_text(text.replace(old, new))
+
+          core = Path("src/mimicus/orchestration/swarm_core.py")
+          text = core.read_text()
+
+          old = '''    persistent_falsifiers_reused = [spec.hash for spec in candidate_specs if spec.hash in {row.hash for row in promoted}]\n    subtasks = decompose_task(task_hash, profile, evidence_context)\n'''
+          new = '''    persistent_falsifiers_reused = [spec.hash for spec in candidate_specs if spec.hash in {row.hash for row in promoted}]\n    if candidate_specs and not evidence_bundle.items:\n        ledger.append(\n            "evidence_missing",\n            {\n                "reason": "evidence_required_falsifier_has_no_structured_evidence",\n                "source_mode": request.source_mode,\n                "falsifier_primitives": [spec.primitive for spec in candidate_specs],\n            },\n        )\n    subtasks = decompose_task(task_hash, profile, evidence_context)\n'''
+          assert old in text
+          text = text.replace(old, new)
+
+          old = '''    budget = BudgetLedger(request.budget_usd)\n    provider_estimate = host.provider.capabilities.estimated_max_cost_per_call\n    if provider_estimate is None and host.provider.capabilities.known_zero_cost:\n        provider_estimate = 0.0\n    if selected and not host.provider.capabilities.known_zero_cost and provider_estimate is None and len(selected) > 1:\n        selected = []\n        rationale["pricing_preflight"] = {"status": "PRICING_PREFLIGHT_REQUIRED", "executed_members": []}\n    elif provider_estimate is not None and provider_estimate > 0.0:\n        affordable = int((request.budget_usd + 1e-12) // provider_estimate)\n        if affordable < len(selected):\n            selected = selected[: max(0, affordable)]\n            rationale["pricing_preflight"] = {"status": "DEGRADED_BEFORE_EXECUTION", "executed_members": [row.fingerprint for row in selected]}\n    selected_by_fp = {row.fingerprint: row for row in selected}\n'''
+          new = '''    budget = BudgetLedger(request.budget_usd)\n    provider_estimate = host.provider.capabilities.estimated_max_cost_per_call\n    if provider_estimate is None and host.provider.capabilities.known_zero_cost:\n        provider_estimate = 0.0\n    planned_members = [row.fingerprint for row in selected]\n    pricing_preflight: dict[str, Any] = {\n        "status": "READY",\n        "planned_paid_calls": len(selected),\n        "estimated_max_cost_per_call": provider_estimate,\n        "configured_budget_usd": request.budget_usd,\n        "planned_members": planned_members,\n    }\n    if selected and not host.provider.capabilities.known_zero_cost and provider_estimate is None and len(selected) > 1:\n        selected = []\n        pricing_preflight.update(\n            {"status": "PRICING_PREFLIGHT_REQUIRED", "reason": "pricing_preflight_required", "executed_members": []}\n        )\n        rationale["pricing_preflight"] = pricing_preflight\n        ledger.append("pricing_preflight_required", pricing_preflight)\n    elif provider_estimate is not None and provider_estimate > 0.0:\n        affordable = int((request.budget_usd + 1e-12) // provider_estimate)\n        if affordable < len(selected):\n            selected = selected[: max(0, affordable)]\n            pricing_preflight.update(\n                {\n                    "status": "DEGRADED_BEFORE_EXECUTION" if selected else "INSUFFICIENT_BUDGET",\n                    "reason": "insufficient_preflight_budget",\n                    "executed_members": [row.fingerprint for row in selected],\n                }\n            )\n            rationale["pricing_preflight"] = pricing_preflight\n            ledger.append("pricing_preflight_degraded", pricing_preflight)\n    pricing_preflight.setdefault("executed_members", [row.fingerprint for row in selected])\n    selected_by_fp = {row.fingerprint: row for row in selected}\n'''
+          assert old in text
+          text = text.replace(old, new)
+
+          old = '''            claimed_refs = list(dict.fromkeys(response.claim.evidence_refs))\n            validated_refs = [ref for ref in claimed_refs if ref in allowed_refs]\n            claim = response.claim.model_copy(update={"evidence_refs": validated_refs})\n'''
+          new = '''            claimed_refs = list(dict.fromkeys(response.claim.evidence_refs))\n            validated_refs = [ref for ref in claimed_refs if ref in allowed_refs]\n            rejected_refs = [ref for ref in claimed_refs if ref not in allowed_refs]\n            claim = response.claim.model_copy(update={"evidence_refs": validated_refs})\n'''
+          assert old in text
+          text = text.replace(old, new)
+
+          old = '''                        "evidence_refs_rejected": [ref for ref in claimed_refs if ref not in allowed_refs],\n                        "subtask_hash": None if subtask is None else subtask.hash,\n'''
+          new = '''                        "evidence_refs_rejected": rejected_refs,\n                        "subtask_hash": None if subtask is None else subtask.hash,\n'''
+          assert old in text
+          text = text.replace(old, new)
+
+          old = '''            ledger.append(\n                "claim_proposed",\n'''
+          new = '''            if rejected_refs:\n                ledger.append(\n                    "evidence_ref_rejected",\n                    {"fingerprint": member.fingerprint, "rejected_refs": rejected_refs, "allowed_refs": sorted(allowed_refs)},\n                )\n            ledger.append(\n                "claim_proposed",\n'''
+          assert old in text
+          text = text.replace(old, new, 1)
+
+          old = '''            "provider": host.provider.capabilities.__dict__,\n            "provider_usages": provider_usages,\n'''
+          new = '''            "provider": host.provider.capabilities.__dict__,\n            "provider_usages": provider_usages,\n            "pricing_preflight": pricing_preflight,\n'''
+          assert old in text
+          core.write_text(text.replace(old, new))
+          PY
+      - run: ruff format src/mimicus/orchestration/engine.py src/mimicus/orchestration/swarm_core.py src/mimicus/storage/swarm_state.py src/mimicus/verification/service.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/mimicus/orchestration/engine.py src/mimicus/orchestration/swarm_core.py src/mimicus/storage/swarm_state.py src/mimicus/verification/service.py
+          if ! git diff --cached --quiet; then
+            git commit -m "ORDER-006: restore historical invariants and format swarm core"
+            git push origin HEAD:order-002-mimicus-v01
+          fi
