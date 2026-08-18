@@ -26,8 +26,8 @@ def create_mcp_server(profile: str = "offline") -> Any:
 
     server = MCPServer(
         "MiMicus",
-        version="0.3.0",
-        description="Persistent auditable immune swarm with real microauditions, verified adjudication and learned coalition state.",
+        version="0.3.1",
+        description="Persistent auditable immune swarm with authenticated verified adjudication and immutable claim lineage.",
     )
     write_annotations = ToolAnnotations.model_validate({"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": profile == "openai"})
     get_annotations = ToolAnnotations.model_validate({"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False})
@@ -52,6 +52,7 @@ def create_mcp_server(profile: str = "offline") -> Any:
             max_concurrency=max_concurrency,
             depth=depth,
             learn=learn,
+            source_mode="runtime",
         )
         return _engine(profile).run(request).model_dump(mode="json")
 
@@ -62,6 +63,7 @@ def create_mcp_server(profile: str = "offline") -> Any:
         verified_status: Literal["SUPPORTED", "FALSIFIED"],
         authority_class: str,
         verifier_id: str,
+        auth_token: str,
         observed_at: str,
         source_independence_cluster: str,
         evidence_hashes: list[str] | None = None,
@@ -69,12 +71,16 @@ def create_mcp_server(profile: str = "offline") -> Any:
         supersedes_receipt_hash: str | None = None,
         appeal_of_receipt_hash: str | None = None,
     ) -> dict[str, Any]:
+        # Labels remain caller-provided claims. Authority is granted only if the
+        # server-side persisted verifier policy authenticates this credential
+        # and all proof hashes bind to the target run.
         submission = VerificationSubmission(
             run_id=run_id,
             claim_hash=claim_hash,
             verified_status=verified_status,
             authority_class=authority_class,
             verifier_id=verifier_id,
+            auth_token=auth_token,
             observed_at=datetime.fromisoformat(observed_at.replace("Z", "+00:00")),
             source_independence_cluster=source_independence_cluster,
             evidence_hashes=tuple(evidence_hashes or []),
