@@ -5,6 +5,64 @@ from datetime import UTC, datetime
 
 from mimicus.canonical import sha256_obj, sha256_text
 
+IDENTITY_SCOPE = "mimicus-exact-agent-v2.2"
+
+
+def material_manifest(
+    *,
+    provider: str,
+    model: str,
+    model_version: str,
+    phenotype: str,
+    phenotype_version: str,
+    system_prompt_hash: str,
+    tool_manifest_hash: str,
+    policy_hash: str,
+    provider_adapter_version: str,
+) -> dict[str, str]:
+    return {
+        "runtime_provider_id": provider,
+        "runtime_model_id": model,
+        "runtime_model_version": model_version,
+        "phenotype": phenotype,
+        "phenotype_version": phenotype_version,
+        "system_prompt_hash": system_prompt_hash,
+        "tool_manifest_hash": tool_manifest_hash,
+        "policy_hash": policy_hash,
+        "provider_adapter_version": provider_adapter_version,
+    }
+
+
+def exact_fingerprint_from_manifest(manifest: dict[str, str]) -> str:
+    return sha256_obj({"scope": IDENTITY_SCOPE, "material_manifest": manifest})
+
+
+def exact_fingerprint(
+    *,
+    provider: str,
+    model: str,
+    model_version: str,
+    phenotype: str,
+    phenotype_version: str,
+    system_prompt_hash: str,
+    tool_manifest_hash: str,
+    policy_hash: str,
+    provider_adapter_version: str,
+) -> str:
+    return exact_fingerprint_from_manifest(
+        material_manifest(
+            provider=provider,
+            model=model,
+            model_version=model_version,
+            phenotype=phenotype,
+            phenotype_version=phenotype_version,
+            system_prompt_hash=system_prompt_hash,
+            tool_manifest_hash=tool_manifest_hash,
+            policy_hash=policy_hash,
+            provider_adapter_version=provider_adapter_version,
+        )
+    )
+
 
 @dataclass(frozen=True)
 class AgentIdentity:
@@ -32,56 +90,41 @@ class AgentIdentity:
         if not self.tool_manifest_hash:
             object.__setattr__(self, "tool_manifest_hash", self.tool_policy_hash)
         if not self.policy_hash:
-            object.__setattr__(self, "policy_hash", sha256_text("mimicus-v0.2.1-policy"))
+            object.__setattr__(self, "policy_hash", sha256_text("mimicus-v0.2.2-policy"))
+
+    @property
+    def material_manifest(self) -> dict[str, str]:
+        return material_manifest(
+            provider=self.provider,
+            model=self.model_family,
+            model_version=self.runtime_model_version,
+            phenotype=self.phenotype,
+            phenotype_version=self.phenotype_version,
+            system_prompt_hash=self.system_prompt_hash,
+            tool_manifest_hash=self.tool_manifest_hash,
+            policy_hash=self.policy_hash,
+            provider_adapter_version=self.provider_adapter_version,
+        )
+
+    def recompute_fingerprint(self) -> str:
+        return exact_fingerprint_from_manifest(self.material_manifest)
+
+    @property
+    def fingerprint_matches_manifest(self) -> bool:
+        return self.fingerprint == self.recompute_fingerprint()
 
     @property
     def manifest_hash(self) -> str:
         return sha256_obj(
-            self.material_manifest
-            | {"fingerprint": self.fingerprint, "lineage_id": self.lineage_id, "parent_fingerprint": self.parent_fingerprint, "revision_provenance": self.revision_provenance}
+            {
+                "material_manifest": self.material_manifest,
+                "fingerprint": self.fingerprint,
+                "recomputed_fingerprint": self.recompute_fingerprint(),
+                "lineage_id": self.lineage_id,
+                "parent_fingerprint": self.parent_fingerprint,
+                "revision_provenance": self.revision_provenance,
+            }
         )
-
-    @property
-    def material_manifest(self) -> dict[str, str]:
-        return {
-            "runtime_provider_id": self.provider,
-            "runtime_model_id": self.model_family,
-            "runtime_model_version": self.runtime_model_version,
-            "phenotype": self.phenotype,
-            "phenotype_version": self.phenotype_version,
-            "system_prompt_hash": self.system_prompt_hash,
-            "tool_manifest_hash": self.tool_manifest_hash,
-            "policy_hash": self.policy_hash,
-            "provider_adapter_version": self.provider_adapter_version,
-        }
-
-
-def exact_fingerprint(
-    *,
-    provider: str,
-    model: str,
-    model_version: str,
-    phenotype: str,
-    phenotype_version: str,
-    system_prompt_hash: str,
-    tool_manifest_hash: str,
-    policy_hash: str,
-    provider_adapter_version: str,
-) -> str:
-    return sha256_obj(
-        {
-            "runtime_provider_id": provider,
-            "runtime_model_id": model,
-            "runtime_model_version": model_version,
-            "phenotype": phenotype,
-            "phenotype_version": phenotype_version,
-            "system_prompt_hash": system_prompt_hash,
-            "tool_manifest_hash": tool_manifest_hash,
-            "policy_hash": policy_hash,
-            "provider_adapter_version": provider_adapter_version,
-            "scope": "mimicus-exact-agent-v2.1",
-        }
-    )
 
 
 def lineage_id(*, provider: str, model_family: str, phenotype: str, tool_policy_hash: str) -> str:
@@ -115,8 +158,8 @@ def make_identity(
 ) -> AgentIdentity:
     prompt_hash = system_prompt_hash or sha256_text(f"{phenotype}:{phenotype_version}")
     tools_hash = tool_manifest_hash or tool_policy_hash
-    resolved_policy = policy_hash or sha256_text("mimicus-v0.2.1-policy")
-    resolved_fp = fingerprint or exact_fingerprint(
+    resolved_policy = policy_hash or sha256_text("mimicus-v0.2.2-policy")
+    manifest = material_manifest(
         provider=provider,
         model=model_family,
         model_version=runtime_model_version,
@@ -127,6 +170,7 @@ def make_identity(
         policy_hash=resolved_policy,
         provider_adapter_version=provider_adapter_version,
     )
+    resolved_fp = fingerprint or exact_fingerprint_from_manifest(manifest)
     resolved_lineage = declared_lineage_id or lineage_id(provider=provider, model_family=model_family, phenotype=phenotype, tool_policy_hash=tool_policy_hash)
     return AgentIdentity(
         fingerprint=resolved_fp,

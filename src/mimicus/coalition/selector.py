@@ -25,6 +25,9 @@ class AgentCandidate:
     policy_hash: str = ""
     provider_adapter_version: str = "unknown"
     runtime_model_version: str = "unknown"
+    capability_audition_scores: dict[str, float] = field(default_factory=dict)
+    capability_calibration_scores: dict[str, float] = field(default_factory=dict)
+    capability_states: dict[str, str] = field(default_factory=dict)
 
 
 def correlation(a: AgentCandidate, b: AgentCandidate) -> float:
@@ -51,9 +54,29 @@ def _signature(candidate: AgentCandidate) -> SemanticSignature:
     )
 
 
+def _capability_state(candidate: AgentCandidate, capability: str) -> str:
+    if candidate.capability_states:
+        return candidate.capability_states.get(capability, "ACTIVE")
+    if candidate.bankrupt:
+        return "BANKRUPT"
+    if candidate.probation:
+        return "PROBATION"
+    return "ACTIVE"
+
+
+def _capability_trust(candidate: AgentCandidate, capability: str) -> float:
+    audition_score = candidate.capability_audition_scores.get(capability, candidate.audition_score)
+    calibration_score = candidate.capability_calibration_scores.get(capability, candidate.calibration_score)
+    return 0.55 * audition_score + 0.45 * calibration_score
+
+
+def _usable_capabilities(candidate: AgentCandidate, required: set[str]) -> set[str]:
+    return {cap for cap in required & set(candidate.capabilities) if _capability_state(candidate, cap) == "ACTIVE"}
+
+
 def select_coalition(profile: ThreatProfile, candidates: list[AgentCandidate], max_agents: int) -> tuple[list[AgentCandidate], dict[str, object]]:
     required = set(profile.required_capabilities)
-    available = [c for c in candidates if not c.bankrupt and not c.probation]
+    available = [candidate for candidate in candidates if _usable_capabilities(candidate, required)]
     selected: list[AgentCandidate] = []
     uncovered = set(required)
     proximity_log: list[dict[str, object]] = []
@@ -63,8 +86,8 @@ def select_coalition(profile: ThreatProfile, candidates: list[AgentCandidate], m
         for candidate in available:
             if candidate in selected:
                 continue
-            coverage = len(uncovered & candidate.capabilities)
-            if coverage == 0:
+            useful_caps = _usable_capabilities(candidate, uncovered)
+            if not useful_caps:
                 continue
             corr_penalty = max((correlation(candidate, member) for member in selected), default=0.0)
             proximity_penalty = 0.0
@@ -74,12 +97,14 @@ def select_coalition(profile: ThreatProfile, candidates: list[AgentCandidate], m
                 closest = max(comparisons, key=lambda row: row.score)
                 proximity_penalty = 0.45 * closest.score if not closest.useful_contradiction else 0.0
                 proximity_reason = closest.reason
-            trust = 0.55 * candidate.audition_score + 0.45 * candidate.calibration_score
-            score = coverage * trust * (1.0 - 0.8 * corr_penalty) * max(0.05, 1.0 - proximity_penalty)
+            capability_trust = {cap: _capability_trust(candidate, cap) for cap in sorted(useful_caps)}
+            authority = sum(capability_trust.values())
+            score = authority * (1.0 - 0.8 * corr_penalty) * max(0.05, 1.0 - proximity_penalty)
             proximity_log.append(
                 {
                     "candidate": candidate.fingerprint,
-                    "coverage": coverage,
+                    "capability_coverage": sorted(useful_caps),
+                    "capability_trust": capability_trust,
                     "correlation_penalty": corr_penalty,
                     "proximity_penalty": proximity_penalty,
                     "reason": proximity_reason,
@@ -91,17 +116,35 @@ def select_coalition(profile: ThreatProfile, candidates: list[AgentCandidate], m
         if best is None:
             break
         selected.append(best)
-        uncovered -= best.capabilities
-    if not selected and available:
-        selected.append(max(available, key=lambda c: c.audition_score + c.calibration_score))
+        uncovered -= _usable_capabilities(best, uncovered)
     rationale: dict[str, object] = {
         "required_capabilities": sorted(required),
         "covered_capabilities": sorted(required - uncovered),
         "uncovered_capabilities": sorted(uncovered),
-        "selected": [c.fingerprint for c in selected],
+        "selected": [candidate.fingerprint for candidate in selected],
         "correlation_matrix": {f"{a.fingerprint}:{b.fingerprint}": correlation(a, b) for i, a in enumerate(selected) for b in selected[i + 1 :]},
         "semantic_proximity": proximity_log,
-        "probation_excluded": [c.fingerprint for c in candidates if c.probation],
-        "bankrupt_excluded": [c.fingerprint for c in candidates if c.bankrupt],
+        "capability_authority": {
+            candidate.fingerprint: {
+                cap: {
+                    "state": _capability_state(candidate, cap),
+                    "audition_score": candidate.capability_audition_scores.get(cap, candidate.audition_score),
+                    "calibration_score": candidate.capability_calibration_scores.get(cap, candidate.calibration_score),
+                    "direct_trust": _capability_trust(candidate, cap),
+                }
+                for cap in sorted(required & set(candidate.capabilities))
+            }
+            for candidate in candidates
+        },
+        "probation_excluded": [
+            candidate.fingerprint
+            for candidate in candidates
+            if all(_capability_state(candidate, cap) == "PROBATION" for cap in required & set(candidate.capabilities)) and required & set(candidate.capabilities)
+        ],
+        "bankrupt_excluded": [
+            candidate.fingerprint
+            for candidate in candidates
+            if all(_capability_state(candidate, cap) == "BANKRUPT" for cap in required & set(candidate.capabilities)) and required & set(candidate.capabilities)
+        ],
     }
     return selected, rationale

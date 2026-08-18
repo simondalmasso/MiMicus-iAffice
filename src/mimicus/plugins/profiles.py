@@ -31,6 +31,16 @@ class Profile:
     database_kind: str
 
 
+def _env_float(name: str) -> float | None:
+    value = os.getenv(name)
+    if value is None or not value.strip():
+        return None
+    parsed = float(value)
+    if parsed < 0:
+        raise ValueError(f"{name} must be non-negative")
+    return parsed
+
+
 PROFILES = {
     "offline": Profile("offline", False, "scripted", "sqlite"),
     "openai": Profile("openai", True, "openai_agents", "sqlite"),
@@ -43,7 +53,16 @@ def build_kernel(profile_name: str, database_url: str | None = None, *, provider
         raise ValueError(f"unknown profile: {profile_name}")
     db_url = database_url or os.environ.get("MIMICUS_DATABASE_URL") or "sqlite:///mimicus.db"
     repository = Repository(db_url)
-    provider: Provider = provider_override or (ScriptedProvider() if profile_name != "openai" else OpenAIAgentsProvider(os.getenv("MIMICUS_OPENAI_MODEL", "gpt-5-mini")))
+    provider: Provider = provider_override or (
+        ScriptedProvider()
+        if profile_name != "openai"
+        else OpenAIAgentsProvider(
+            os.getenv("MIMICUS_OPENAI_MODEL", "gpt-5-mini"),
+            input_usd_per_million_tokens=_env_float("MIMICUS_OPENAI_INPUT_USD_PER_MILLION_TOKENS"),
+            output_usd_per_million_tokens=_env_float("MIMICUS_OPENAI_OUTPUT_USD_PER_MILLION_TOKENS"),
+            max_cost_per_call_usd=_env_float("MIMICUS_OPENAI_MAX_COST_PER_CALL_USD"),
+        )
+    )
     storage = RepositoryStorage(repository)
     factory = BuiltinAgentFactory(provider.capabilities)
     plugins = [

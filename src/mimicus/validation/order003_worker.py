@@ -30,7 +30,15 @@ def _engine(provider: ScriptedProvider | None = None) -> MiMicusEngine:
 
 def seed_memory() -> dict[str, Any]:
     engine = _engine()
-    result = engine.run(RunRequest(task="K3 TAM 12x mismatch", domain="finance", learn=True))
+    result = engine.run(
+        RunRequest(
+            task="K3 TAM 12x mismatch",
+            domain="finance",
+            scenario="tam_12x",
+            fixture={"claim_statement": "TAM", "claim_type": "numeric", "price": 10.0, "users": 100.0, "price_period": "monthly", "claimed": 1000.0},
+            learn=True,
+        )
+    )
     assert result.memory_changes and result.replay_verified
     trusted = str(result.memory_changes[0]["memory_id"])
     quarantined = write_gate(
@@ -59,7 +67,14 @@ def seed_memory() -> dict[str, Any]:
 def reuse_memory() -> dict[str, Any]:
     engine = _engine()
     eligible_before = [item.memory_id for item in engine.repository.eligible_memory("finance")]
-    result = engine.run(RunRequest(task="K3 TAM 12x mismatch", domain="finance"))
+    result = engine.run(
+        RunRequest(
+            task="K3 TAM 12x mismatch",
+            domain="finance",
+            scenario="tam_12x",
+            fixture={"claim_statement": "TAM", "claim_type": "numeric", "price": 10.0, "users": 100.0, "price_period": "monthly", "claimed": 1000.0},
+        )
+    )
     assert result.replay_verified
     state = engine.repository.inspect_state(result.run_id)
     return {

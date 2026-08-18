@@ -76,11 +76,17 @@ class Repository:
         create_schema(self.engine)
 
     def register_identity(self, identity: AgentIdentity) -> None:
+        recomputed = identity.recompute_fingerprint()
+        if identity.fingerprint != recomputed:
+            raise ValueError("agent fingerprint/material manifest mismatch")
         with self.engine.begin() as connection:
             fingerprint = connection.execute(select(AgentFingerprintRow.fingerprint).where(AgentFingerprintRow.fingerprint == identity.fingerprint)).scalar_one_or_none()
             manifest = canonical_json(
                 {
                     "fingerprint": identity.fingerprint,
+                    "recomputed_fingerprint": recomputed,
+                    "fingerprint_matches_manifest": True,
+                    "material_manifest": identity.material_manifest,
                     "lineage_id": identity.lineage_id,
                     "provider": identity.provider,
                     "model_family": identity.model_family,
@@ -96,6 +102,11 @@ class Repository:
                     "revision_provenance": identity.revision_provenance,
                 }
             )
+            if fingerprint is not None:
+                existing_manifest = connection.execute(select(AgentFingerprintRow.manifest_json).where(AgentFingerprintRow.fingerprint == identity.fingerprint)).scalar_one()
+                parsed_manifest = json.loads(existing_manifest)
+                if parsed_manifest.get("material_manifest") != identity.material_manifest or parsed_manifest.get("recomputed_fingerprint") != recomputed:
+                    raise ValueError("agent fingerprint manifest drift detected")
             if fingerprint is None:
                 connection.execute(
                     insert(AgentFingerprintRow).values(
@@ -538,6 +549,7 @@ class Repository:
             specs = connection.execute(select(FalsifierSpecRow.spec_hash, FalsifierSpecRow.version, FalsifierSpecRow.domain)).all()
             bankruptcies = connection.execute(select(AgentBankruptcyRow.fingerprint, AgentBankruptcyRow.domain, AgentBankruptcyRow.state)).all()
             lineages = connection.execute(select(AgentLineageMemberRow.fingerprint, AgentLineageMemberRow.lineage_id)).all()
+            identity_manifests = connection.execute(select(AgentFingerprintRow.manifest_json)).scalars().all()
             communications: list[str] = []
             evidence_rows: list[str] = []
             if run_id is not None:
@@ -551,6 +563,7 @@ class Repository:
             "falsifiers": [{"spec_hash": a, "version": b, "domain": c} for a, b, c in specs],
             "bankruptcy": [{"fingerprint": a, "domain": b, "state": c} for a, b, c in bankruptcies],
             "lineages": [{"fingerprint": a, "lineage_id": b} for a, b in lineages],
+            "identities": [json.loads(row) for row in identity_manifests],
             "communications": [json.loads(row) for row in communications if row],
             "evidence": [json.loads(row) for row in evidence_rows if row],
         }

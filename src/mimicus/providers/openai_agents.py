@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import asyncio
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from time import perf_counter
 from typing import Any
 
+from mimicus.canonical import sha256_obj
 from mimicus.claims.models import Claim
 from mimicus.orchestration.communication import ChallengeRequest, ChallengeResponse
 from mimicus.providers.base import Provider, ProviderCapabilities, ProviderRequest, ProviderResponse
@@ -18,25 +19,44 @@ class OpenAIAgentsProvider(Provider):
     timeout_seconds: float = 30.0
     input_usd_per_million_tokens: float | None = None
     output_usd_per_million_tokens: float | None = None
+    max_cost_per_call_usd: float | None = None
     max_memory_items: int = 8
     max_memory_chars: int = 6000
+    max_evidence_items: int = 16
+    max_evidence_chars: int = 60000
+    tools: tuple[Any, ...] = field(default_factory=tuple)
+
+    def _tool_manifest(self) -> list[dict[str, str]]:
+        rows: list[dict[str, str]] = []
+        for tool in self.tools:
+            rows.append(
+                {
+                    "name": str(getattr(tool, "name", type(tool).__name__)),
+                    "description": str(getattr(tool, "description", ""))[:500],
+                    "type": f"{type(tool).__module__}.{type(tool).__qualname__}",
+                }
+            )
+        return sorted(rows, key=lambda row: (row["name"], row["type"], row["description"]))
 
     @property
     def capabilities(self) -> ProviderCapabilities:
-        authoritative = self.input_usd_per_million_tokens is not None and self.output_usd_per_million_tokens is not None
+        authoritative_pricing = self.max_cost_per_call_usd is not None or (self.input_usd_per_million_tokens is not None and self.output_usd_per_million_tokens is not None)
+        tool_manifest = self._tool_manifest()
         return ProviderCapabilities(
             supports_structured_output=True,
             supports_async=True,
-            supports_tools=True,
+            supports_tools=bool(tool_manifest),
             provider_id="openai_agents",
             model_id=self.model,
             version=f"configured:{self.model}",
-            adapter_version="openai-agents-0.21.1/mimicus-adapter-v2.1",
+            adapter_version="openai-agents-0.21.1/mimicus-adapter-v2.2",
             usage_metadata_available=True,
             cancellation="asyncio.wait_for",
             known_zero_cost=False,
-            estimated_max_cost_per_call=None,
-            pricing_metadata_authoritative=authoritative,
+            estimated_max_cost_per_call=self.max_cost_per_call_usd,
+            pricing_metadata_authoritative=authoritative_pricing,
+            tool_manifest_hash=sha256_obj({"tools": tool_manifest}),
+            evidence_acquisition_available=bool(tool_manifest),
         )
 
     def build_agent(self, phenotype: str, domain: str) -> Any:
@@ -45,10 +65,19 @@ class OpenAIAgentsProvider(Provider):
         instructions = (
             f"You are the {phenotype} phenotype for domain {domain}. "
             "Return only a structured Claim. Treat missing evidence as uncertainty. "
-            "Verified institutional memory, when supplied in the structured input, is common evidence rather than a peer answer. "
+            "Cite only evidence_hash values present in runtime_evidence. Never invent evidence references. "
+            "Verified institutional memory is gated context, not a peer answer. "
             "Do not coordinate with peer agents during this sealed first pass."
         )
-        return Agent(name=f"mimicus-{phenotype}", instructions=instructions, model=self.model, output_type=Claim)
+        kwargs: dict[str, Any] = {
+            "name": f"mimicus-{phenotype}",
+            "instructions": instructions,
+            "model": self.model,
+            "output_type": Claim,
+        }
+        if self.tools:
+            kwargs["tools"] = list(self.tools)
+        return Agent(**kwargs)
 
     @staticmethod
     def _usage_numbers(usage: Any) -> tuple[int | None, int | None, int | None]:
@@ -96,17 +125,43 @@ class OpenAIAgentsProvider(Provider):
             used_chars += len(encoded)
         return payload
 
-    def structured_input(self, request: ProviderRequest) -> tuple[str, int]:
+    def _evidence_payload(self, evidence: tuple[dict[str, Any], ...]) -> list[dict[str, Any]]:
+        payload: list[dict[str, Any]] = []
+        used_chars = 0
+        for item in evidence:
+            if len(payload) >= self.max_evidence_items:
+                break
+            row = {
+                "evidence_hash": str(item.get("evidence_hash", "")),
+                "origin": str(item.get("origin", "")),
+                "source_class": str(item.get("source_class", "")),
+                "observed_at": item.get("observed_at"),
+                "as_of": item.get("as_of"),
+                "independence_cluster": str(item.get("independence_cluster", "")),
+                "content": str(item.get("content", ""))[:12000],
+                "extracted_facts": item.get("extracted_facts", {}),
+                "extraction_method": str(item.get("extraction_method", "")),
+                "authority_class": str(item.get("authority_class", "")),
+                "units": item.get("units"),
+            }
+            encoded = json.dumps(row, sort_keys=True, separators=(",", ":"), default=str)
+            if used_chars + len(encoded) > self.max_evidence_chars:
+                break
+            payload.append(row)
+            used_chars += len(encoded)
+        return payload
+
+    def structured_input(self, request: ProviderRequest) -> tuple[str, int, int]:
         memory = self._verified_memory_payload(request.verified_memory)
-        if not memory:
-            return request.task, 0
+        evidence = self._evidence_payload(request.evidence)
         body = {
             "task": request.task,
+            "runtime_evidence": evidence,
             "verified_institutional_memory": memory,
             "sealed_first_pass": True,
             "peer_outputs_included": False,
         }
-        return json.dumps(body, sort_keys=True, separators=(",", ":")), len(memory)
+        return json.dumps(body, sort_keys=True, separators=(",", ":"), default=str), len(memory), len(evidence)
 
     async def generate_async(self, task: str, phenotype: str, domain: str) -> tuple[Claim, dict[str, object]]:
         from agents import Runner
@@ -122,6 +177,7 @@ class OpenAIAgentsProvider(Provider):
             output = Claim.model_validate(output)
         usage = getattr(getattr(result, "context_wrapper", None), "usage", None)
         input_tokens, output_tokens, total_tokens = self._usage_numbers(usage)
+        cost = self._monetary_cost(usage)
         metadata: dict[str, object] = {
             "last_agent": getattr(getattr(result, "last_agent", None), "name", None),
             "usage": str(usage) if usage is not None else None,
@@ -129,33 +185,50 @@ class OpenAIAgentsProvider(Provider):
             "output_tokens": output_tokens,
             "total_tokens": total_tokens,
             "timeout_seconds": self.timeout_seconds,
-            "monetary_cost_status": "KNOWN" if self._monetary_cost(usage) is not None else "UNKNOWN",
+            "monetary_cost_status": "KNOWN" if cost is not None else "UNKNOWN",
         }
-        if self._monetary_cost(usage) is not None:
-            metadata["monetary_cost_usd"] = self._monetary_cost(usage)
+        if cost is not None:
+            metadata["monetary_cost_usd"] = cost
         return output, metadata
 
     async def generate_request_async(self, request: ProviderRequest) -> ProviderResponse:
         started = perf_counter()
-        model_input, memory_count = self.structured_input(request)
+        model_input, memory_count, evidence_count = self.structured_input(request)
         claim, metadata = await self.generate_async(model_input, request.phenotype, request.domain)
         latency_ms = (perf_counter() - started) * 1000.0
         trace_id = str(metadata.get("last_agent") or "") or None
+        allowed = {str(item.get("evidence_hash", "")) for item in request.evidence}
+        claimed = list(dict.fromkeys(claim.evidence_refs))
+        validated = [ref for ref in claimed if ref in allowed]
+        rejected = [ref for ref in claimed if ref not in allowed]
+        validated_claim = claim.model_copy(update={"evidence_refs": validated})
         usage = dict(metadata)
-        usage["verified_memory_items_consumed"] = memory_count
+        usage.update(
+            {
+                "verified_memory_items_consumed": memory_count,
+                "evidence_items_supplied": evidence_count,
+                "evidence_hashes_supplied": sorted(allowed),
+                "evidence_refs_claimed": claimed,
+                "evidence_refs_validated": validated,
+                "evidence_refs_rejected": rejected,
+            }
+        )
         cost_value = usage.get("monetary_cost_usd")
         cost = float(cost_value) if isinstance(cost_value, (float, int)) else None
-        return ProviderResponse(claim=claim, cost=cost, latency_ms=latency_ms, trace_id=trace_id, usage=usage)
+        return ProviderResponse(claim=validated_claim, cost=cost, latency_ms=latency_ms, trace_id=trace_id, usage=usage)
 
     async def challenge_async(self, request: ChallengeRequest) -> ChallengeResponse:
         from agents import Agent, Runner
 
-        agent = Agent(
-            name="mimicus-structured-challenger",
-            instructions=("Evaluate only the supplied structured claim/evidence/falsifier summary. Return a concise ChallengeResponse. Never expose hidden chain-of-thought."),
-            model=self.model,
-            output_type=ChallengeResponse,
-        )
+        kwargs: dict[str, Any] = {
+            "name": "mimicus-structured-challenger",
+            "instructions": "Evaluate only the supplied structured claim/evidence/falsifier summary. Return a concise ChallengeResponse. Never expose hidden chain-of-thought.",
+            "model": self.model,
+            "output_type": ChallengeResponse,
+        }
+        if self.tools:
+            kwargs["tools"] = list(self.tools)
+        agent = Agent(**kwargs)
         result = await asyncio.wait_for(Runner.run(agent, request.model_dump_json(), max_turns=self.max_turns), timeout=self.timeout_seconds)
         output = result.final_output
         response = output if isinstance(output, ChallengeResponse) else ChallengeResponse.model_validate(output)

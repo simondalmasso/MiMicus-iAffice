@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import Protocol
 
 from mimicus.agents.identity import AgentIdentity, exact_fingerprint, make_identity
-from mimicus.canonical import sha256_text
+from mimicus.canonical import sha256_obj, sha256_text
 from mimicus.coalition.selector import AgentCandidate, select_coalition
 from mimicus.coalition.threat_profile import ThreatProfile
 from mimicus.falsifiers.builtins import builtin_specs
@@ -46,7 +46,7 @@ class BuiltinAgentFactory:
     provider_capabilities: ProviderCapabilities = field(
         default_factory=lambda: ProviderCapabilities(provider_id="scripted", model_id="fixture-v2", version="2", known_zero_cost=True)
     )
-    policy_version: str = "mimicus-v0.2.1-policy"
+    policy_version: str = "mimicus-v0.2.2-policy"
 
     _PHENOTYPES = (
         ("numeric-1", frozenset({"numeric", "synthesize"}), "numeric-verifier-v2.1"),
@@ -62,7 +62,7 @@ class BuiltinAgentFactory:
         rows: list[AgentCandidate] = []
         for name, capabilities, role_version in self._PHENOTYPES:
             prompt_hash = sha256_text(f"mimicus:{role_version}:{name}")
-            tool_hash = sha256_text(f"tools:{role_version}:{','.join(sorted(capabilities))}")
+            tool_hash = sha256_obj({"phenotype": role_version, "declared_capabilities": sorted(capabilities), "provider_tool_manifest_hash": caps.tool_manifest_hash})
             fingerprint = exact_fingerprint(
                 provider=caps.provider_id,
                 model=caps.model_id,
@@ -72,7 +72,7 @@ class BuiltinAgentFactory:
                 system_prompt_hash=prompt_hash,
                 tool_manifest_hash=tool_hash,
                 policy_hash=policy_hash,
-                provider_adapter_version=caps.version,
+                provider_adapter_version=caps.adapter_version,
             )
             rows.append(
                 AgentCandidate(

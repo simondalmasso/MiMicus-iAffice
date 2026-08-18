@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mimicus-swarm"
-version = "0.2.0"
+version = "0.2.2"
 description = "Persistent parallel agentic immune swarm with executable morphology DAGs, deterministic falsification, gated memory, replay, and MCP."
 readme = "README.md"
 requires-python = ">=3.12,<3.15"

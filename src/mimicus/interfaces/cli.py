@@ -13,6 +13,7 @@ from mimicus.config import Settings
 from mimicus.orchestration.engine import MiMicusEngine, RunRequest, _spec_keys, scenario_fixture
 from mimicus.orchestration.morphology import compile_morphology
 from mimicus.plugins.profiles import PROFILES, build_kernel
+from mimicus.providers.base import Provider
 from mimicus.storage.migrations_adapter import upgrade
 from mimicus.storage.repository import Repository
 
@@ -30,6 +31,10 @@ def doctor(profile: str) -> dict[str, object]:
     kernel.mount_all()
     services = kernel.services.snapshot()
     placeholders = [capability for capability in services if type(kernel.services.get(capability)) is object]
+    provider = kernel.services.get("model_provider")
+    if not isinstance(provider, Provider):
+        raise RuntimeError("model provider service has invalid type")
+    provider_caps = provider.capabilities
     kernel.unmount_all()
     mcp_version = "unknown"
     try:
@@ -47,6 +52,12 @@ def doctor(profile: str) -> dict[str, object]:
         "placeholder_services": placeholders,
         "provider_ready": profile != "openai" or bool(os.getenv("OPENAI_API_KEY")),
         "provider_live_credential_present": bool(os.getenv("OPENAI_API_KEY")) if profile == "openai" else False,
+        "provider_supports_tools": provider_caps.supports_tools,
+        "provider_tool_manifest_hash": provider_caps.tool_manifest_hash,
+        "evidence_acquisition_available": provider_caps.evidence_acquisition_available,
+        "pricing_metadata_authoritative": provider_caps.pricing_metadata_authoritative,
+        "estimated_max_cost_per_call": provider_caps.estimated_max_cost_per_call,
+        "pricing_preflight_status": "READY" if provider_caps.known_zero_cost or provider_caps.estimated_max_cost_per_call is not None else "REQUIRED_FOR_MULTI_CALL",
         "mcp_version": mcp_version,
         "secrets_printed": False,
     }

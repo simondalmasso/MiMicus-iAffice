@@ -629,6 +629,7 @@ class FullMiMicusRunner:
             domain=fixture.domain,
             scenario=fixture.scenario,
             fixture=fixture.public_context,
+            source_mode="benchmark",
             budget_usd=0.02,
             max_agents=4,
             max_concurrency=4,

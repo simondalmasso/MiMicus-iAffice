@@ -24,6 +24,8 @@ class ProviderCapabilities:
     known_zero_cost: bool = False
     estimated_max_cost_per_call: float | None = None
     pricing_metadata_authoritative: bool = False
+    tool_manifest_hash: str = "no-tools"
+    evidence_acquisition_available: bool = False
 
     @property
     def runtime_identity(self) -> tuple[str, str, str]:
@@ -38,6 +40,7 @@ class ProviderRequest:
     sealed_context_id: str
     fixture: dict[str, Any]
     verified_memory: tuple[dict[str, Any], ...] = ()
+    evidence: tuple[dict[str, Any], ...] = ()
 
 
 @dataclass(frozen=True)

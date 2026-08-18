@@ -23,7 +23,7 @@ def create_mcp_server(profile: str = "offline") -> Any:
 
     server = MCPServer(
         "MiMicus",
-        version="0.2.0",
+        version="0.2.2",
         description="Persistent auditable agentic immune swarm with executable morphology DAGs and bounded parallelism.",
     )
     run_annotations = ToolAnnotations.model_validate({"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": profile == "openai"})
@@ -33,6 +33,7 @@ def create_mcp_server(profile: str = "offline") -> Any:
     def run_mimicus(
         task: str,
         domain: str | None = None,
+        evidence: list[dict[str, Any]] | None = None,
         budget_usd: float = 0.0,
         max_agents: int = 4,
         depth: Literal["fast", "normal", "deep"] = "normal",
@@ -43,6 +44,7 @@ def create_mcp_server(profile: str = "offline") -> Any:
         request = RunRequest(
             task=task,
             domain=domain,
+            evidence=evidence or [],
             budget_usd=budget_usd,
             max_agents=max_agents,
             max_concurrency=max_concurrency,

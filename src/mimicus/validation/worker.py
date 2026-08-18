@@ -27,7 +27,15 @@ def _engine() -> MiMicusEngine:
 
 
 def scenario_01_tam() -> dict[str, Any]:
-    result = _engine().run(RunRequest(task="K3 TAM 12x mismatch", domain="finance", learn=True))
+    result = _engine().run(
+        RunRequest(
+            task="K3 TAM 12x mismatch",
+            domain="finance",
+            scenario="tam_12x",
+            fixture={"claim_statement": "TAM", "claim_type": "numeric", "price": 10.0, "users": 100.0, "price_period": "monthly", "claimed": 1000.0},
+            learn=True,
+        )
+    )
     execution = result.falsifiers[0]
     assert execution["verdict"] == "FAIL"
     assert execution["primitive"] == "numeric_invariant"
@@ -45,7 +53,14 @@ def scenario_01_tam() -> dict[str, Any]:
 
 
 def scenario_02_echo() -> dict[str, Any]:
-    result = _engine().run(RunRequest(task="source echo same origin citation", domain="research"))
+    result = _engine().run(
+        RunRequest(
+            task="source echo same origin citation",
+            domain="research",
+            scenario="echo_chamber",
+            fixture={"claim_statement": "sources", "claim_type": "factual", "clusters": ["origin-wire", "origin-wire"], "texts": ["same report", "same report"]},
+        )
+    )
     assert result.falsifiers[0]["verdict"] == "FAIL"
     assert result.falsifiers[0]["primitive"] == "source_independence"
     item = MemoryItem(
@@ -68,14 +83,33 @@ def scenario_02_echo() -> dict[str, Any]:
 
 
 def scenario_03_freshness() -> dict[str, Any]:
-    result = _engine().run(RunRequest(task="freshness stale current date evidence", domain="research"))
+    result = _engine().run(
+        RunRequest(
+            task="freshness stale current date evidence",
+            domain="research",
+            scenario="freshness",
+            fixture={"claim_statement": "freshness", "claim_type": "temporal", "evidence_date": "2025-01-01T00:00:00+00:00", "as_of": "2026-08-17T00:00:00+00:00"},
+        )
+    )
     assert result.falsifiers[0]["verdict"] == "FAIL"
     assert result.falsifiers[0]["primitive"] == "freshness"
     return {"scenario": "03_freshness", "pass": True, "run_id": result.run_id, "primitive": "freshness"}
 
 
 def scenario_04_entailment() -> dict[str, Any]:
-    result = _engine().run(RunRequest(task="citation figure entailment mismatch", domain="research"))
+    result = _engine().run(
+        RunRequest(
+            task="citation figure entailment mismatch",
+            domain="research",
+            scenario="citation_entailment",
+            fixture={
+                "claim_statement": "figure",
+                "claim_type": "numeric",
+                "claim_figure": 42,
+                "evidence_spans": [{"span_id": "e1", "supported_figures": [41], "material_support": True}],
+            },
+        )
+    )
     assert any(row["verdict"] == "FAIL" and row["primitive"] == "citation_entailment" for row in result.falsifiers)
     return {
         "scenario": "04_citation_entailment",
@@ -86,7 +120,14 @@ def scenario_04_entailment() -> dict[str, Any]:
 
 
 def scenario_05_counterexample() -> dict[str, Any]:
-    result = _engine().run(RunRequest(task="absence counterexample none exist", domain="research"))
+    result = _engine().run(
+        RunRequest(
+            task="absence counterexample none exist",
+            domain="research",
+            scenario="counterexample",
+            fixture={"claim_statement": "absence", "claim_type": "factual", "absence_key": "target", "registry": {"target": {"id": "known"}}, "registry_snapshot_hash": "b" * 64},
+        )
+    )
     assert result.falsifiers[0]["verdict"] == "FAIL"
     assert result.falsifiers[0]["primitive"] == "counterexample_search"
     assert result.falsifiers[0]["evidence"]["counterexample"] is not None

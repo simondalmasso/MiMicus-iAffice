@@ -12,7 +12,8 @@ from mimicus.agents.bankruptcy import BankruptcyRecord, evaluate_bankruptcy, rec
 from mimicus.agents.calibration import CalibrationLedger, capability_scope
 from mimicus.agents.identity import make_identity
 from mimicus.canonical import sha256_obj, sha256_text
-from mimicus.claims.evidence import evidence_row, execution_evidence, fixture_evidence
+from mimicus.claims.evidence import evidence_row, execution_evidence
+from mimicus.claims.evidence_bundle import EvidenceInput, explicit_fixture_bundle, runtime_evidence_bundle
 from mimicus.claims.models import Claim
 from mimicus.coalition.selector import AgentCandidate, correlation
 from mimicus.coalition.threat_profile import profile_task
@@ -51,6 +52,8 @@ class RunRequest(BaseModel):
     learn: bool = False
     scenario: str | None = None
     fixture: dict[str, Any] = Field(default_factory=dict)
+    source_mode: Literal["runtime", "fixture", "benchmark"] = "runtime"
+    evidence: list[EvidenceInput] = Field(default_factory=list, max_length=16)
 
 
 class RunResult(BaseModel):
@@ -100,54 +103,10 @@ def default_candidates() -> list[AgentCandidate]:
 
 
 def scenario_fixture(request: RunRequest) -> tuple[str, dict[str, Any]]:
-    text = f"{request.scenario or ''} {request.task}".lower()
-    fixture = dict(request.fixture)
-    if fixture:
-        return request.scenario or "custom", fixture
-    if any(token in text for token in ("tam", "12x", "12×")):
-        return "tam_12x", {
-            "claim_statement": "TAM is 1,000 annual units",
-            "claim_type": "numeric",
-            "probability": 0.94,
-            "price": 10.0,
-            "users": 100.0,
-            "price_period": "monthly",
-            "claimed": 1000.0,
-        }
-    if "echo" in text or "same origin" in text:
-        return "echo_chamber", {
-            "claim_statement": "Three independent sources corroborate the claim",
-            "claim_type": "factual",
-            "probability": 0.9,
-            "clusters": ["origin-wire", "origin-wire", "origin-wire"],
-            "texts": ["same syndicated report"] * 3,
-        }
-    if "fresh" in text or "stale" in text:
-        return "freshness", {
-            "claim_statement": "The evidence is current",
-            "claim_type": "temporal",
-            "probability": 0.85,
-            "evidence_date": "2025-01-01T00:00:00+00:00",
-            "as_of": "2026-08-17T00:00:00+00:00",
-        }
-    if "entail" in text or "citation" in text or "figure" in text:
-        return "citation_entailment", {
-            "claim_statement": "The cited source supports figure 42",
-            "claim_type": "numeric",
-            "probability": 0.88,
-            "claim_figure": 42,
-            "evidence_spans": [{"span_id": "e1", "supported_figures": [41], "material_support": True}],
-        }
-    if "absence" in text or "counterexample" in text or "none exist" in text:
-        return "counterexample", {
-            "claim_statement": "No target exists",
-            "claim_type": "factual",
-            "probability": 0.86,
-            "absence_key": "target",
-            "registry": {"target": {"id": "known-counterexample"}},
-            "registry_snapshot_hash": "b" * 64,
-        }
-    return "general", {"claim_statement": request.task, "claim_type": "other", "probability": 0.5}
+    """Return only explicitly supplied fixture material; task words never create facts."""
+    if request.fixture:
+        return request.scenario or "custom_fixture", dict(request.fixture)
+    return request.scenario or "runtime", {}
 
 
 def _spec_keys(profile_caps: tuple[str, ...], scenario: str) -> list[str]:
@@ -206,10 +165,36 @@ class MiMicusEngine:
         run_id = str(uuid4())
         domain = request.domain or "general"
         scenario, fixture = scenario_fixture(request)
+        resolved_source_mode: Literal["runtime", "fixture", "benchmark"]
+        if request.source_mode == "benchmark":
+            resolved_source_mode = "benchmark"
+        elif request.fixture or request.source_mode == "fixture":
+            resolved_source_mode = "fixture"
+        else:
+            resolved_source_mode = "runtime"
+        if resolved_source_mode == "runtime":
+            evidence_bundle = runtime_evidence_bundle(run_id, request.evidence)
+        else:
+            evidence_bundle = explicit_fixture_bundle(
+                run_id,
+                fixture,
+                domain=domain,
+                scenario=scenario,
+                benchmark=resolved_source_mode == "benchmark",
+            )
+        falsifier_context = evidence_bundle.falsifier_context()
         ledger = EventLedger(run_id)
         progress = ProgressLedger()
         progress_rows: list[dict[str, Any]] = []
-        task_hash = sha256_obj({"task": request.task, "domain": domain, "fixture": fixture})
+        task_hash = sha256_obj(
+            {
+                "task": request.task,
+                "domain": domain,
+                "source_mode": resolved_source_mode,
+                "evidence_hashes": evidence_bundle.hashes,
+                "fixture_hash": sha256_obj(fixture) if resolved_source_mode != "runtime" else None,
+            }
+        )
         config_hash = sha256_obj(
             {
                 "budget_usd": request.budget_usd,
@@ -217,9 +202,11 @@ class MiMicusEngine:
                 "max_concurrency": request.max_concurrency,
                 "depth": request.depth,
                 "learn": request.learn,
+                "source_mode": resolved_source_mode,
             }
         )
-        ledger.append("run_started", {"task_hash": task_hash, "config_hash": config_hash, "plugin_hashes": self.plugin_hashes})
+        ledger.append("run_started", {"task_hash": task_hash, "config_hash": config_hash, "plugin_hashes": self.plugin_hashes, "source_mode": resolved_source_mode})
+        ledger.append("evidence_bundle_prepared", {"source_mode": resolved_source_mode, "evidence_hashes": list(evidence_bundle.hashes), "count": len(evidence_bundle.items)})
 
         def advance(step: str, uncertainty: float) -> None:
             progress.advance(step, uncertainty)
@@ -271,11 +258,9 @@ class MiMicusEngine:
             identity = self.services.agent_factory.identity_for(candidate)
             if isinstance(revisions, dict) and isinstance(revisions.get(candidate.name), dict):
                 revision = revisions[candidate.name]
-                revised_fp = str(
-                    revision.get("fingerprint") or _fingerprint(candidate.name, candidate.provider, candidate.model, prompt=str(revision.get("prompt_revision", "revision")))
-                )
+                requested_fp = str(revision["fingerprint"]) if revision.get("fingerprint") else None
                 identity = make_identity(
-                    fingerprint=revised_fp,
+                    fingerprint=requested_fp,
                     provider=candidate.provider,
                     model_family=candidate.model,
                     phenotype=candidate.name,
@@ -290,7 +275,7 @@ class MiMicusEngine:
                     declared_lineage_id=str(revision.get("lineage_id")) if revision.get("lineage_id") else identity.lineage_id,
                     revision_provenance=str(revision.get("provenance", "declared ORDER-004 revision")),
                 )
-                candidate = replace(candidate, fingerprint=revised_fp, prompt_hash=identity.system_prompt_hash, tool_hash=identity.tool_manifest_hash)
+                candidate = replace(candidate, fingerprint=identity.fingerprint, prompt_hash=identity.system_prompt_hash, tool_hash=identity.tool_manifest_hash)
             self.repository.register_identity(identity)
             candidate = replace(candidate, lineage_id=identity.lineage_id)
             relevant_caps = [cap for cap in profile.required_capabilities if cap in candidate.capabilities]
@@ -312,79 +297,136 @@ class MiMicusEngine:
                 audited.append(replace(candidate, audition_score=0.5, calibration_score=0.5))
                 continue
 
-            target_cap = relevant_caps[0]
-            category = canary_for.get(target_cap, "semantic_decoy")
-            family = f"{target_cap}_canary"
-            scoped_state_key = capability_scope(domain, target_cap, family)
-            current_state = self.repository.bankruptcy_state(candidate.fingerprint, scoped_state_key)
-            known_negative_lineage = self.repository.lineage_has_bankrupt_predecessor(identity.lineage_id, domain, exclude_fingerprint=candidate.fingerprint)
-            if known_negative_lineage and current_state == "ACTIVE":
-                self.repository.set_bankruptcy_state(candidate.fingerprint, scoped_state_key, "PROBATION", "known lineage has unresolved domain bankruptcy")
-                self.repository.set_bankruptcy_state(candidate.fingerprint, domain, "PROBATION", f"capability {target_cap}: known-lineage whitewashing defense")
-                current_state = "PROBATION"
+            cap_auditions: dict[str, float] = {}
+            cap_calibrations: dict[str, float] = {}
+            cap_states: dict[str, str] = {}
+            for target_cap in relevant_caps:
+                category = canary_for.get(target_cap, "semantic_decoy")
+                family = f"{target_cap}_canary"
+                scoped_state_key = capability_scope(domain, target_cap, family)
+                current_state = self.repository.bankruptcy_state(candidate.fingerprint, scoped_state_key)
+                known_negative_lineage = self.repository.lineage_has_bankrupt_predecessor(
+                    identity.lineage_id,
+                    scoped_state_key,
+                    exclude_fingerprint=candidate.fingerprint,
+                )
+                if known_negative_lineage and current_state == "ACTIVE":
+                    self.repository.set_bankruptcy_state(
+                        candidate.fingerprint,
+                        scoped_state_key,
+                        "PROBATION",
+                        "known lineage has unresolved capability bankruptcy",
+                    )
+                    current_state = "PROBATION"
+                    ledger.append(
+                        "bankruptcy_changed",
+                        {
+                            "fingerprint": candidate.fingerprint,
+                            "domain": domain,
+                            "capability": target_cap,
+                            "test_family": family,
+                            "state": "PROBATION",
+                            "reason": "known-lineage capability whitewashing defense",
+                        },
+                    )
+                forced_fail = candidate.fingerprint in failures or candidate.name in failures or target_cap in fail_caps
+                passed_answer = "wrong" if forced_fail else expected_answer[category]
+                audition_result = audition(
+                    candidate.fingerprint,
+                    domain,
+                    category,
+                    passed_answer,
+                    capability=target_cap,
+                    test_family=family,
+                    supported=True,
+                )
+                assert audition_result.passed is not None
+                calibration = self.calibration.record_capability_verified(
+                    candidate.fingerprint,
+                    domain,
+                    target_cap,
+                    family,
+                    predicted_probability=0.8,
+                    outcome=audition_result.passed,
+                    canary=True,
+                )
+                # Domain aggregate is telemetry-only. No routing path reads it for positive authority.
+                self.calibration.record_verified(
+                    candidate.fingerprint,
+                    domain,
+                    predicted_probability=0.8,
+                    outcome=audition_result.passed,
+                    canary=True,
+                )
+                evaluated = evaluate_bankruptcy(calibration)
+                recovery_requested = candidate.fingerprint in recovery or candidate.name in recovery
+                if recovery_requested:
+                    recovered = recover(
+                        BankruptcyRecord(candidate.fingerprint, scoped_state_key, BankruptcyState(current_state), "recovery path"),
+                        recovery_audition_passed=audition_result.passed,
+                    )
+                    next_state = recovered.state.value
+                    reason = recovered.reason or "recovery audition"
+                elif evaluated.state == BankruptcyState.BANKRUPT:
+                    next_state = "BANKRUPT"
+                    reason = evaluated.reason or "verified capability audition bankruptcy"
+                else:
+                    next_state = current_state
+                    reason = "direct verified capability calibration"
+                if next_state != current_state:
+                    self.repository.set_bankruptcy_state(candidate.fingerprint, scoped_state_key, next_state, reason)
+                    ledger.append(
+                        "bankruptcy_changed",
+                        {
+                            "fingerprint": candidate.fingerprint,
+                            "domain": domain,
+                            "capability": target_cap,
+                            "test_family": family,
+                            "state": next_state,
+                            "reason": reason,
+                        },
+                    )
+                state = self.repository.bankruptcy_state(candidate.fingerprint, scoped_state_key)
+                cap_auditions[target_cap] = audition_result.score
+                cap_calibrations[target_cap] = calibration.trust
+                cap_states[target_cap] = state
+                if state == "BANKRUPT":
+                    lineage_exclusions["bankrupt"].append(candidate.fingerprint)
+                elif state == "PROBATION":
+                    lineage_exclusions["probation"].append(candidate.fingerprint)
                 ledger.append(
-                    "bankruptcy_changed",
-                    {"fingerprint": candidate.fingerprint, "domain": domain, "capability": target_cap, "state": "PROBATION", "reason": "known-lineage whitewashing defense"},
+                    "agent_auditioned",
+                    {
+                        "fingerprint": candidate.fingerprint,
+                        "lineage_id": identity.lineage_id,
+                        "domain": domain,
+                        "capability": target_cap,
+                        "category": category,
+                        "test_family": family,
+                        "applicability": "APPLICABLE",
+                        "passed": audition_result.passed,
+                        "score": audition_result.score,
+                        "direct_attempts": calibration.attempts,
+                        "direct_brier": calibration.brier_score,
+                        "routing_state": state,
+                    },
                 )
-            forced_fail = candidate.fingerprint in failures or candidate.name in failures or target_cap in fail_caps
-            passed_answer = "wrong" if forced_fail else expected_answer[category]
-            audition_result = audition(candidate.fingerprint, domain, category, passed_answer, capability=target_cap, test_family=family, supported=True)
-            assert audition_result.passed is not None
-            calibration = self.calibration.record_capability_verified(
-                candidate.fingerprint, domain, target_cap, family, predicted_probability=0.8, outcome=audition_result.passed, canary=True
-            )
-            # Keep the historical domain summary for ORDER-003 compatibility, but routing decisions below are capability-scoped.
-            self.calibration.record_verified(candidate.fingerprint, domain, predicted_probability=0.8, outcome=audition_result.passed, canary=True)
-            evaluated = evaluate_bankruptcy(calibration)
-            recovery_requested = candidate.fingerprint in recovery or candidate.name in recovery
-            if recovery_requested:
-                recovered = recover(
-                    BankruptcyRecord(candidate.fingerprint, scoped_state_key, BankruptcyState(current_state), "recovery path"), recovery_audition_passed=audition_result.passed
-                )
-                next_state = recovered.state.value
-                reason = recovered.reason or "recovery audition"
-            elif evaluated.state == BankruptcyState.BANKRUPT:
-                next_state = "BANKRUPT"
-                reason = evaluated.reason or "verified capability audition bankruptcy"
-            else:
-                next_state = current_state
-                reason = "direct verified capability calibration"
-            if next_state != current_state:
-                self.repository.set_bankruptcy_state(candidate.fingerprint, scoped_state_key, next_state, reason)
-                ledger.append(
-                    "bankruptcy_changed",
-                    {"fingerprint": candidate.fingerprint, "domain": domain, "capability": target_cap, "test_family": family, "state": next_state, "reason": reason},
-                )
-            if next_state == "BANKRUPT":
-                self.repository.set_bankruptcy_state(candidate.fingerprint, domain, "BANKRUPT", f"capability {target_cap}: {reason}")
-            elif recovery_requested and next_state == "ACTIVE":
-                self.repository.set_bankruptcy_state(candidate.fingerprint, domain, "ACTIVE", f"capability {target_cap} recovery audition passed")
-            state = self.repository.bankruptcy_state(candidate.fingerprint, scoped_state_key)
-            if state == "BANKRUPT" and self.repository.bankruptcy_state(candidate.fingerprint, domain) != "BANKRUPT":
-                self.repository.set_bankruptcy_state(candidate.fingerprint, domain, "BANKRUPT", f"capability {target_cap}: verified relevant canary bankruptcy")
-            if state == "BANKRUPT":
-                lineage_exclusions["bankrupt"].append(candidate.fingerprint)
-            elif state == "PROBATION":
-                lineage_exclusions["probation"].append(candidate.fingerprint)
-            ledger.append(
-                "agent_auditioned",
-                {
-                    "fingerprint": candidate.fingerprint,
-                    "lineage_id": identity.lineage_id,
-                    "domain": domain,
-                    "capability": target_cap,
-                    "category": category,
-                    "test_family": family,
-                    "applicability": "APPLICABLE",
-                    "passed": audition_result.passed,
-                    "score": audition_result.score,
-                    "direct_attempts": calibration.attempts,
-                    "direct_brier": calibration.brier_score,
-                    "routing_state": state,
-                },
-            )
+            # Historical domain state remains inspection-only and cannot grant authority.
+            if cap_states and all(state == "BANKRUPT" for state in cap_states.values()):
+                self.repository.set_bankruptcy_state(candidate.fingerprint, domain, "BANKRUPT", "all relevant capabilities bankrupt")
+            elif cap_states and all(state == "ACTIVE" for state in cap_states.values()):
+                self.repository.set_bankruptcy_state(candidate.fingerprint, domain, "ACTIVE", "all relevant capabilities active")
             audited.append(
-                replace(candidate, audition_score=audition_result.score, calibration_score=calibration.trust, bankrupt=state == "BANKRUPT", probation=state == "PROBATION")
+                replace(
+                    candidate,
+                    audition_score=sum(cap_auditions.values()) / max(1, len(cap_auditions)),
+                    calibration_score=sum(cap_calibrations.values()) / max(1, len(cap_calibrations)),
+                    bankrupt=bool(cap_states) and all(state == "BANKRUPT" for state in cap_states.values()),
+                    probation=bool(cap_states) and all(state == "PROBATION" for state in cap_states.values()),
+                    capability_audition_scores=cap_auditions,
+                    capability_calibration_scores=cap_calibrations,
+                    capability_states=cap_states,
+                )
             )
         advance("AUDITION_CANDIDATES", 0.70)
 
@@ -442,9 +484,39 @@ class MiMicusEngine:
                 },
             )
         budget = BudgetLedger(request.budget_usd)
-        provider_estimate = float(fixture["agent_cost"]) if "agent_cost" in fixture else self.provider.capabilities.estimated_max_cost_per_call
+        provider_estimate = (
+            float(fixture["agent_cost"]) if resolved_source_mode != "runtime" and "agent_cost" in fixture else self.provider.capabilities.estimated_max_cost_per_call
+        )
         if provider_estimate is None and self.provider.capabilities.known_zero_cost:
             provider_estimate = 0.0
+        planned_members = [member.fingerprint for member in selected]
+        pricing_preflight: dict[str, Any] = {
+            "status": "READY",
+            "planned_paid_calls": len(selected),
+            "estimated_max_cost_per_call": provider_estimate,
+            "configured_budget_usd": request.budget_usd,
+            "planned_members": planned_members,
+        }
+        if selected and not self.provider.capabilities.known_zero_cost:
+            if provider_estimate is None and len(selected) > 1:
+                pricing_preflight.update({"status": "PRICING_PREFLIGHT_REQUIRED", "reason": "pricing_preflight_required", "executed_members": []})
+                ledger.append("pricing_preflight_required", pricing_preflight)
+                selected = []
+                rationale["pricing_preflight"] = pricing_preflight
+            elif provider_estimate is not None and provider_estimate > 0.0:
+                affordable = int((request.budget_usd + 1e-12) // provider_estimate)
+                if affordable < len(selected):
+                    selected = selected[: max(0, affordable)]
+                    pricing_preflight.update(
+                        {
+                            "status": "DEGRADED_BEFORE_EXECUTION" if selected else "INSUFFICIENT_BUDGET",
+                            "reason": "insufficient_preflight_budget",
+                            "executed_members": [member.fingerprint for member in selected],
+                        }
+                    )
+                    ledger.append("pricing_preflight_degraded", pricing_preflight)
+                    rationale["pricing_preflight"] = pricing_preflight
+        pricing_preflight.setdefault("executed_members", [member.fingerprint for member in selected])
         projected_agent_cost = request.budget_usd if provider_estimate is None and selected else float(provider_estimate or 0.0) * len(selected)
         market_budget = max(0.0, request.budget_usd - min(request.budget_usd, projected_agent_cost))
         max_tests = {"fast": 1, "normal": 3, "deep": 5}[request.depth]
@@ -492,9 +564,17 @@ class MiMicusEngine:
 
         selected_by_fp = {member.fingerprint: member for member in selected}
         specs_by_hash = {spec.hash: spec for spec in selected_specs}
-        base_evidence = fixture_evidence(fixture, domain=domain, scenario=scenario)
-        base_evidence_rows = [evidence_row(item, run_id=run_id) for item in base_evidence]
-        base_evidence_hashes = [str(row["evidence_hash"]) for row in base_evidence_rows]
+        base_evidence_rows = evidence_bundle.persisted_rows()
+        base_evidence_hashes = list(evidence_bundle.hashes)
+        if selected_specs and not base_evidence_rows:
+            ledger.append(
+                "evidence_missing",
+                {
+                    "reason": "evidence_required_falsifier_has_no_structured_evidence",
+                    "source_mode": resolved_source_mode,
+                    "falsifier_primitives": [spec.primitive for spec in selected_specs],
+                },
+            )
         claims_by_fp: dict[str, Claim] = {}
         claim_trace_ids: dict[str, str | None] = {}
         provider_usages: list[dict[str, Any]] = []
@@ -516,7 +596,9 @@ class MiMicusEngine:
                     ledger.append("budget_exhausted", {"node_id": node.node_id, "kind": node.kind.value, "category": "agent_generation"})
                     return {"budget_exhausted": True}
                 sealed_context_id = str(uuid5(NAMESPACE_URL, f"{run_id}:{member.fingerprint}:sealed"))
-                provider_request = ProviderRequest(request.task, domain, member.name, sealed_context_id, fixture, tuple(injected_by_agent.get(member.fingerprint, [])))
+                provider_request = ProviderRequest(
+                    request.task, domain, member.name, sealed_context_id, fixture, tuple(injected_by_agent.get(member.fingerprint, [])), evidence_bundle.provider_payload()
+                )
                 try:
                     response: ProviderResponse = await self.provider.generate_request_async(provider_request)
                 except asyncio.CancelledError:
@@ -529,10 +611,26 @@ class MiMicusEngine:
                     raise
                 reconciliation = await budget.reconcile(reservation, response.cost)
                 provider_call_count += 1
-                claim_with_evidence = response.claim.model_copy(update={"evidence_refs": list(base_evidence_hashes)})
+                claimed_refs = list(dict.fromkeys(response.claim.evidence_refs))
+                allowed_refs = set(base_evidence_hashes)
+                validated_refs = [ref for ref in claimed_refs if ref in allowed_refs]
+                rejected_refs = [ref for ref in claimed_refs if ref not in allowed_refs]
+                claim_with_evidence = response.claim.model_copy(update={"evidence_refs": validated_refs})
                 claims_by_fp[member.fingerprint] = claim_with_evidence
                 claim_trace_ids[member.fingerprint] = response.trace_id
-                provider_usages.append({"fingerprint": member.fingerprint, "trace_id": response.trace_id, "usage": response.usage, "budget": reconciliation})
+                provider_usage = dict(response.usage)
+                provider_usage.update(
+                    {
+                        "evidence_items_supplied": len(base_evidence_hashes),
+                        "evidence_hashes_supplied": sorted(base_evidence_hashes),
+                        "evidence_refs_claimed": claimed_refs,
+                        "evidence_refs_validated": validated_refs,
+                        "evidence_refs_rejected": rejected_refs,
+                    }
+                )
+                provider_usages.append({"fingerprint": member.fingerprint, "trace_id": response.trace_id, "usage": provider_usage, "budget": reconciliation})
+                if rejected_refs:
+                    ledger.append("evidence_ref_rejected", {"fingerprint": member.fingerprint, "rejected_refs": rejected_refs, "allowed_refs": sorted(allowed_refs)})
                 ledger.append(
                     "claim_proposed",
                     {
@@ -542,6 +640,8 @@ class MiMicusEngine:
                         "probability": claim_with_evidence.probability,
                         "provider_trace_id": response.trace_id,
                         "verified_memory_ids": [item["memory_id"] for item in injected_by_agent.get(member.fingerprint, [])],
+                        "evidence_refs": list(claim_with_evidence.evidence_refs),
+                        "evidence_hashes_supplied": sorted(base_evidence_hashes),
                     },
                 )
                 return {
@@ -562,7 +662,7 @@ class MiMicusEngine:
                     ledger.append("budget_exhausted", {"node_id": node.node_id, "kind": node.kind.value, "category": "falsifier"})
                     return {"budget_exhausted": True}
                 try:
-                    execution = self.services.falsifiers.run(spec, fixture)
+                    execution = self.services.falsifiers.run(spec, falsifier_context)
                 except BaseException:
                     await budget.release(reservation, reason="falsifier failed")
                     raise
@@ -590,12 +690,19 @@ class MiMicusEngine:
                                 SemanticSignature(left.statement, domain=left.domain, claim_type=left.claim_type, evidence_clusters=tuple(left.evidence_refs)),
                                 SemanticSignature(right.statement, domain=right.domain, claim_type=right.claim_type, evidence_clusters=tuple(right.evidence_refs)),
                             )
+                            relevant_edge_caps = [
+                                cap for cap in profile.required_capabilities if cap in left_member.capabilities and left_member.capability_states.get(cap, "ACTIVE") == "ACTIVE"
+                            ]
+                            edge_reliability = min(
+                                (self.calibration.direct_trust(left_fp, domain, cap, f"{cap}_canary") for cap in relevant_edge_caps),
+                                default=0.5,
+                            )
                             candidates_for_edges.append(
                                 CommunicationCandidate(
                                     challenger=left_fp,
                                     target=right_fp,
                                     residual_disagreement=disagreement,
-                                    verified_reliability=self.calibration.direct_trust(left_fp, domain),
+                                    verified_reliability=edge_reliability,
                                     task_relevance=1.0,
                                     capability_complementarity=1.0 if left_member.capabilities != right_member.capabilities else 0.4,
                                     correlation=correlation(left_member, right_member),
@@ -690,9 +797,6 @@ class MiMicusEngine:
         ordered_executions = sorted(executions, key=lambda row: row.spec_hash)
         execution_evidence_rows = [evidence_row(execution_evidence(item), run_id=run_id) for item in ordered_executions]
         decisive_evidence_hashes = [str(row["evidence_hash"]) for row in execution_evidence_rows]
-        if decisive_evidence_hashes:
-            for claim in ordered_claims:
-                claim.evidence_refs = sorted(set(claim.evidence_refs + decisive_evidence_hashes))
         if not ordered_claims:
             final_status = ClaimStatus.INCONCLUSIVE
         elif any(execution.verdict == Verdict.FAIL for execution in ordered_executions):
@@ -864,9 +968,13 @@ class MiMicusEngine:
             falsifiers=falsifier_rows,
             evidence_provenance={
                 "scenario": scenario,
-                "fixture_hash": sha256_obj(fixture),
-                "source_clusters": fixture.get("clusters", []),
-                "pinned_registry_hash": fixture.get("registry_snapshot_hash"),
+                "source_mode": resolved_source_mode,
+                "fixture_hash": sha256_obj(fixture) if resolved_source_mode != "runtime" else None,
+                "source_clusters": falsifier_context.get("clusters", []),
+                "pinned_registry_hash": falsifier_context.get("registry_snapshot_hash"),
+                "provider_input_evidence_hashes": sorted(base_evidence_hashes),
+                "falsifier_execution_evidence_hashes": sorted(decisive_evidence_hashes),
+                "pricing_preflight": pricing_preflight,
                 "plan_hash": plan.plan_hash,
                 "provider": self.provider.capabilities.__dict__,
                 "provider_usages": provider_usages,
@@ -900,7 +1008,7 @@ class MiMicusEngine:
             },
             persistent_memory_reused=sorted(persistent_memory_reused),
             persistent_falsifiers_reused=sorted(set(persistent_falsifiers_reused)),
-            lineage_exclusions={key: sorted(value) for key, value in lineage_exclusions.items()},
+            lineage_exclusions={key: sorted(set(value)) for key, value in lineage_exclusions.items()},
         )
         self.repository.save_run_bundle(
             run_id=run_id,
