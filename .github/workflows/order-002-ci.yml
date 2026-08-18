@@ -1,37 +1,51 @@
-name: ORDER-005 cleanup bootstrap
+name: ORDER-005 development validation
 
 on:
   pull_request:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: order-005-cleanup-${{ github.event.pull_request.number || github.ref }}
+  group: order-005-dev-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  PYTHONUNBUFFERED: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
 jobs:
-  cleanup:
-    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'order-002-mimicus-v01' }}
+  quality:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: order-002-mimicus-v01
-          fetch-depth: 0
       - uses: actions/setup-python@v5
         with: {python-version: "3.12"}
-      - run: python -m pip install ruff==0.16.3
-      - run: python scripts/order005_fix2.py
-      - run: |
-          ruff format src tests scripts
-          ruff check --fix src tests scripts
-          git rm -f scripts/order005_fix2.py
-          git diff --check
-      - run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
-          git commit -m 'ORDER-005: normalize regression probes'
-          git push origin HEAD:order-002-mimicus-v01
+      - run: python -m pip install -r requirements.lock && python -m pip install --no-deps -e .
+      - run: python -m pip check
+      - run: ruff format --check .
+      - run: ruff check .
+      - run: mypy src/mimicus
+
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: python -m pip install -r requirements.lock && python -m pip install --no-deps -e .
+      - run: pytest tests/unit tests/integration --cov=mimicus --cov-report=term-missing --cov-fail-under=90
+
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: python -m pip install -r requirements.lock && python -m pip install --no-deps -e .
+      - run: python scripts/check_security.py
+      - run: python scripts/check_ledger.py
+      - run: python -m mimicus.validation.order003_e2e "$RUNNER_TEMP/ORDER-003"
+      - run: python -m mimicus.validation.e2e "$RUNNER_TEMP/ORDER-002"
+      - run: mimicus benchmark --profile offline --episodes 20 --output-dir "$RUNNER_TEMP/benchmark"
