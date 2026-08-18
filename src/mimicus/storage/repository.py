@@ -86,6 +86,12 @@ class Repository:
                     "model_family": identity.model_family,
                     "phenotype": identity.phenotype,
                     "tool_policy_hash": identity.tool_policy_hash,
+                    "runtime_model_version": identity.runtime_model_version,
+                    "phenotype_version": identity.phenotype_version,
+                    "system_prompt_hash": identity.system_prompt_hash,
+                    "tool_manifest_hash": identity.tool_manifest_hash,
+                    "policy_hash": identity.policy_hash,
+                    "provider_adapter_version": identity.provider_adapter_version,
                     "parent_fingerprint": identity.parent_fingerprint,
                     "revision_provenance": identity.revision_provenance,
                 }
@@ -516,6 +522,15 @@ class Repository:
             rows = connection.execute(select(EventRow.event_json).where(EventRow.run_id == run_id).order_by(EventRow.sequence)).scalars().all()
         return [json.loads(row) for row in rows]
 
+    def get_evidence(self, run_id: str) -> list[dict[str, Any]]:
+        with self.engine.connect() as connection:
+            rows = connection.execute(select(EvidenceRow.payload_json).where(EvidenceRow.run_id == run_id).order_by(EvidenceRow.evidence_hash)).scalars().all()
+        return [json.loads(row) for row in rows]
+
+    def resolve_evidence(self, run_id: str, evidence_hashes: list[str]) -> dict[str, dict[str, Any]]:
+        wanted = set(evidence_hashes)
+        return {str(row.get("evidence_hash")): row for row in self.get_evidence(run_id) if str(row.get("evidence_hash")) in wanted}
+
     def inspect_state(self, run_id: str | None = None) -> dict[str, Any]:
         with self.engine.connect() as connection:
             runs = connection.execute(select(RunRow.run_id)).scalars().all()
@@ -524,9 +539,12 @@ class Repository:
             bankruptcies = connection.execute(select(AgentBankruptcyRow.fingerprint, AgentBankruptcyRow.domain, AgentBankruptcyRow.state)).all()
             lineages = connection.execute(select(AgentLineageMemberRow.fingerprint, AgentLineageMemberRow.lineage_id)).all()
             communications: list[str] = []
+            evidence_rows: list[str] = []
             if run_id is not None:
                 communication_rows = connection.execute(select(CommunicationRow.payload_json).where(CommunicationRow.run_id == run_id)).scalars().all()
                 communications = [str(row) for row in communication_rows if row is not None]
+                raw_evidence = connection.execute(select(EvidenceRow.payload_json).where(EvidenceRow.run_id == run_id)).scalars().all()
+                evidence_rows = [str(row) for row in raw_evidence if row is not None]
         return {
             "run_count": len(runs),
             "memory": [{"memory_id": a, "status": b, "domain": c} for a, b, c in memories],
@@ -534,6 +552,7 @@ class Repository:
             "bankruptcy": [{"fingerprint": a, "domain": b, "state": c} for a, b, c in bankruptcies],
             "lineages": [{"fingerprint": a, "lineage_id": b} for a, b in lineages],
             "communications": [json.loads(row) for row in communications if row],
+            "evidence": [json.loads(row) for row in evidence_rows if row],
         }
 
     def reset_run_for_test(self, run_id: str) -> None:
