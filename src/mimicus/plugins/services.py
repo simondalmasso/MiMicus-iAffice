@@ -85,7 +85,7 @@ class BuiltinAgentFactory:
                     tool_hash=tool_hash,
                     phenotype_version=role_version,
                     policy_hash=policy_hash,
-                    provider_adapter_version=caps.version,
+                    provider_adapter_version=caps.adapter_version,
                     runtime_model_version=caps.version,
                 )
             )

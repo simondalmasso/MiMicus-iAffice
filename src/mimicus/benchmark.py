@@ -15,10 +15,11 @@ from mimicus.claims.models import Claim
 from mimicus.events.ledger import EventLedger
 from mimicus.falsifiers.builtins import builtin_specs
 from mimicus.falsifiers.primitives import execute_primitive
+from mimicus.orchestration.communication import ChallengeRequest, ChallengeResponse
 from mimicus.orchestration.engine import MiMicusEngine, RunRequest
 from mimicus.orchestration.replay import verify_replay
 from mimicus.providers.base import Provider, ProviderCapabilities, ProviderRequest, ProviderResponse
-from mimicus.types import Verdict
+from mimicus.types import ClaimStatus, Verdict
 
 Architecture = Literal["A", "B", "C", "D", "E"]
 
@@ -124,6 +125,7 @@ class RawRow:
     semantic_redundancy: float
     lineage_whitewash_captured: bool | None
     ledger_head: str
+    morphology: str = "baseline"
 
 
 class ArchitectureRunner(Protocol):
@@ -135,12 +137,7 @@ class ArchitectureRunner(Protocol):
 
 
 class BenchmarkProvider(Provider):
-    """Deterministic provider whose behavior is independent of hidden ground truth.
-
-    It reasons only from public task tokens and phenotype. A small deterministic
-    fallibility function makes calibration/majority behavior measurable without
-    assigning outcomes by architecture name.
-    """
+    """Deterministic benchmark provider using public structured evidence only."""
 
     def __init__(self, *, error_modulus: int = 11, force_statement: str | None = None) -> None:
         self.error_modulus = max(2, error_modulus)
@@ -149,40 +146,83 @@ class BenchmarkProvider(Provider):
 
     @property
     def capabilities(self) -> ProviderCapabilities:
-        return ProviderCapabilities(provider_id="benchmark-scripted", model_id="public-heuristic-v1", version="1", usage_metadata_available=True)
+        return ProviderCapabilities(
+            provider_id="benchmark-scripted",
+            model_id="public-structured-heuristic",
+            version="benchmark-v2.1",
+            adapter_version="benchmark-adapter-v2.1",
+            usage_metadata_available=True,
+            known_zero_cost=False,
+            estimated_max_cost_per_call=0.0001,
+            pricing_metadata_authoritative=True,
+        )
 
     @staticmethod
-    def _public_answer(task: str) -> str:
-        text = task.lower()
-        if "general-alpha" in text:
+    def _public_answer(context: dict[str, Any]) -> str:
+        marker = context.get("benchmark_marker")
+        if marker == 1:
             return "ALPHA"
-        if "general-beta" in text:
+        if marker == 2:
             return "BETA"
-        fail_markers = ("mismatch", "stale", "echo-duplicate", "unsupported-figure", "counterexample-found", "mixed-fail")
-        supported_markers = ("aligned", "fresh-current", "independent-sources", "entailed-figure", "registry-absent", "mixed-supported")
-        if any(marker in text for marker in fail_markers):
-            return "FALSIFIED"
-        if any(marker in text for marker in supported_markers):
-            return "SUPPORTED"
-        return "INCONCLUSIVE"
+        checks: list[bool] = []
+        if all(key in context for key in ("price", "users", "claimed")):
+            multiplier = 12.0 if str(context.get("price_period", "annual")).lower() == "monthly" else 1.0
+            expected = float(context["price"]) * float(context["users"]) * multiplier
+            claimed = float(context["claimed"])
+            checks.append(abs(expected - claimed) / max(abs(expected), 1e-9) <= 0.01)
+        if "evidence_date" in context and "as_of" in context:
+            from datetime import datetime
+
+            observed = datetime.fromisoformat(str(context["evidence_date"]).replace("Z", "+00:00"))
+            as_of = datetime.fromisoformat(str(context["as_of"]).replace("Z", "+00:00"))
+            checks.append((as_of - observed).days <= 90)
+        clusters = context.get("clusters")
+        if isinstance(clusters, list) and clusters:
+            checks.append(len(set(str(value) for value in clusters)) >= 2)
+        if "claim_figure" in context and isinstance(context.get("evidence_spans"), list):
+            figure = context["claim_figure"]
+            spans = cast(list[dict[str, Any]], context["evidence_spans"])
+            checks.append(any(bool(span.get("material_support")) and figure in list(span.get("supported_figures", [])) for span in spans))
+        if "absence_key" in context and isinstance(context.get("registry"), dict):
+            checks.append(str(context["absence_key"]) not in cast(dict[str, Any], context["registry"]))
+        if not checks:
+            return "INCONCLUSIVE"
+        return "SUPPORTED" if all(checks) else "FALSIFIED"
+
+    @staticmethod
+    def _flip(answer: str) -> str:
+        return {"SUPPORTED": "FALSIFIED", "FALSIFIED": "SUPPORTED", "ALPHA": "BETA", "BETA": "ALPHA"}.get(answer, answer)
 
     async def generate_request_async(self, request: ProviderRequest) -> ProviderResponse:
         self.calls += 1
-        answer = self.force_statement or self._public_answer(request.task)
-        digest = int(sha256_obj({"task": request.task, "phenotype": request.phenotype})[:8], 16)
+        answer = self.force_statement or self._public_answer(request.fixture)
+        digest = int(sha256_obj({"public_context": request.fixture, "phenotype": request.phenotype})[:8], 16)
         if self.force_statement is None and digest % self.error_modulus == 0:
-            if answer == "FALSIFIED":
-                answer = "SUPPORTED"
-            elif answer == "SUPPORTED":
-                answer = "FALSIFIED"
-            elif answer == "ALPHA":
-                answer = "BETA"
-            elif answer == "BETA":
-                answer = "ALPHA"
-        claim = Claim(statement=answer, domain=request.domain, probability=0.78, claim_type="factual")
-        trace_id = str(uuid5(NAMESPACE_URL, f"benchmark:{request.task}:{request.phenotype}:{self.calls}"))
+            answer = self._flip(answer)
+        probability = 0.55 + (digest % 36) / 100.0
+        claim = Claim(statement=answer, domain=request.domain, probability=min(0.91, probability), claim_type="factual")
+        trace_id = str(uuid5(NAMESPACE_URL, f"benchmark:{sha256_obj(request.fixture)}:{request.phenotype}:{self.calls}"))
         await asyncio.sleep(0)
-        return ProviderResponse(claim=claim, cost=0.0001, latency_ms=0.1, trace_id=trace_id, usage={"simulated": True})
+        return ProviderResponse(
+            claim=claim,
+            cost=0.0001,
+            latency_ms=0.1,
+            trace_id=trace_id,
+            usage={"simulated": True, "monetary_cost_status": "KNOWN", "monetary_cost_usd": 0.0001},
+        )
+
+    async def challenge_async(self, request: ChallengeRequest) -> ChallengeResponse:
+        self.calls += 1
+        await asyncio.sleep(0)
+        return ChallengeResponse(
+            disposition="partial",
+            revised_probability=0.58,
+            revised_status=ClaimStatus.PROPOSED,
+            rationale_summary="benchmark structured challenge",
+            provider_call_id=str(uuid5(NAMESPACE_URL, f"benchmark-challenge:{request.hash}:{self.calls}")),
+            cost=0.0001,
+            usage={"simulated": True, "monetary_cost_status": "KNOWN", "monetary_cost_usd": 0.0001},
+        )
 
 
 def fixture_stream(count: int = 200) -> list[BenchmarkFixture]:
@@ -191,7 +231,7 @@ def fixture_stream(count: int = 200) -> list[BenchmarkFixture]:
     templates: list[dict[str, Any]] = [
         {
             "name": "numeric-mismatch",
-            "task": "numeric mismatch public evidence",
+            "task": "Evaluate annualized numeric consistency from structured evidence",
             "domain": "finance",
             "scenario": "tam_12x",
             "context": {"claim_statement": "TAM claim", "claim_type": "numeric", "price": 10.0, "users": 10.0, "price_period": "monthly", "claimed": 1000.0},
@@ -200,7 +240,7 @@ def fixture_stream(count: int = 200) -> list[BenchmarkFixture]:
         },
         {
             "name": "numeric-aligned",
-            "task": "numeric aligned public evidence",
+            "task": "Evaluate annualized numeric consistency from structured evidence",
             "domain": "finance",
             "scenario": "tam_12x",
             "context": {"claim_statement": "TAM claim", "claim_type": "numeric", "price": 10.0, "users": 10.0, "price_period": "monthly", "claimed": 1200.0},
@@ -209,7 +249,7 @@ def fixture_stream(count: int = 200) -> list[BenchmarkFixture]:
         },
         {
             "name": "fresh-stale",
-            "task": "freshness stale public evidence",
+            "task": "Evaluate temporal validity from structured evidence",
             "domain": "research",
             "scenario": "freshness",
             "context": {"claim_statement": "freshness", "claim_type": "temporal", "evidence_date": "2025-01-01T00:00:00+00:00", "as_of": "2026-08-17T00:00:00+00:00"},
@@ -218,7 +258,7 @@ def fixture_stream(count: int = 200) -> list[BenchmarkFixture]:
         },
         {
             "name": "fresh-current",
-            "task": "fresh-current public evidence",
+            "task": "Evaluate temporal validity from structured evidence",
             "domain": "research",
             "scenario": "freshness",
             "context": {"claim_statement": "freshness", "claim_type": "temporal", "evidence_date": "2026-08-10T00:00:00+00:00", "as_of": "2026-08-17T00:00:00+00:00"},
@@ -227,7 +267,7 @@ def fixture_stream(count: int = 200) -> list[BenchmarkFixture]:
         },
         {
             "name": "echo-duplicate",
-            "task": "source echo-duplicate public evidence",
+            "task": "Evaluate source independence from structured provenance",
             "domain": "research",
             "scenario": "echo_chamber",
             "context": {"claim_statement": "sources", "claim_type": "factual", "clusters": ["wire-a", "wire-a"], "texts": ["same report", "same report"]},
@@ -236,7 +276,7 @@ def fixture_stream(count: int = 200) -> list[BenchmarkFixture]:
         },
         {
             "name": "independent-sources",
-            "task": "independent-sources public evidence",
+            "task": "Evaluate source independence from structured provenance",
             "domain": "research",
             "scenario": "echo_chamber",
             "context": {"claim_statement": "sources", "claim_type": "factual", "clusters": ["primary-a", "primary-b"], "texts": ["alpha", "beta"]},
@@ -245,7 +285,7 @@ def fixture_stream(count: int = 200) -> list[BenchmarkFixture]:
         },
         {
             "name": "unsupported-figure",
-            "task": "citation unsupported-figure public evidence",
+            "task": "Evaluate citation entailment for the structured figure evidence",
             "domain": "research",
             "scenario": "citation_entailment",
             "context": {
@@ -259,7 +299,7 @@ def fixture_stream(count: int = 200) -> list[BenchmarkFixture]:
         },
         {
             "name": "entailed-figure",
-            "task": "citation entailed-figure public evidence",
+            "task": "Evaluate citation entailment for the structured figure evidence",
             "domain": "research",
             "scenario": "citation_entailment",
             "context": {
@@ -273,7 +313,7 @@ def fixture_stream(count: int = 200) -> list[BenchmarkFixture]:
         },
         {
             "name": "counterexample-found",
-            "task": "absence counterexample-found public evidence",
+            "task": "Evaluate an absence claim against the structured counterexample registry",
             "domain": "research",
             "scenario": "counterexample",
             "context": {"claim_statement": "absence", "claim_type": "factual", "absence_key": "target", "registry": {"target": {"id": 1}}, "registry_snapshot_hash": "c" * 64},
@@ -282,7 +322,7 @@ def fixture_stream(count: int = 200) -> list[BenchmarkFixture]:
         },
         {
             "name": "registry-absent",
-            "task": "registry-absent public evidence",
+            "task": "Evaluate an absence claim against the structured counterexample registry",
             "domain": "research",
             "scenario": "counterexample",
             "context": {"claim_statement": "absence", "claim_type": "factual", "absence_key": "target", "registry": {}, "registry_snapshot_hash": "d" * 64},
@@ -291,25 +331,25 @@ def fixture_stream(count: int = 200) -> list[BenchmarkFixture]:
         },
         {
             "name": "general-alpha",
-            "task": "general-alpha public classification",
+            "task": "Classify the structured public marker using the fixed rule",
             "domain": "general",
             "scenario": "general",
-            "context": {"claim_statement": "ALPHA", "claim_type": "factual"},
+            "context": {"claim_statement": "classification", "claim_type": "factual", "benchmark_marker": 1},
             "truth": {"kind": "statement", "value": "ALPHA"},
             "keys": (),
         },
         {
             "name": "general-beta",
-            "task": "general-beta public classification",
+            "task": "Classify the structured public marker using the fixed rule",
             "domain": "general",
             "scenario": "general",
-            "context": {"claim_statement": "BETA", "claim_type": "factual"},
+            "context": {"claim_statement": "classification", "claim_type": "factual", "benchmark_marker": 2},
             "truth": {"kind": "statement", "value": "BETA"},
             "keys": (),
         },
         {
             "name": "mixed-fail",
-            "task": "mixed-fail source citation fresh figure echo public evidence",
+            "task": "Assess fresh source citation figure and counterexample evidence",
             "domain": "research",
             "scenario": "general",
             "context": {
@@ -321,17 +361,18 @@ def fixture_stream(count: int = 200) -> list[BenchmarkFixture]:
                 "as_of": "2026-08-17T00:00:00+00:00",
                 "claim_figure": 42,
                 "evidence_spans": [{"span_id": "x", "supported_figures": [41], "material_support": True}],
-                "force_sparse": True,
-                "force_challenge": True,
+                "absence_key": "target",
+                "registry": {"target": {"id": 1}},
+                "registry_snapshot_hash": "e" * 64,
             },
             "truth": {"kind": "status", "value": "falsified"},
-            "keys": ("F2", "F3", "F4"),
+            "keys": ("F2", "F3", "F4", "F5"),
         },
     ]
     fixtures: list[BenchmarkFixture] = []
     for index in range(count):
         template = templates[index % len(templates)]
-        fixture_id = f"fx-{index:04d}-{template['name']}"
+        fixture_id = f"fx-{index:04d}"
         task = f"{template['task']} case-{index:04d}"
         fixtures.append(
             BenchmarkFixture(
@@ -588,7 +629,7 @@ class FullMiMicusRunner:
             domain=fixture.domain,
             scenario=fixture.scenario,
             fixture=fixture.public_context,
-            budget_usd=0.0,
+            budget_usd=0.02,
             max_agents=4,
             max_concurrency=4,
             depth="normal",
@@ -618,7 +659,7 @@ class FullMiMicusRunner:
             peak_concurrency=int(cast(Any, concurrency.get("peak_concurrency", 0))),
             parallel_efficiency=float(cast(Any, concurrency.get("parallel_efficiency", 0.0))),
             avoidable_serialization_count=int(cast(Any, concurrency.get("avoidable_serialization_count", 0))),
-            cost=float(cast(Any, result.budget.get("spent_usd", 0.0))),
+            cost=float(cast(Any, result.budget.get("known_actual_usd", result.budget.get("spent_usd", 0.0)))),
             replay_verified=result.replay_verified,
             ledger_head=result.ledger_head,
             falsifier_reused=bool(result.persistent_falsifiers_reused),
@@ -708,6 +749,7 @@ async def _run_all(count: int, provider_overrides: dict[Architecture, Provider] 
                         semantic_redundancy=output.semantic_redundancy,
                         lineage_whitewash_captured=output.lineage_whitewash_captured,
                         ledger_head=output.ledger_head,
+                        morphology=str(output.trace.get("morphology", "baseline")),
                     )
                 )
         fixture_order_hashes = {architecture: sha256_obj([row.fixture_id for row in rows if row.architecture == architecture]) for architecture in ("A", "B", "C", "D", "E")}
@@ -756,11 +798,11 @@ def _metrics(rows: list[RawRow]) -> dict[str, Any]:
 
 async def anti_rigging_probe() -> dict[str, Any]:
     target = BenchmarkFixture(
-        fixture_id="anti-general-alpha",
-        task="general-alpha public classification anti-rigging",
+        fixture_id="anti-neutral",
+        task="Classify the structured public marker using the fixed rule",
         domain="general",
         scenario="general",
-        public_context={"claim_statement": "ALPHA", "claim_type": "factual"},
+        public_context={"claim_statement": "classification", "claim_type": "factual", "benchmark_marker": 1},
         ground_truth={"kind": "statement", "value": "ALPHA"},
     )
     with tempfile.TemporaryDirectory(prefix="mimicus-anti-rigging-") as directory:
@@ -789,12 +831,40 @@ async def anti_rigging_probe() -> dict[str, Any]:
     }
 
 
+async def leakage_probe() -> dict[str, Any]:
+    fixtures = fixture_stream(40)
+    forbidden = ("mismatch", "aligned", "stale", "unsupported-figure", "counterexample-found", "general-alpha", "general-beta", "mixed-fail")
+    leaking = [fixture.fixture_id for fixture in fixtures if any(token in fixture.task.lower() for token in forbidden)]
+    sample = fixtures[0]
+    provider = BenchmarkProvider(error_modulus=10_000)
+    original = await provider.generate_request_async(ProviderRequest(sample.task, sample.domain, "leakage", "original", sample.public_context))
+    renamed = await provider.generate_request_async(
+        ProviderRequest("Neutral wording replacement with identical evidence", sample.domain, "leakage", "renamed", sample.public_context)
+    )
+    return {
+        "task_answer_markers_absent": not leaking,
+        "leaking_fixture_ids": leaking,
+        "renamed_task_same_verdict": original.claim.statement == renamed.claim.statement,
+        "public_context_hash": sha256_obj(sample.public_context),
+        "passed": not leaking and original.claim.statement == renamed.claim.statement,
+    }
+
+
 async def _build_report(count: int) -> tuple[dict[str, Any], list[RawRow]]:
     rows, metadata = await _run_all(count)
     metrics = {architecture: _metrics([row for row in rows if row.architecture == architecture]) for architecture in ("A", "B", "C", "D", "E")}
     anti = await anti_rigging_probe()
+    leakage = await leakage_probe()
+    e_rows = [row for row in rows if row.architecture == "E"]
+    morphology_distribution: dict[str, int] = {}
+    agent_count_distribution: dict[str, int] = {}
+    challenge_edge_distribution: dict[str, int] = {}
+    for row in e_rows:
+        morphology_distribution[row.morphology] = morphology_distribution.get(row.morphology, 0) + 1
+        agent_count_distribution[str(row.agent_count)] = agent_count_distribution.get(str(row.agent_count), 0) + 1
+        challenge_edge_distribution[str(row.communication_edge_count)] = challenge_edge_distribution.get(str(row.communication_edge_count), 0) + 1
     report: dict[str, Any] = {
-        "benchmark_version": "ORDER-003-v0.2-execution-derived",
+        "benchmark_version": "ORDER-004-v0.2.1-neutral-execution-derived",
         "episodes_per_architecture": count,
         "total_architecture_episodes": count * 5,
         "architectures": {
@@ -815,6 +885,8 @@ async def _build_report(count: int) -> tuple[dict[str, Any], list[RawRow]]:
             "kill_question_answer": "YES",
         },
         "anti_rigging": anti,
+        "leakage_probe": leakage,
+        "morphology_distribution": {"classes": morphology_distribution, "agent_counts": agent_count_distribution, "challenge_edges": challenge_edge_distribution},
         "fixture_stream": metadata,
         "cost_label": "simulated deterministic provider/falsifier accounting unless live provider explicitly substituted",
         "rigging_statement": "All architectures execute the same ordered public fixture stream. Correctness is produced only by the common grader against separately pinned ground truth after each runner has returned actual output.",
@@ -838,8 +910,10 @@ def write_benchmark(output_json: Path, output_md: Path, count: int = 200) -> dic
             handle.write(json.dumps(asdict(row), sort_keys=True) + "\n")
     anti_path = output_json.parent / "BENCHMARK_ANTI_RIGGING.json"
     anti_path.write_text(json.dumps(report["anti_rigging"], indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    (output_json.parent / "BENCHMARK_MORPHOLOGY_DISTRIBUTION.json").write_text(json.dumps(report["morphology_distribution"], indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    (output_json.parent / "BENCHMARK_LEAKAGE.json").write_text(json.dumps(report["leakage_probe"], indent=2, sort_keys=True) + "\n", encoding="utf-8")
     lines = [
-        "# MiMicus ORDER-003 execution-derived benchmark",
+        "# MiMicus ORDER-004 neutral execution-derived benchmark",
         "",
         f"Episodes per architecture: {count}; total real architecture-runs: {count * 5}.",
         "",

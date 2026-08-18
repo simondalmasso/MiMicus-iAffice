@@ -78,5 +78,7 @@ def execution_evidence(execution: FalsifierExecution) -> Evidence:
     )
 
 
-def evidence_row(evidence: Evidence) -> dict[str, Any]:
-    return evidence.model_dump(mode="json") | {"evidence_hash": evidence.hash}
+def evidence_row(evidence: Evidence, *, run_id: str | None = None) -> dict[str, Any]:
+    canonical_hash = evidence.hash
+    evidence_hash = canonical_hash if run_id is None else sha256_obj({"run_id": run_id, "canonical_evidence_hash": canonical_hash})
+    return evidence.model_dump(mode="json") | {"canonical_evidence_hash": canonical_hash, "evidence_hash": evidence_hash}

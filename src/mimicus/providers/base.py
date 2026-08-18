@@ -18,6 +18,7 @@ class ProviderCapabilities:
     provider_id: str = "unknown"
     model_id: str = "unknown"
     version: str = "unknown"
+    adapter_version: str = "unknown"
     usage_metadata_available: bool = False
     cancellation: str = "asyncio"
     known_zero_cost: bool = False

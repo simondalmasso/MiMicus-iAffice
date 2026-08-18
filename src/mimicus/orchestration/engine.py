@@ -320,6 +320,7 @@ class MiMicusEngine:
             known_negative_lineage = self.repository.lineage_has_bankrupt_predecessor(identity.lineage_id, domain, exclude_fingerprint=candidate.fingerprint)
             if known_negative_lineage and current_state == "ACTIVE":
                 self.repository.set_bankruptcy_state(candidate.fingerprint, scoped_state_key, "PROBATION", "known lineage has unresolved domain bankruptcy")
+                self.repository.set_bankruptcy_state(candidate.fingerprint, domain, "PROBATION", f"capability {target_cap}: known-lineage whitewashing defense")
                 current_state = "PROBATION"
                 ledger.append(
                     "bankruptcy_changed",
@@ -492,7 +493,7 @@ class MiMicusEngine:
         selected_by_fp = {member.fingerprint: member for member in selected}
         specs_by_hash = {spec.hash: spec for spec in selected_specs}
         base_evidence = fixture_evidence(fixture, domain=domain, scenario=scenario)
-        base_evidence_rows = [evidence_row(item) for item in base_evidence]
+        base_evidence_rows = [evidence_row(item, run_id=run_id) for item in base_evidence]
         base_evidence_hashes = [str(row["evidence_hash"]) for row in base_evidence_rows]
         claims_by_fp: dict[str, Claim] = {}
         claim_trace_ids: dict[str, str | None] = {}
@@ -528,7 +529,7 @@ class MiMicusEngine:
                     raise
                 reconciliation = await budget.reconcile(reservation, response.cost)
                 provider_call_count += 1
-                claim_with_evidence = response.claim.model_copy(update={"evidence_refs": sorted(set(response.claim.evidence_refs + base_evidence_hashes))})
+                claim_with_evidence = response.claim.model_copy(update={"evidence_refs": list(base_evidence_hashes)})
                 claims_by_fp[member.fingerprint] = claim_with_evidence
                 claim_trace_ids[member.fingerprint] = response.trace_id
                 provider_usages.append({"fingerprint": member.fingerprint, "trace_id": response.trace_id, "usage": response.usage, "budget": reconciliation})
@@ -687,6 +688,11 @@ class MiMicusEngine:
 
         ordered_claims = [claims_by_fp[key] for key in sorted(claims_by_fp)]
         ordered_executions = sorted(executions, key=lambda row: row.spec_hash)
+        execution_evidence_rows = [evidence_row(execution_evidence(item), run_id=run_id) for item in ordered_executions]
+        decisive_evidence_hashes = [str(row["evidence_hash"]) for row in execution_evidence_rows]
+        if decisive_evidence_hashes:
+            for claim in ordered_claims:
+                claim.evidence_refs = sorted(set(claim.evidence_refs + decisive_evidence_hashes))
         if not ordered_claims:
             final_status = ClaimStatus.INCONCLUSIVE
         elif any(execution.verdict == Verdict.FAIL for execution in ordered_executions):
@@ -845,7 +851,7 @@ class MiMicusEngine:
             "rationale": rationale,
             "plan_hash": plan.plan_hash,
         }
-        all_evidence_rows = base_evidence_rows + [evidence_row(execution_evidence(item)) for item in ordered_executions]
+        all_evidence_rows = base_evidence_rows + execution_evidence_rows
         budget_snapshot = budget.snapshot()
         budget_snapshot.update({"latency_ms": sum(execution.latency_ms for execution in ordered_executions), "max_tests": max_tests, "max_concurrency": request.max_concurrency})
         result = RunResult(
@@ -922,4 +928,5 @@ class MiMicusEngine:
             return None
         events = self.repository.get_events(run_id)
         replay = verify_replay(events, str(result["ledger_head"]))
-        return result | {"replay_state": replay, "events": events, "persistent_state": self.repository.inspect_state(run_id)}
+        evidence = self.repository.get_evidence(run_id)
+        return result | {"replay_state": replay, "events": events, "evidence": evidence, "persistent_state": self.repository.inspect_state(run_id)}
