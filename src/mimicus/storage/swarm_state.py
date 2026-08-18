@@ -130,16 +130,20 @@ class SwarmStateStore:
                     )
                 )
             else:
-                current = connection.execute(
-                    select(
-                        AgentMarginalValueRow.verified_episodes,
-                        AgentMarginalValueRow.successes,
-                        AgentMarginalValueRow.failures,
-                        AgentMarginalValueRow.marginal_sum,
-                        AgentMarginalValueRow.cost_sum,
-                        AgentMarginalValueRow.decisive_test_count,
-                    ).where(AgentMarginalValueRow.id == row_id)
-                ).mappings().one()
+                current = (
+                    connection.execute(
+                        select(
+                            AgentMarginalValueRow.verified_episodes,
+                            AgentMarginalValueRow.successes,
+                            AgentMarginalValueRow.failures,
+                            AgentMarginalValueRow.marginal_sum,
+                            AgentMarginalValueRow.cost_sum,
+                            AgentMarginalValueRow.decisive_test_count,
+                        ).where(AgentMarginalValueRow.id == row_id)
+                    )
+                    .mappings()
+                    .one()
+                )
                 connection.execute(
                     update(AgentMarginalValueRow)
                     .where(AgentMarginalValueRow.id == row_id)
@@ -207,13 +211,17 @@ class SwarmStateStore:
                             )
                         )
                     else:
-                        current = connection.execute(
-                            select(
-                                PairwiseCofailureRow.verified_episodes,
-                                PairwiseCofailureRow.cofailures,
-                                PairwiseCofailureRow.independent_successes,
-                            ).where(PairwiseCofailureRow.id == row_id)
-                        ).mappings().one()
+                        current = (
+                            connection.execute(
+                                select(
+                                    PairwiseCofailureRow.verified_episodes,
+                                    PairwiseCofailureRow.cofailures,
+                                    PairwiseCofailureRow.independent_successes,
+                                ).where(PairwiseCofailureRow.id == row_id)
+                            )
+                            .mappings()
+                            .one()
+                        )
                         connection.execute(
                             update(PairwiseCofailureRow)
                             .where(PairwiseCofailureRow.id == row_id)
@@ -231,14 +239,18 @@ class SwarmStateStore:
         pair: dict[str, dict[str, float]] = {fp: {} for fp in fingerprints}
         marginal: dict[str, dict[str, float]] = {fp: {} for fp in fingerprints}
         with self.engine.connect() as connection:
-            pair_rows = connection.execute(
-                select(
-                    PairwiseCofailureRow.agent_a,
-                    PairwiseCofailureRow.agent_b,
-                    PairwiseCofailureRow.verified_episodes,
-                    PairwiseCofailureRow.cofailures,
-                ).where(PairwiseCofailureRow.domain == domain, PairwiseCofailureRow.capability.in_(list(capabilities)))
-            ).mappings().all()
+            pair_rows = (
+                connection.execute(
+                    select(
+                        PairwiseCofailureRow.agent_a,
+                        PairwiseCofailureRow.agent_b,
+                        PairwiseCofailureRow.verified_episodes,
+                        PairwiseCofailureRow.cofailures,
+                    ).where(PairwiseCofailureRow.domain == domain, PairwiseCofailureRow.capability.in_(list(capabilities)))
+                )
+                .mappings()
+                .all()
+            )
             for pair_row in pair_rows:
                 agent_a = str(pair_row["agent_a"])
                 agent_b = str(pair_row["agent_b"])
@@ -249,14 +261,18 @@ class SwarmStateStore:
                 penalty = (int(pair_row["cofailures"]) / max(1, episodes)) * confidence
                 pair[agent_a][agent_b] = max(pair[agent_a].get(agent_b, 0.0), penalty)
                 pair[agent_b][agent_a] = max(pair[agent_b].get(agent_a, 0.0), penalty)
-            marginal_rows = connection.execute(
-                select(
-                    AgentMarginalValueRow.fingerprint,
-                    AgentMarginalValueRow.capability,
-                    AgentMarginalValueRow.marginal_sum,
-                    AgentMarginalValueRow.verified_episodes,
-                ).where(AgentMarginalValueRow.domain == domain, AgentMarginalValueRow.fingerprint.in_(fingerprints))
-            ).mappings().all()
+            marginal_rows = (
+                connection.execute(
+                    select(
+                        AgentMarginalValueRow.fingerprint,
+                        AgentMarginalValueRow.capability,
+                        AgentMarginalValueRow.marginal_sum,
+                        AgentMarginalValueRow.verified_episodes,
+                    ).where(AgentMarginalValueRow.domain == domain, AgentMarginalValueRow.fingerprint.in_(fingerprints))
+                )
+                .mappings()
+                .all()
+            )
             for marginal_row in marginal_rows:
                 capability = str(marginal_row["capability"])
                 if capability not in capabilities:
@@ -270,23 +286,19 @@ class SwarmStateStore:
 
     def prior_failure_modes(self, domain: str) -> tuple[str, ...]:
         with self.engine.connect() as connection:
-            rows = connection.execute(
-                select(
-                    AgentMarginalValueRow.capability,
-                    AgentMarginalValueRow.verified_episodes,
-                    AgentMarginalValueRow.failures,
-                    AgentMarginalValueRow.successes,
-                ).where(AgentMarginalValueRow.domain == domain)
-            ).mappings().all()
-        return tuple(
-            sorted(
-                {
-                    str(row["capability"])
-                    for row in rows
-                    if int(row["verified_episodes"]) >= 3 and int(row["failures"]) > int(row["successes"])
-                }
+            rows = (
+                connection.execute(
+                    select(
+                        AgentMarginalValueRow.capability,
+                        AgentMarginalValueRow.verified_episodes,
+                        AgentMarginalValueRow.failures,
+                        AgentMarginalValueRow.successes,
+                    ).where(AgentMarginalValueRow.domain == domain)
+                )
+                .mappings()
+                .all()
             )
-        )
+        return tuple(sorted({str(row["capability"]) for row in rows if int(row["verified_episodes"]) >= 3 and int(row["failures"]) > int(row["successes"])}))
 
     def record_germinal_outcome(self, receipt_hash: str, status: str, payload: dict[str, Any]) -> None:
         with self.engine.begin() as connection:

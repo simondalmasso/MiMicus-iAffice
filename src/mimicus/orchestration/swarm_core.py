@@ -220,6 +220,11 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
     )
     ledger.append("threat_profiled", profile.model_dump(mode="json"))
 
+    budget = BudgetLedger(request.budget_usd)
+    provider_estimate = host.provider.capabilities.estimated_max_cost_per_call
+    if provider_estimate is None and host.provider.capabilities.known_zero_cost:
+        provider_estimate = 0.0
+
     audited: list[AgentCandidate] = []
     lineage_exclusions: dict[str, list[str]] = {"bankrupt": [], "probation": []}
     audition_records: list[dict[str, Any]] = []
@@ -240,18 +245,51 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
             family = f"{capability}_canary"
             canary_prompt = CANARY_BANK[category][0]
             sealed = str(uuid5(NAMESPACE_URL, f"{run_id}:{candidate.fingerprint}:{capability}:audition"))
-            provider_result = await host.provider.audition_async(
-                AuditionRequest(
-                    fingerprint=candidate.fingerprint,
-                    domain=domain,
-                    phenotype=candidate.name,
-                    capability=capability,
-                    test_family=family,
-                    category=category,
-                    prompt=canary_prompt,
-                    sealed_context_id=sealed,
-                )
+            audition_reservation = await budget.reserve(
+                "audition",
+                provider_estimate,
+                known_zero_cost=host.provider.capabilities.known_zero_cost,
             )
+            if audition_reservation is None:
+                state_key = capability_scope(domain, capability, family)
+                current_state = host.repository.bankruptcy_state(candidate.fingerprint, state_key)
+                scores[capability] = 0.5
+                calibrations[capability] = _blend_verified_authority(host, candidate.fingerprint, domain, capability, 0.5)
+                states[capability] = current_state
+                audition_row = {
+                    "fingerprint": candidate.fingerprint,
+                    "phenotype": candidate.name,
+                    "capability": capability,
+                    "category": category,
+                    "test_family": family,
+                    "prompt_hash": sha256_obj(canary_prompt),
+                    "provider_trace_id": None,
+                    "provider_executed": False,
+                    "applicability": "BUDGET_BLOCKED",
+                    "passed": None,
+                    "score": 0.5,
+                    "routing_state": current_state,
+                }
+                audition_records.append(audition_row)
+                ledger.append("agent_audition_budget_blocked", audition_row)
+                continue
+            try:
+                provider_result = await host.provider.audition_async(
+                    AuditionRequest(
+                        fingerprint=candidate.fingerprint,
+                        domain=domain,
+                        phenotype=candidate.name,
+                        capability=capability,
+                        test_family=family,
+                        category=category,
+                        prompt=canary_prompt,
+                        sealed_context_id=sealed,
+                    )
+                )
+            except BaseException:
+                await budget.release(audition_reservation, reason="audition failure/cancellation")
+                raise
+            await budget.reconcile(audition_reservation, provider_result.cost)
             scored = audition(
                 candidate.fingerprint,
                 domain,
@@ -381,10 +419,6 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
         {"plan_hash": plan.plan_hash, "morphology": plan.name.value, "structural_signature": plan.structural_signature, "subtask_hashes": [row.hash for row in subtasks]},
     )
 
-    budget = BudgetLedger(request.budget_usd)
-    provider_estimate = host.provider.capabilities.estimated_max_cost_per_call
-    if provider_estimate is None and host.provider.capabilities.known_zero_cost:
-        provider_estimate = 0.0
     planned_members = [row.fingerprint for row in selected]
     pricing_preflight: dict[str, Any] = {
         "status": "READY",
@@ -399,7 +433,7 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
         rationale["pricing_preflight"] = pricing_preflight
         ledger.append("pricing_preflight_required", pricing_preflight)
     elif provider_estimate is not None and provider_estimate > 0.0:
-        affordable = int((request.budget_usd + 1e-12) // provider_estimate)
+        affordable = int((budget.remaining_usd + 1e-12) // provider_estimate)
         if affordable < len(selected):
             selected = selected[: max(0, affordable)]
             pricing_preflight.update(
