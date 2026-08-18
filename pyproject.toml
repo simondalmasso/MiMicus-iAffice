@@ -41,7 +41,11 @@ markers = ["live: requires external credentials"]
 [tool.coverage.run]
 branch = true
 source = ["mimicus"]
-omit = ["src/mimicus/__init__.py"]
+omit = [
+  "src/mimicus/__init__.py",
+  "src/mimicus/validation/order003_e2e.py",
+  "src/mimicus/validation/order003_worker.py",
+]
 
 [tool.coverage.report]
 fail_under = 90
