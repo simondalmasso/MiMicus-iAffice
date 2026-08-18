@@ -1,0 +1,590 @@
+name: ORDER-007 core surgical patch
+on:
+  push:
+    branches: [order-002-mimicus-v01]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: order-002-mimicus-v01
+      - name: Patch F034 F035 and active authority
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('src/mimicus/orchestration/swarm_core.py')
+          s = p.read_text()
+
+          new_compile = '''def _compile_core_plan(
+              *,
+              task_hash: str,
+              selected: list[AgentCandidate],
+              candidate_specs: list[FalsifierSpec],
+              profile: ThreatProfile,
+              subtasks: list[Subtask],
+              max_concurrency: int,
+          ) -> tuple[MorphologyPlan, dict[str, Subtask]]:
+              count = len(selected)
+              caps = profile.required_capabilities
+              if count <= 1:
+                  name = MorphologyName.SOLO
+              elif caps == ("synthesize",) or set(caps) == {"synthesize"}:
+                  name = MorphologyName.PAIRED_VERIFY
+              elif len(caps) >= 5 and count >= 3:
+                  name = MorphologyName.HIERARCHICAL_FANOUT_FANIN
+              elif len(caps) >= 3 and count >= 3:
+                  name = MorphologyName.SPARSE_GRAPH
+              else:
+                  name = MorphologyName.PARALLEL_FANOUT
+              profile_node = DagNode(_core_node_id(NodeKind.PROFILE, 0), NodeKind.PROFILE, input_hash=task_hash)
+              memory = DagNode(_core_node_id(NodeKind.MEMORY_RETRIEVE, 0), NodeKind.MEMORY_RETRIEVE, (profile_node.node_id,), input_hash=task_hash)
+              audition_node = DagNode(_core_node_id(NodeKind.AUDITION, 0), NodeKind.AUDITION, (profile_node.node_id,), input_hash=task_hash)
+              nodes = [profile_node, memory, audition_node]
+              edges = [DagEdge(profile_node.node_id, memory.node_id), DagEdge(profile_node.node_id, audition_node.node_id)]
+              parent_ids: tuple[str, ...] = (memory.node_id, audition_node.node_id)
+              if name == MorphologyName.HIERARCHICAL_FANOUT_FANIN:
+                  decompose = DagNode(_core_node_id(NodeKind.DECOMPOSE, 0, task_hash), NodeKind.DECOMPOSE, parent_ids, input_hash=task_hash, group="hierarchy-root")
+                  nodes.append(decompose)
+                  edges.extend([DagEdge(memory.node_id, decompose.node_id, "decomposition"), DagEdge(audition_node.node_id, decompose.node_id, "decomposition")])
+                  parent_ids = (decompose.node_id,)
+              assignment: dict[str, Subtask] = {}
+              assignment_agents: dict[str, str] = {}
+              unresolved: list[str] = []
+              agent_nodes: list[DagNode] = []
+              if name == MorphologyName.HIERARCHICAL_FANOUT_FANIN:
+                  loads = {member.fingerprint: 0 for member in selected}
+                  for index, subtask in enumerate(subtasks):
+                      qualified = [
+                          member
+                          for member in selected
+                          if set(subtask.required_capabilities).issubset(member.capabilities)
+                          and all(member.capability_states.get(capability, "ACTIVE") == "ACTIVE" for capability in subtask.required_capabilities)
+                      ]
+                      if not qualified:
+                          unresolved.append(subtask.hash)
+                          continue
+                      member = min(qualified, key=lambda row: (loads[row.fingerprint], row.fingerprint))
+                      loads[member.fingerprint] += 1
+                      node = DagNode(
+                          _core_node_id(NodeKind.AGENT_TASK, index, f"{member.fingerprint}:{subtask.hash}"),
+                          NodeKind.AGENT_TASK,
+                          parent_ids,
+                          identity=member.fingerprint,
+                          input_hash=subtask.hash,
+                          group=subtask.dependency_group,
+                      )
+                      assignment[node.node_id] = subtask
+                      assignment_agents[node.node_id] = member.fingerprint
+                      nodes.append(node)
+                      agent_nodes.append(node)
+                      for parent in parent_ids:
+                          edges.append(DagEdge(parent, node.node_id, "subtask_fanout", subtask.dependency_group))
+              else:
+                  for index, member in enumerate(selected):
+                      group = "paired" if name == MorphologyName.PAIRED_VERIFY else "fanout"
+                      node = DagNode(
+                          _core_node_id(NodeKind.AGENT_TASK, index, member.fingerprint),
+                          NodeKind.AGENT_TASK,
+                          parent_ids,
+                          identity=member.fingerprint,
+                          input_hash=sha256_obj({"task": task_hash, "agent": member.fingerprint}),
+                          group=group,
+                      )
+                      nodes.append(node)
+                      agent_nodes.append(node)
+                      for parent in parent_ids:
+                          edges.append(DagEdge(parent, node.node_id, "worker_fanout", group))
+              post_first_pass: list[str]
+              subgroup_joins: list[DagNode] = []
+              if name == MorphologyName.HIERARCHICAL_FANOUT_FANIN:
+                  groups = sorted({str(node.group) for node in agent_nodes if node.group})
+                  for group_index, group in enumerate(groups, start=1):
+                      members = [node for node in agent_nodes if node.group == group]
+                      join = DagNode(
+                          _core_node_id(NodeKind.JOIN, group_index, group),
+                          NodeKind.JOIN,
+                          tuple(node.node_id for node in members),
+                          input_hash=sha256_obj([node.input_hash for node in members]),
+                          group=f"subgroup:{group}",
+                      )
+                      nodes.append(join)
+                      subgroup_joins.append(join)
+                      for member_node in members:
+                          edges.append(DagEdge(member_node.node_id, join.node_id, "nested_subtask_fanin", group))
+                  post_first_pass = [node.node_id for node in subgroup_joins]
+              else:
+                  post_first_pass = [node.node_id for node in agent_nodes]
+              falsifier_nodes: list[DagNode] = []
+              for index, spec in enumerate(candidate_specs):
+                  node = DagNode(
+                      _core_node_id(NodeKind.FALSIFIER, index, spec.hash),
+                      NodeKind.FALSIFIER,
+                      tuple(post_first_pass),
+                      identity=spec.hash,
+                      input_hash=sha256_obj({"task": task_hash, "spec": spec.hash, "phase": "post-first-pass"}),
+                      group="claim-aware-market",
+                  )
+                  nodes.append(node)
+                  falsifier_nodes.append(node)
+                  for parent in post_first_pass:
+                      edges.append(DagEdge(parent, node.node_id, "claim_aware_falsifier_after_first_pass", "claim-aware-market"))
+              upstream = list(post_first_pass) + [node.node_id for node in falsifier_nodes]
+              if name in {MorphologyName.PAIRED_VERIFY, MorphologyName.SPARSE_GRAPH} and len(agent_nodes) >= 2:
+                  semantics = "explicit_peer_verification" if name == MorphologyName.PAIRED_VERIFY else "selective_sparse_communication"
+                  challenge = DagNode(
+                      _core_node_id(NodeKind.CHALLENGE, 0, name.value),
+                      NodeKind.CHALLENGE,
+                      tuple([node.node_id for node in agent_nodes] + [node.node_id for node in falsifier_nodes]),
+                      input_hash=task_hash,
+                      group=semantics,
+                  )
+                  nodes.append(challenge)
+                  for parent in challenge.prerequisites:
+                      edges.append(DagEdge(parent, challenge.node_id, semantics, semantics))
+                  upstream.append(challenge.node_id)
+              final_join = DagNode(_core_node_id(NodeKind.JOIN, 0, name.value), NodeKind.JOIN, tuple(sorted(set(upstream))), input_hash=task_hash, group="final-fanin")
+              synthesis = DagNode(_core_node_id(NodeKind.SYNTHESIS, 0), NodeKind.SYNTHESIS, (final_join.node_id,), input_hash=task_hash)
+              nodes.extend([final_join, synthesis])
+              for parent in final_join.prerequisites:
+                  edges.append(DagEdge(parent, final_join.node_id, "final_fanin"))
+              edges.append(DagEdge(final_join.node_id, synthesis.node_id, "synthesize_actual_swarm_outputs"))
+              plan = MorphologyPlan(
+                  name=name,
+                  nodes=nodes,
+                  edges=edges,
+                  compiler_rationale={
+                      "swarm_core": "ORDER-007",
+                      "selected_agents": count,
+                      "required_capabilities": list(caps),
+                      "subtask_hashes": [row.hash for row in subtasks],
+                      "subtask_assignments": {node_id: row.hash for node_id, row in assignment.items()},
+                      "subtask_assignment_agents": assignment_agents,
+                      "unresolved_subtasks": unresolved,
+                      "claim_aware_market_after_first_pass": True,
+                      "max_concurrency": max_concurrency,
+                  },
+              )
+              plan.validate()
+              return plan, assignment
+          '''
+          s, n = re.subn(r'def _compile_core_plan\(.*?\n\ndef _blend_verified_authority', new_compile + '\n\ndef _blend_verified_authority', s, count=1, flags=re.S)
+          assert n == 1, 'compile function replacement failed'
+
+          old_blend = '''def _blend_verified_authority(host: Any, fingerprint: str, domain: str, capability: str, canary_trust: float) -> float:
+              verified = host.calibration.get_capability(fingerprint, domain, capability, f"{capability}_verified_task")
+              if verified.attempts == 0:
+                  return canary_trust
+              weight = min(0.75, verified.attempts / (verified.attempts + 3.0))
+              return (1.0 - weight) * canary_trust + weight * verified.trust
+          '''
+          new_blend = '''def _blend_verified_authority(host: Any, fingerprint: str, domain: str, capability: str, canary_trust: float) -> float:
+              verified = SwarmStateStore(host.repository.engine).verified_authority(fingerprint, domain, capability)
+              attempts = int(verified["attempts"])
+              if attempts == 0:
+                  return canary_trust
+              weight = min(0.75, attempts / (attempts + 3.0))
+              return (1.0 - weight) * canary_trust + weight * float(verified["trust"])
+          '''
+          assert old_blend in s
+          s = s.replace(old_blend, new_blend)
+
+          old_specs = '''    builtins = host.services.falsifiers.specs(domain)
+              spec_keys = list(dict.fromkeys(_SPEC_FOR[cap] for cap in profile.required_capabilities if cap in _SPEC_FOR))
+              base_specs = [builtins[key] for key in spec_keys]
+              promoted = host.repository.promoted_falsifiers(domain)
+              promoted_by_primitive = {spec.primitive: spec for spec in promoted}
+              candidate_specs = [promoted_by_primitive.get(spec.primitive, spec) for spec in base_specs]
+              persistent_falsifiers_reused = [spec.hash for spec in candidate_specs if spec.hash in {row.hash for row in promoted}]
+          '''
+          new_specs = '''    builtins = host.services.falsifiers.specs(domain)
+              promoted = host.repository.promoted_falsifiers(domain)
+              registry_by_hash = {spec.hash: spec for spec in [*builtins.values(), *promoted]}
+              candidate_specs = sorted(registry_by_hash.values(), key=lambda spec: spec.hash)
+              promoted_hashes = {row.hash for row in promoted}
+              persistent_falsifiers_reused = [spec.hash for spec in candidate_specs if spec.hash in promoted_hashes]
+          '''
+          assert old_specs in s
+          s = s.replace(old_specs, new_specs)
+
+          start = s.index('    selected_by_fp = {row.fingerprint: row for row in selected}')
+          end = s.index('    executor = DagExecutor(request.max_concurrency)', start)
+          new_runtime = '''    selected_by_fp = {row.fingerprint: row for row in selected}
+              spec_by_hash = {row.hash: row for row in candidate_specs}
+              claims_by_node: dict[str, Claim] = {}
+              claim_owner_by_node: dict[str, str] = {}
+              claim_trace_ids: dict[str, str | None] = {}
+              provider_usages: list[dict[str, Any]] = []
+              executions: list[FalsifierExecution] = []
+              communications: list[dict[str, Any]] = []
+              subgroup_results: dict[str, dict[str, Any]] = {}
+              executed_subtask_hashes: set[str] = set()
+              provider_call_count = 0
+              market_lock = asyncio.Lock()
+              market_selected: list[ClaimFalsifierBid] | None = None
+              market_all: list[ClaimFalsifierBid] = []
+              decision: SwarmDecision | None = None
+              selected_market_specs: set[str] = set()
+
+              precompleted: dict[str, object] = {}
+              for node in plan.nodes:
+                  if node.kind == NodeKind.PROFILE:
+                      node.status = "COMPLETED"
+                      payload = profile.model_dump(mode="json")
+                      node.output_hash = sha256_obj(payload)
+                      precompleted[node.node_id] = payload
+                  elif node.kind == NodeKind.MEMORY_RETRIEVE:
+                      node.status = "COMPLETED"
+                      payload = {"memory_ids": [item.memory_id for item in retrieved_memory]}
+                      node.output_hash = sha256_obj(payload)
+                      precompleted[node.node_id] = payload
+                  elif node.kind == NodeKind.AUDITION:
+                      node.status = "COMPLETED"
+                      payload = {"auditions": audition_records}
+                      node.output_hash = sha256_obj(payload)
+                      precompleted[node.node_id] = payload
+
+              def scoped_evidence_payload(subtask: Subtask | None) -> tuple[dict[str, Any], ...]:
+                  if subtask is None:
+                      return evidence_bundle.provider_payload()
+                  scope = set(subtask.evidence_scope)
+                  scoped: list[dict[str, Any]] = []
+                  for item in evidence_bundle.items:
+                      facts = {key: value for key, value in item.extracted_facts.items() if key in scope}
+                      if not facts:
+                          continue
+                      payload = item.provider_payload()
+                      payload["extracted_facts"] = facts
+                      payload["content"] = ""
+                      scoped.append(payload)
+                  return tuple(scoped)
+
+              async def ensure_market() -> list[ClaimFalsifierBid]:
+                  nonlocal market_selected, market_all
+                  async with market_lock:
+                      if market_selected is not None:
+                          return market_selected
+                      projected = float(provider_estimate or 0.0) * len(selected)
+                      market_budget = max(0.0, request.budget_usd - min(request.budget_usd, projected))
+                      market_selected, market_all = FalsifierMarket().select_for_claims(
+                          candidate_specs,
+                          [claims_by_node[key] for key in sorted(claims_by_node)],
+                          evidence=evidence_context,
+                          budget_usd=market_budget,
+                          max_tests={"fast": 1, "normal": 3, "deep": 5}[request.depth],
+                          evidence_quality=1.0 if evidence_bundle.items else 0.0,
+                      )
+                      ledger.append(
+                          "falsifier_market_scored",
+                          {
+                              "phase": "after_sealed_first_pass",
+                              "registry_scope": "full_safe_registry_plus_promoted",
+                              "selected": [asdict(row) for row in market_selected],
+                              "candidates": [asdict(row) for row in market_all],
+                          },
+                      )
+                      return market_selected
+
+              async def handle(node: DagNode) -> object:
+                  nonlocal provider_call_count, decision
+                  ledger.append("dag_node_started", {"node_id": node.node_id, "kind": node.kind.value, "input_hash": node.input_hash})
+                  if node.kind == NodeKind.DECOMPOSE:
+                      payload = {"subtasks": [row.model_dump(mode="json") | {"subtask_hash": row.hash} for row in subtasks]}
+                      ledger.append("task_decomposed", payload)
+                      return payload
+                  if node.kind == NodeKind.AGENT_TASK:
+                      if node.identity is None or node.identity not in selected_by_fp:
+                          return {"skipped": True, "reason": "member removed by preflight"}
+                      member = selected_by_fp[node.identity]
+                      reservation = await budget.reserve("agent_generation", provider_estimate, known_zero_cost=host.provider.capabilities.known_zero_cost)
+                      if reservation is None:
+                          return {"budget_exhausted": True}
+                      subtask = subtask_assignment.get(node.node_id)
+                      task_payload = subtask.objective if subtask is not None else request.task
+                      runtime_payload = scoped_evidence_payload(subtask)
+                      allowed_refs = {str(row["evidence_hash"]) for row in runtime_payload}
+                      sealed = str(uuid5(NAMESPACE_URL, f"{run_id}:{member.fingerprint}:{node.input_hash}:sealed"))
+                      provider_request = ProviderRequest(
+                          task_payload,
+                          domain,
+                          member.name,
+                          sealed,
+                          fixture if request.source_mode != "runtime" else {},
+                          tuple(injected_by_agent.get(member.fingerprint, [])),
+                          runtime_payload,
+                      )
+                      try:
+                          response = await host.provider.generate_request_async(provider_request)
+                      except BaseException:
+                          await budget.release(reservation, reason="provider failure/cancellation")
+                          raise
+                      reconciliation = await budget.reconcile(reservation, response.cost)
+                      provider_call_count += 1
+                      claimed_refs = list(dict.fromkeys(response.claim.evidence_refs))
+                      validated_refs = [ref for ref in claimed_refs if ref in allowed_refs]
+                      rejected_refs = [ref for ref in claimed_refs if ref not in allowed_refs]
+                      claim = response.claim.model_copy(update={"evidence_refs": validated_refs})
+                      claims_by_node[node.node_id] = claim
+                      claim_owner_by_node[node.node_id] = member.fingerprint
+                      claim_trace_ids[node.node_id] = response.trace_id
+                      if subtask is not None:
+                          executed_subtask_hashes.add(subtask.hash)
+                      provider_usages.append(
+                          {
+                              "fingerprint": member.fingerprint,
+                              "node_id": node.node_id,
+                              "trace_id": response.trace_id,
+                              "usage": dict(response.usage)
+                              | {
+                                  "evidence_hashes_supplied": sorted(allowed_refs),
+                                  "evidence_refs_claimed": claimed_refs,
+                                  "evidence_refs_validated": validated_refs,
+                                  "evidence_refs_rejected": rejected_refs,
+                                  "subtask_hash": None if subtask is None else subtask.hash,
+                                  "evidence_scope": [] if subtask is None else list(subtask.evidence_scope),
+                              },
+                              "budget": reconciliation,
+                          }
+                      )
+                      if rejected_refs:
+                          ledger.append(
+                              "evidence_ref_rejected",
+                              {"fingerprint": member.fingerprint, "node_id": node.node_id, "rejected_refs": rejected_refs, "allowed_refs": sorted(allowed_refs)},
+                          )
+                      ledger.append(
+                          "claim_proposed",
+                          {
+                              "claim_hash": claim.hash,
+                              "claim_identity_hash": claim.identity_hash,
+                              "claim_revision_hash": claim.revision_hash,
+                              "fingerprint": member.fingerprint,
+                              "node_id": node.node_id,
+                              "probability": claim.probability,
+                              "provider_trace_id": response.trace_id,
+                              "evidence_refs": validated_refs,
+                              "subtask_hash": None if subtask is None else subtask.hash,
+                              "provider_task_hash": sha256_obj(task_payload),
+                          },
+                      )
+                      return {"claim": claim.model_dump(mode="json"), "claim_identity_hash": claim.identity_hash, "subtask_hash": None if subtask is None else subtask.hash}
+                  if node.kind == NodeKind.FALSIFIER:
+                      if node.identity is None or node.identity not in spec_by_hash:
+                          return {"skipped": True}
+                      bids = await ensure_market()
+                      relevant = [bid for bid in bids if bid.spec_hash == node.identity]
+                      if not relevant:
+                          return {"selected": False, "reason": "market did not retain spec for any claim"}
+                      spec = spec_by_hash[node.identity]
+                      selected_market_specs.add(spec.hash)
+                      if not host.services.sandbox.permits(spec.primitive):
+                          raise RuntimeError(f"sandbox rejected primitive {spec.primitive}")
+                      reservation = await budget.reserve("falsifier", spec.estimated_cost, known_zero_cost=spec.estimated_cost == 0.0)
+                      if reservation is None:
+                          return {"budget_exhausted": True}
+                      raw = host.services.falsifiers.run(spec, evidence_context)
+                      reason = "; ".join(sorted({bid.selection_reason for bid in relevant}))
+                      execution = raw.model_copy(update={"target_claim_hashes": tuple(sorted({bid.target_claim_hash for bid in relevant})), "selection_reason": reason})
+                      await budget.reconcile(reservation, execution.cost)
+                      executions.append(execution)
+                      ledger.append("falsifier_selected", {"spec_hash": spec.hash, "target_claim_hashes": list(execution.target_claim_hashes), "why": reason})
+                      ledger.append("falsifier_executed", execution.model_dump(mode="json"))
+                      return execution.model_dump(mode="json")
+                  if node.kind == NodeKind.CHALLENGE:
+                      owner_to_node = {owner: node_id for node_id, owner in claim_owner_by_node.items()}
+                      if len(owner_to_node) < 2:
+                          return {"opened": 0}
+                      fps = sorted(owner_to_node)
+                      edge_candidates: list[CommunicationCandidate] = []
+                      for index, left_fp in enumerate(fps):
+                          for right_fp in fps[index + 1 :]:
+                              left = claims_by_node[owner_to_node[left_fp]]
+                              right = claims_by_node[owner_to_node[right_fp]]
+                              disagreement = abs(left.probability - right.probability) + (0.25 if left.statement != right.statement else 0.0)
+                              if disagreement < 0.10 and plan.name == MorphologyName.SPARSE_GRAPH:
+                                  continue
+                              proximity = semantic_proximity(
+                                  SemanticSignature(left.statement, domain=left.domain, claim_type=left.claim_type, evidence_clusters=tuple(left.evidence_refs)),
+                                  SemanticSignature(right.statement, domain=right.domain, claim_type=right.claim_type, evidence_clusters=tuple(right.evidence_refs)),
+                              )
+                              edge_candidates.append(
+                                  CommunicationCandidate(
+                                      challenger=left_fp,
+                                      target=right_fp,
+                                      residual_disagreement=disagreement,
+                                      verified_reliability=0.5,
+                                      task_relevance=1.0,
+                                      capability_complementarity=1.0,
+                                      correlation=0.0,
+                                      semantic_proximity=proximity.score,
+                                      expected_information_gain=max(0.2, disagreement),
+                                      estimated_cost=float(provider_estimate or 0.0),
+                                  )
+                              )
+                      chosen = host.services.communication.select(edge_candidates, k=1 if plan.name == MorphologyName.PAIRED_VERIFY else 2)
+                      for edge in chosen:
+                          target_node = owner_to_node[edge.target]
+                          target = claims_by_node[target_node]
+                          identity_before = target.identity_hash
+                          revision_before = target.revision_hash
+                          request_row = ChallengeRequest(
+                              challenger_fingerprint=edge.challenger,
+                              target_fingerprint=edge.target,
+                              target_claim_hash=target.identity_hash,
+                              target_statement_summary=target.statement[:500],
+                              evidence_refs=list(target.evidence_refs),
+                              falsifier_observations=[row.model_dump(mode="json") for row in executions if target.identity_hash in row.target_claim_hashes],
+                              challenge_reason=f"residual uncertainty score={edge.score:.4f}",
+                              round=1,
+                          )
+                          reservation = await budget.reserve("challenge", provider_estimate, known_zero_cost=host.provider.capabilities.known_zero_cost)
+                          if reservation is None:
+                              continue
+                          response = await host.provider.challenge_async(request_row)
+                          await budget.reconcile(reservation, response.cost)
+                          provider_call_count += 1
+                          revised = target.model_copy(update={"probability": response.revised_probability, "status": response.revised_status})
+                          assert revised.identity_hash == identity_before
+                          claims_by_node[target_node] = revised
+                          comm = {
+                              "round": 1,
+                              "source_fp": edge.challenger,
+                              "target_fp": edge.target,
+                              "target_node_id": target_node,
+                              "target_claim_hash": identity_before,
+                              "revision_before_hash": revision_before,
+                              "revision_after_hash": revised.revision_hash,
+                              "reason": request_row.challenge_reason,
+                              "score": edge.score,
+                              "input_hash": request_row.hash,
+                              "output_hash": response.hash,
+                              "provider_call_id": response.provider_call_id,
+                          }
+                          communications.append(comm)
+                          ledger.append("communication_edge_opened", comm)
+                      return {"opened": len(communications)}
+                  if node.kind == NodeKind.JOIN:
+                      if node.group and node.group.startswith("subgroup:"):
+                          visible = {
+                              parent: claims_by_node[parent].identity_hash
+                              for parent in node.prerequisites
+                              if parent in claims_by_node
+                          }
+                          payload = {"claims": visible, "subtask_hashes": [subtask_assignment[parent].hash for parent in node.prerequisites if parent in subtask_assignment]}
+                          subgroup_results[node.group] = payload
+                          return payload
+                      return {
+                          "claims": {key: claim.identity_hash for key, claim in claims_by_node.items()},
+                          "executions": [row.execution_snapshot_hash for row in executions],
+                          "communications": len(communications),
+                      }
+                  if node.kind == NodeKind.SYNTHESIS:
+                      claim_rows: list[tuple[str, Claim, float]] = []
+                      for node_id, claim in sorted(claims_by_node.items()):
+                          fp = claim_owner_by_node[node_id]
+                          member = selected_by_fp[fp]
+                          subtask = subtask_assignment.get(node_id)
+                          relevant_caps = list(subtask.required_capabilities) if subtask is not None else [cap for cap in profile.required_capabilities if cap in member.capabilities]
+                          authority = sum(member.capability_calibration_scores.get(cap, member.calibration_score) for cap in relevant_caps) / max(1, len(relevant_caps))
+                          claim_rows.append((fp, claim, authority))
+                      required_hashes = {row.hash for row in subtasks} if plan.name == MorphologyName.HIERARCHICAL_FANOUT_FANIN else set()
+                      hierarchy_complete = (
+                          plan.name != MorphologyName.HIERARCHICAL_FANOUT_FANIN
+                          or (required_hashes <= executed_subtask_hashes and not plan.compiler_rationale.get("unresolved_subtasks"))
+                      )
+                      decision = synthesize_swarm(
+                          claim_rows,
+                          executions,
+                          communications,
+                          budget=budget.snapshot(),
+                          coverage_complete=not bool(rationale.get("uncovered_capabilities")) and bool(evidence_bundle.items) and hierarchy_complete,
+                      )
+                      ledger.append("swarm_decision_synthesized", decision.model_dump(mode="json") | {"decision_hash": decision.hash})
+                      return decision.model_dump(mode="json")
+                  return {"kind": node.kind.value}
+
+          '''
+          s = s[:start] + new_runtime + s[end:]
+
+          # Stable final-claim persistence and complete hierarchy telemetry.
+          old_final = '''    final_claims: list[dict[str, Any]] = []
+              for fp, claim in sorted(claims_by_fp.items()):
+                  member = selected_by_fp[fp]
+                  relevant = [cap for cap in profile.required_capabilities if cap in member.capabilities]
+                  immutable_claim_hash = claim.hash
+                  persisted_status = selected_status if immutable_claim_hash in decision.selected_claim_hashes else claim.status
+                  final_claims.append(
+                      claim.model_dump(mode="json")
+                      | {
+                          "status": persisted_status.value,
+                          "claim_hash": immutable_claim_hash,
+                          "provider_trace_id": claim_trace_ids.get(fp),
+                          "contributor_fingerprint": fp,
+                          "contributor_capabilities": relevant,
+                          "contributor_test_families": [f"{cap}_verified_task" for cap in relevant],
+                      }
+                  )
+          '''
+          new_final = '''    final_claims: list[dict[str, Any]] = []
+              for node_id, claim in sorted(claims_by_node.items()):
+                  fp = claim_owner_by_node[node_id]
+                  member = selected_by_fp[fp]
+                  subtask = subtask_assignment.get(node_id)
+                  relevant = list(subtask.required_capabilities) if subtask is not None else [cap for cap in profile.required_capabilities if cap in member.capabilities]
+                  immutable_claim_hash = claim.identity_hash
+                  persisted_status = selected_status if immutable_claim_hash in decision.selected_claim_hashes else claim.status
+                  final_claims.append(
+                      claim.model_dump(mode="json")
+                      | {
+                          "status": persisted_status.value,
+                          "claim_hash": immutable_claim_hash,
+                          "claim_identity_hash": immutable_claim_hash,
+                          "claim_revision_hash": claim.revision_hash,
+                          "provider_trace_id": claim_trace_ids.get(node_id),
+                          "contributor_node_id": node_id,
+                          "contributor_fingerprint": fp,
+                          "contributor_capabilities": relevant,
+                          "contributor_test_families": [f"{cap}_verified_task" for cap in relevant],
+                          "subtask_hash": None if subtask is None else subtask.hash,
+                      }
+                  )
+          '''
+          assert old_final in s
+          s = s.replace(old_final, new_final)
+
+          s = s.replace('"swarm_core": "ORDER-006"', '"swarm_core": "ORDER-007"')
+          s = s.replace('"subtask_assignments": plan.compiler_rationale.get("subtask_assignments", {}),\n          }', '"subtask_assignments": plan.compiler_rationale.get("subtask_assignments", {}),\n              "subtask_assignment_agents": plan.compiler_rationale.get("subtask_assignment_agents", {}),\n          }')
+
+          marker = '    all_evidence_rows = evidence_bundle.persisted_rows() + execution_evidence_rows\n'
+          assert marker in s
+          hierarchy = '''    required_subtask_hashes = {row.hash for row in subtasks} if plan.name == MorphologyName.HIERARCHICAL_FANOUT_FANIN else set()
+              unresolved_subtask_hashes = sorted(required_subtask_hashes - executed_subtask_hashes | set(plan.compiler_rationale.get("unresolved_subtasks", [])))
+              hierarchy_execution = {
+                  "required_subtasks": sorted(required_subtask_hashes),
+                  "assigned_subtasks": sorted(set(plan.compiler_rationale.get("subtask_assignments", {}).values())),
+                  "executed_subtasks": sorted(executed_subtask_hashes),
+                  "unresolved_subtasks": unresolved_subtask_hashes,
+                  "subgroup_results": subgroup_results,
+                  "complete": not unresolved_subtask_hashes if plan.name == MorphologyName.HIERARCHICAL_FANOUT_FANIN else True,
+              }
+          '''
+          s = s.replace(marker, hierarchy + marker)
+          s = s.replace('        "threat_profile": profile.model_dump(mode="json"),\n      }', '        "threat_profile": profile.model_dump(mode="json"),\n          "hierarchy_execution": hierarchy_execution,\n      }')
+
+          # Remove obsolete profile-only spec map after claim-driven registry switch.
+          s = re.sub(r'\n_SPEC_FOR = \{[^\n]+\}\n', '\n', s, count=1)
+          p.write_text(s)
+          PY
+          ruff format src/mimicus/orchestration/swarm_core.py
+          ruff check src/mimicus/orchestration/swarm_core.py
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/mimicus/orchestration/swarm_core.py
+          git diff --cached --check
+          git commit -m 'ORDER-007: close claim market and hierarchy invariants'
+          git push origin HEAD:order-002-mimicus-v01
