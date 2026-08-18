@@ -359,6 +359,8 @@ class MiMicusEngine:
             elif recovery_requested and next_state == "ACTIVE":
                 self.repository.set_bankruptcy_state(candidate.fingerprint, domain, "ACTIVE", f"capability {target_cap} recovery audition passed")
             state = self.repository.bankruptcy_state(candidate.fingerprint, scoped_state_key)
+            if state == "BANKRUPT" and self.repository.bankruptcy_state(candidate.fingerprint, domain) != "BANKRUPT":
+                self.repository.set_bankruptcy_state(candidate.fingerprint, domain, "BANKRUPT", f"capability {target_cap}: verified relevant canary bankruptcy")
             if state == "BANKRUPT":
                 lineage_exclusions["bankrupt"].append(candidate.fingerprint)
             elif state == "PROBATION":

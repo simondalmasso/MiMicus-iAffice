@@ -172,7 +172,7 @@ def compile_morphology(
     nodes.extend([profile, memory, audition])
     edges.extend([DagEdge(profile.node_id, memory.node_id), DagEdge(profile.node_id, audition.node_id)])
 
-    agent_parent_ids = (memory.node_id, audition.node_id)
+    agent_parent_ids: tuple[str, ...] = (memory.node_id, audition.node_id)
     if name == MorphologyName.HIERARCHICAL_FANOUT_FANIN:
         decompose = DagNode(_node_id(NodeKind.DECOMPOSE, 0, task_hash), NodeKind.DECOMPOSE, agent_parent_ids, input_hash=task_hash, group="hierarchy-root")
         nodes.append(decompose)

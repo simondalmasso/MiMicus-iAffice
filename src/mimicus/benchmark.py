@@ -407,7 +407,7 @@ class SingleAgentRunner:
             peak_concurrency=1,
             parallel_efficiency=1.0,
             avoidable_serialization_count=0,
-            cost=response.cost,
+            cost=float(response.cost or 0.0),
             replay_verified=replay,
             ledger_head=head,
         )
@@ -457,7 +457,7 @@ class StaticThreeAgentRunner:
             peak_concurrency=3,
             parallel_efficiency=min(1.0, (serial / max(wall, 0.001)) / 3.0),
             avoidable_serialization_count=0,
-            cost=sum(response.cost for response in responses),
+            cost=sum(float(response.cost or 0.0) for response in responses),
             replay_verified=replay,
             ledger_head=head,
         )
@@ -509,7 +509,7 @@ class CalibrationRouterRunner:
             peak_concurrency=1,
             parallel_efficiency=1.0,
             avoidable_serialization_count=0,
-            cost=response.cost,
+            cost=float(response.cost or 0.0),
             replay_verified=replay,
             ledger_head=head,
         )
@@ -566,7 +566,7 @@ class FalsifierMarketRunner:
             peak_concurrency=1,
             parallel_efficiency=1.0,
             avoidable_serialization_count=max(0, len(executions) - 1),
-            cost=response.cost + sum(execution.cost for execution in executions),
+            cost=float(response.cost or 0.0) + sum(execution.cost for execution in executions),
             replay_verified=replay,
             ledger_head=head,
             falsifier_reused=reused,
