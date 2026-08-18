@@ -8,6 +8,10 @@ if TYPE_CHECKING:
     from mimicus.storage.repository import Repository
 
 
+def capability_scope(domain: str, capability: str, test_family: str) -> str:
+    return f"{domain}::cap={capability}::family={test_family}"
+
+
 @dataclass
 class CalibrationRecord:
     fingerprint: str
@@ -18,6 +22,8 @@ class CalibrationRecord:
     brier_sum: float = 0.0
     canary_failure_streak: int = 0
     last_verified_at: datetime | None = None
+    capability: str | None = None
+    test_family: str | None = None
 
     @property
     def brier_score(self) -> float | None:
@@ -70,14 +76,34 @@ class CalibrationLedger:
             record = self.get(fingerprint, domain)
             record.update(predicted_probability=predicted_probability, outcome=outcome, canary=canary)
             return record
-        self.repository.record_calibration(
-            fingerprint,
-            domain,
-            predicted_probability=predicted_probability,
-            outcome=outcome,
-            canary=canary,
-        )
+        self.repository.record_calibration(fingerprint, domain, predicted_probability=predicted_probability, outcome=outcome, canary=canary)
         return self.get(fingerprint, domain)
 
-    def direct_trust(self, fingerprint: str, domain: str) -> float:
+    def get_capability(self, fingerprint: str, domain: str, capability: str, test_family: str) -> CalibrationRecord:
+        scoped = capability_scope(domain, capability, test_family)
+        record = self.get(fingerprint, scoped)
+        record.domain = domain
+        record.capability = capability
+        record.test_family = test_family
+        return record
+
+    def record_capability_verified(
+        self,
+        fingerprint: str,
+        domain: str,
+        capability: str,
+        test_family: str,
+        *,
+        predicted_probability: float,
+        outcome: bool,
+        canary: bool = True,
+    ) -> CalibrationRecord:
+        scoped = capability_scope(domain, capability, test_family)
+        self.record_verified(fingerprint, scoped, predicted_probability=predicted_probability, outcome=outcome, canary=canary)
+        return self.get_capability(fingerprint, domain, capability, test_family)
+
+    def direct_trust(self, fingerprint: str, domain: str, capability: str | None = None, test_family: str | None = None) -> float:
+        if capability is not None:
+            family = test_family or f"{capability}_canary"
+            return self.get_capability(fingerprint, domain, capability, family).trust
         return self.get(fingerprint, domain).trust
