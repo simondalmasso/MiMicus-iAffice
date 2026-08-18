@@ -124,7 +124,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_bench = sub.add_parser("benchmark")
     p_bench.add_argument("--profile", choices=sorted(PROFILES), default="offline")
     p_bench.add_argument("--episodes", type=int, default=200)
-    p_bench.add_argument("--output-dir", default="evidence/ORDER-006")
+    p_bench.add_argument("--output-dir", default="evidence/ORDER-007")
 
     p_serve = sub.add_parser("serve")
     p_serve.add_argument("--profile", choices=sorted(PROFILES), default="offline")
@@ -144,12 +144,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
     if args.command == "plugin":
         kernel = build_kernel(args.profile, _database_url())
-        print(
-            json.dumps([plugin.manifest.model_dump(mode="json") | {"manifest_hash": plugin.manifest.manifest_hash} for plugin in kernel.plugins.values()], indent=2, sort_keys=True)
-        )
+        print(json.dumps([plugin.manifest.model_dump(mode="json") | {"manifest_hash": plugin.manifest.manifest_hash} for plugin in kernel.plugins.values()], indent=2, sort_keys=True))
         return 0
     if args.command == "run":
         payload = _load_task(args.task_file)
+        if payload.get("fixture") or payload.get("source_mode", "runtime") != "runtime" or payload.get("core_semantics") is False:
+            raise SystemExit("mimicus run is normal runtime and cannot enter fixture/legacy semantics")
+        payload["source_mode"] = "runtime"
+        payload.pop("core_semantics", None)
         payload.update(
             {
                 "budget_usd": args.budget_usd,
@@ -207,19 +209,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0 if result.get("accepted") else 2
     if args.command == "benchmark":
         if args.profile != "offline":
-            raise SystemExit("ORDER-006 reference benchmark is offline only")
+            raise SystemExit("ORDER-007 reference benchmark is offline only")
         out = Path(args.output_dir)
         report = write_benchmark(out / "BENCHMARK.json", out / "BENCHMARK.md", args.episodes)
-        print(
-            json.dumps(
-                {
-                    "episodes": report["episodes_per_architecture"],
-                    "total_runs": report["total_architecture_episodes"],
-                    "output": str(out),
-                    "anti_rigging": report["anti_rigging"]["passed"],
-                }
-            )
-        )
+        print(json.dumps({"episodes": report["episodes_per_architecture"], "total_runs": report["total_architecture_episodes"], "output": str(out), "anti_rigging": report["anti_rigging"]["passed"]}))
         return 0
     if args.command == "serve":
         from mimicus.interfaces.mcp_server import serve
