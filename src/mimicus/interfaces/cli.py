@@ -16,6 +16,7 @@ from mimicus.plugins.profiles import PROFILES, build_kernel
 from mimicus.providers.base import Provider
 from mimicus.storage.migrations_adapter import upgrade
 from mimicus.storage.repository import Repository
+from mimicus.verification.models import VerificationSubmission
 
 
 def _database_url() -> str:
@@ -116,10 +117,14 @@ def build_parser() -> argparse.ArgumentParser:
     p_replay = sub.add_parser("replay")
     p_replay.add_argument("run_id")
 
+    p_verify = sub.add_parser("verify")
+    p_verify.add_argument("--profile", choices=sorted(PROFILES), default="offline")
+    p_verify.add_argument("--receipt-file", required=True)
+
     p_bench = sub.add_parser("benchmark")
     p_bench.add_argument("--profile", choices=sorted(PROFILES), default="offline")
     p_bench.add_argument("--episodes", type=int, default=200)
-    p_bench.add_argument("--output-dir", default="evidence/ORDER-003")
+    p_bench.add_argument("--output-dir", default="evidence/ORDER-006")
 
     p_serve = sub.add_parser("serve")
     p_serve.add_argument("--profile", choices=sorted(PROFILES), default="offline")
@@ -194,9 +199,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 2
         print(json.dumps(full["replay_state"], indent=2, sort_keys=True))
         return 0 if full["replay_state"]["verified"] else 1
+    if args.command == "verify":
+        payload = json.loads(Path(args.receipt_file).read_text(encoding="utf-8"))
+        submission = VerificationSubmission.model_validate(payload)
+        result = _engine(args.profile).submit_verification(submission)
+        print(json.dumps(result, indent=2, sort_keys=True, default=str))
+        return 0 if result.get("accepted") else 2
     if args.command == "benchmark":
         if args.profile != "offline":
-            raise SystemExit("ORDER-003 reference benchmark is offline only")
+            raise SystemExit("ORDER-006 reference benchmark is offline only")
         out = Path(args.output_dir)
         report = write_benchmark(out / "BENCHMARK.json", out / "BENCHMARK.md", args.episodes)
         print(
