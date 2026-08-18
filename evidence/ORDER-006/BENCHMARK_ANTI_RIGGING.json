@@ -1,0 +1,11 @@
+{
+  "baseline_after_improvement": 1,
+  "baseline_before_improvement": 0,
+  "baseline_improvement_increases_metric": true,
+  "e_reference_accuracy": 1,
+  "e_wrong_provider_accuracy": 0,
+  "e_wrong_provider_decreases_metric": true,
+  "grader_signature_has_no_architecture_argument": true,
+  "ground_truth_separate_from_runner": true,
+  "passed": true
+}

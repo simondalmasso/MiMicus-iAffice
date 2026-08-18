@@ -1,0 +1,49 @@
+{
+  "competent": {
+    "audition": {
+      "applicability": "APPLICABLE",
+      "capability": "numeric",
+      "category": "parameter_trap",
+      "fingerprint": "7b92ac4afcb66cec6a35dac51f59eb4f75770b47ca7ccb251214a1d53192a950",
+      "passed": true,
+      "phenotype": "numeric-1",
+      "prompt_hash": "7a4f90e4a80a1ddaa0b1ccdb4b65eacf59347307b638b51112b1ee58ed4ae00d",
+      "provider_executed": true,
+      "provider_trace_id": "4ebca858-e639-53a9-b03e-fdbb60418857",
+      "routing_state": "ACTIVE",
+      "score": 1.0,
+      "test_family": "numeric_canary"
+    },
+    "run_id": "ec30e4f7-d496-49bf-8173-cbd0e5a8be7f",
+    "selected": true
+  },
+  "incompetent": {
+    "audition": {
+      "applicability": "APPLICABLE",
+      "capability": "numeric",
+      "category": "parameter_trap",
+      "fingerprint": "7b92ac4afcb66cec6a35dac51f59eb4f75770b47ca7ccb251214a1d53192a950",
+      "passed": false,
+      "phenotype": "numeric-1",
+      "prompt_hash": "7a4f90e4a80a1ddaa0b1ccdb4b65eacf59347307b638b51112b1ee58ed4ae00d",
+      "provider_executed": true,
+      "provider_trace_id": "1e93ee0f-5c65-50fb-9754-214c11d3fc13",
+      "routing_state": "BANKRUPT",
+      "score": 0.0,
+      "test_family": "numeric_canary"
+    },
+    "fingerprint": "7b92ac4afcb66cec6a35dac51f59eb4f75770b47ca7ccb251214a1d53192a950",
+    "run_ids": [
+      "305fe404-9e16-4020-852c-4237c1224b61",
+      "6b5e0639-abd8-42e9-af6c-8cb26adfe892",
+      "58e39784-2285-481e-8e6d-b8b0046833bd"
+    ],
+    "state": "BANKRUPT"
+  },
+  "pass": true,
+  "real_provider_execution": true,
+  "restart": {
+    "attempts": 3,
+    "excluded_after_restart": true
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "accepted_receipt": {
+    "accepted": true,
+    "appeal_of_receipt_hash": null,
+    "authority_class": "deterministic_oracle",
+    "claim_hash": "eeaabd6b6a494606f3137c1b11a6f3864dd3d06897ababa17cc30ee03febf0a5",
+    "created_at": "2026-08-18T13:21:52.650591Z",
+    "evidence_hashes": [
+      "7f05e2982b9814808350f60bca6c39d55535b936fde9400cc9ede8d127c587f8"
+    ],
+    "observed_at": "2026-08-18T11:00:00Z",
+    "origin_key_hash": "ac8a76d8a28341b1fc6c7273b8a47bd10a5216ed6c39f56a8dc0488a37bdc462",
+    "receipt_hash": "f9e3a89d41563dc13817ceb3545917685a1c21363a84a24c179a767459c2e1fa",
+    "receipt_id": "3cd8c6ba-d0ea-5f1b-877c-6c814a39579b",
+    "rejection_reason": null,
+    "run_id": "64a06a39-4662-49c2-b60d-a91245bd0c68",
+    "snapshot_hashes": [
+      "6f7bae866c419498c5a566ec8743eaddd98d360045ca40f78d2d73d6fe04c1e0"
+    ],
+    "source_independence_cluster": "order006-numeric-registry-v1",
+    "supersedes_receipt_hash": null,
+    "verified_status": "FALSIFIED",
+    "verifier_id": "oracle:order006-numeric-registry"
+  },
+  "attributions": [
+    {
+      "capability": "numeric",
+      "fingerprint": "7b92ac4afcb66cec6a35dac51f59eb4f75770b47ca7ccb251214a1d53192a950",
+      "outcome": false,
+      "test_family": "numeric_verified_task"
+    }
+  ],
+  "claim_hash": "eeaabd6b6a494606f3137c1b11a6f3864dd3d06897ababa17cc30ee03febf0a5",
+  "duplicate_same_origin_blocked": true,
+  "mismatched_claim_fail_closed": "claim_hash_not_bound_to_run",
+  "pass": true,
+  "replay_verified": true,
+  "restart_receipts": [
+    {
+      "accepted": true,
+      "appeal_of_receipt_hash": null,
+      "authority_class": "deterministic_oracle",
+      "claim_hash": "eeaabd6b6a494606f3137c1b11a6f3864dd3d06897ababa17cc30ee03febf0a5",
+      "created_at": "2026-08-18T13:21:52.650591Z",
+      "evidence_hashes": [
+        "7f05e2982b9814808350f60bca6c39d55535b936fde9400cc9ede8d127c587f8"
+      ],
+      "observed_at": "2026-08-18T11:00:00Z",
+      "origin_key_hash": "ac8a76d8a28341b1fc6c7273b8a47bd10a5216ed6c39f56a8dc0488a37bdc462",
+      "receipt_hash": "f9e3a89d41563dc13817ceb3545917685a1c21363a84a24c179a767459c2e1fa",
+      "receipt_id": "3cd8c6ba-d0ea-5f1b-877c-6c814a39579b",
+      "rejection_reason": null,
+      "run_id": "64a06a39-4662-49c2-b60d-a91245bd0c68",
+      "snapshot_hashes": [
+        "6f7bae866c419498c5a566ec8743eaddd98d360045ca40f78d2d73d6fe04c1e0"
+      ],
+      "source_independence_cluster": "order006-numeric-registry-v1",
+      "supersedes_receipt_hash": null,
+      "verified_status": "FALSIFIED",
+      "verifier_id": "oracle:order006-numeric-registry"
+    },
+    {
+      "accepted": false,
+      "appeal_of_receipt_hash": null,
+      "authority_class": "deterministic_oracle",
+      "claim_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "created_at": "2026-08-18T13:21:52.708949Z",
+      "evidence_hashes": [
+        "7f05e2982b9814808350f60bca6c39d55535b936fde9400cc9ede8d127c587f8"
+      ],
+      "observed_at": "2026-08-18T11:00:00Z",
+      "origin_key_hash": "f31ec10680056f950e3bd82318b044753b9713a49293fc9dd32f7b2d12aa40dd",
+      "receipt_hash": "a9a80687debd9cf68f572266e550aeb16ef9db178cfe6011eeeec20ec3b1a10d",
+      "receipt_id": "09220ec9-8889-5cb7-b7e4-c3185410d3e5",
+      "rejection_reason": "claim_hash_not_bound_to_run",
+      "run_id": "64a06a39-4662-49c2-b60d-a91245bd0c68",
+      "snapshot_hashes": [
+        "6f7bae866c419498c5a566ec8743eaddd98d360045ca40f78d2d73d6fe04c1e0"
+      ],
+      "source_independence_cluster": "order006-other",
+      "supersedes_receipt_hash": null,
+      "verified_status": "FALSIFIED",
+      "verifier_id": "oracle:order006-other"
+    }
+  ],
+  "run_id": "64a06a39-4662-49c2-b60d-a91245bd0c68"
+}

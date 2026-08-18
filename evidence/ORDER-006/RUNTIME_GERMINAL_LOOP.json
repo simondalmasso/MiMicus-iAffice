@@ -1,0 +1,92 @@
+{
+  "generated_executable_code": false,
+  "germinal": {
+    "candidate_hash": "523134620267b2be5cdb8b7d5ba11706d0f028b80801dd1800394fd3cbe53a34",
+    "evasion_hash": "76bbf95c7c569cc2257f9bb29a8197f9ee95d8a8d49a418ed5ca371144097154",
+    "germinal_entry_state": "GERMINAL_QUARANTINE",
+    "metrics": {
+      "candidate": {
+        "critical_regressions": 0,
+        "fn": 0,
+        "fnr": 0.0,
+        "fp": 0,
+        "fpr": 0.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "tested": 20,
+        "tn": 10,
+        "tp": 10
+      },
+      "catches_triggering_evasion": true,
+      "fossils_tested": 20,
+      "parent": {
+        "critical_regressions": 0,
+        "fn": 0,
+        "fnr": 0.0,
+        "fp": 0,
+        "fpr": 0.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "tested": 20,
+        "tn": 10,
+        "tp": 10
+      },
+      "reason": "deterministic promotion gate passed",
+      "receipt_hash": "f9e3a89d41563dc13817ceb3545917685a1c21363a84a24c179a767459c2e1fa"
+    },
+    "parent_hash": "70723980fce09fad9eb891385d274cc1c7a088dc82689cff95a64edad380cfe4",
+    "receipt_hash": "f9e3a89d41563dc13817ceb3545917685a1c21363a84a24c179a767459c2e1fa",
+    "status": "PROMOTE"
+  },
+  "later_verdict": "FAIL",
+  "parent_execution": {
+    "cost": 0.0,
+    "evidence": {
+      "claimed": 1248.0,
+      "expected": 1200.0,
+      "normalized_period": "annual",
+      "relative_error": 0.04,
+      "tolerance": 0.05
+    },
+    "execution_snapshot_hash": "6f7bae866c419498c5a566ec8743eaddd98d360045ca40f78d2d73d6fe04c1e0",
+    "id": "F1.numeric_invariant",
+    "latency_ms": 1.0,
+    "persistent_reuse": false,
+    "primitive": "numeric_invariant",
+    "reason": null,
+    "selection_reason": "claim-aware applicability=0.70; uncertainty=0.40; disagreement=0.00",
+    "spec_hash": "70723980fce09fad9eb891385d274cc1c7a088dc82689cff95a64edad380cfe4",
+    "target_claim_hashes": [
+      "eeaabd6b6a494606f3137c1b11a6f3864dd3d06897ababa17cc30ee03febf0a5"
+    ],
+    "verdict": "PASS"
+  },
+  "pass": true,
+  "promoted_reused": [
+    "523134620267b2be5cdb8b7d5ba11706d0f028b80801dd1800394fd3cbe53a34"
+  ],
+  "restart_run_id": "66b5812a-8b64-4053-b11f-c54540995bfd",
+  "verified_contradiction": {
+    "accepted": true,
+    "appeal_of_receipt_hash": null,
+    "authority_class": "deterministic_oracle",
+    "claim_hash": "eeaabd6b6a494606f3137c1b11a6f3864dd3d06897ababa17cc30ee03febf0a5",
+    "created_at": "2026-08-18T13:21:52.650591Z",
+    "evidence_hashes": [
+      "7f05e2982b9814808350f60bca6c39d55535b936fde9400cc9ede8d127c587f8"
+    ],
+    "observed_at": "2026-08-18T11:00:00Z",
+    "origin_key_hash": "ac8a76d8a28341b1fc6c7273b8a47bd10a5216ed6c39f56a8dc0488a37bdc462",
+    "receipt_hash": "f9e3a89d41563dc13817ceb3545917685a1c21363a84a24c179a767459c2e1fa",
+    "receipt_id": "3cd8c6ba-d0ea-5f1b-877c-6c814a39579b",
+    "rejection_reason": null,
+    "run_id": "64a06a39-4662-49c2-b60d-a91245bd0c68",
+    "snapshot_hashes": [
+      "6f7bae866c419498c5a566ec8743eaddd98d360045ca40f78d2d73d6fe04c1e0"
+    ],
+    "source_independence_cluster": "order006-numeric-registry-v1",
+    "supersedes_receipt_hash": null,
+    "verified_status": "FALSIFIED",
+    "verifier_id": "oracle:order006-numeric-registry"
+  }
+}

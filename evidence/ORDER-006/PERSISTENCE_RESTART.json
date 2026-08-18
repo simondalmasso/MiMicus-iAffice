@@ -1,0 +1,10 @@
+{
+  "cofailure_selection_changed_after_restart": true,
+  "germinal_promoted_reused": true,
+  "microaudition_restart": {
+    "attempts": 3,
+    "excluded_after_restart": true
+  },
+  "pass": true,
+  "receipt_restart_replay_verified": true
+}

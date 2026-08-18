@@ -1,0 +1,58 @@
+{
+  "falsified_decision": {
+    "candidate_answer": "candidate A",
+    "confidence": 0.687,
+    "decisive_refs": [
+      "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    ],
+    "early_stop_reason": "residual disagreement",
+    "epistemic_status": "FALSIFIED",
+    "hash": "7a87bba0efa26718bd82815cc0750e4fd9ac92ba4e67df4ad4a708d91ea22914",
+    "provenance_hashes": [
+      "c2c53b9b49c3a70e276bbc2ecc2712f2471e72bea4fb65300fa3edfc218bb557",
+      "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    ],
+    "selected_claim_hashes": [
+      "c2c53b9b49c3a70e276bbc2ecc2712f2471e72bea4fb65300fa3edfc218bb557"
+    ],
+    "unresolved_disagreements": [
+      {
+        "challenge_edges": 0,
+        "probability_span": 0.2699999999999999,
+        "statements": [
+          "candidate A",
+          "candidate B"
+        ]
+      }
+    ]
+  },
+  "materially_changed": true,
+  "pass": true,
+  "supported_decision": {
+    "candidate_answer": "candidate A",
+    "confidence": 0.6,
+    "decisive_refs": [
+      "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    ],
+    "early_stop_reason": "residual disagreement",
+    "epistemic_status": "INCONCLUSIVE",
+    "hash": "121614150ff6f9cc49143eb036a1a4c5a3e201c3f111b2ec315f2720f676e429",
+    "provenance_hashes": [
+      "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "c2c53b9b49c3a70e276bbc2ecc2712f2471e72bea4fb65300fa3edfc218bb557"
+    ],
+    "selected_claim_hashes": [
+      "c2c53b9b49c3a70e276bbc2ecc2712f2471e72bea4fb65300fa3edfc218bb557"
+    ],
+    "unresolved_disagreements": [
+      {
+        "challenge_edges": 0,
+        "probability_span": 0.2699999999999999,
+        "statements": [
+          "candidate A",
+          "candidate B"
+        ]
+      }
+    ]
+  }
+}

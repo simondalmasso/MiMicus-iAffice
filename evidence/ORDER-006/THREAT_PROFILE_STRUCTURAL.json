@@ -1,0 +1,68 @@
+{
+  "first": {
+    "complexity": 0.35,
+    "domain": "finance",
+    "required_capabilities": [
+      "numeric"
+    ],
+    "signal_provenance": [
+      {
+        "capability": "numeric",
+        "source": "evidence_schema",
+        "strength": 1.0,
+        "threat": "numeric_inconsistency"
+      },
+      {
+        "budget_usd": 0.0,
+        "source": "budget",
+        "strength": 0.2
+      },
+      {
+        "max_concurrency": 2,
+        "source": "concurrency",
+        "strength": 0.2
+      }
+    ],
+    "threats": [
+      "numeric_inconsistency"
+    ],
+    "uncertainty": 0.4
+  },
+  "pass": true,
+  "renamed": {
+    "complexity": 0.35,
+    "domain": "finance",
+    "required_capabilities": [
+      "numeric"
+    ],
+    "signal_provenance": [
+      {
+        "capability": "numeric",
+        "source": "task_text_weak",
+        "strength": 0.35,
+        "threat": "numeric_inconsistency"
+      },
+      {
+        "capability": "numeric",
+        "source": "evidence_schema",
+        "strength": 1.0,
+        "threat": "numeric_inconsistency"
+      },
+      {
+        "budget_usd": 0.0,
+        "source": "budget",
+        "strength": 0.2
+      },
+      {
+        "max_concurrency": 2,
+        "source": "concurrency",
+        "strength": 0.2
+      }
+    ],
+    "threats": [
+      "numeric_inconsistency"
+    ],
+    "uncertainty": 0.4
+  },
+  "same_required_capabilities": true
+}

@@ -1,0 +1,190 @@
+ORDER_006_TEST_RESULTS
+SOURCE_HEAD=266ae0105a79e7a3eceda10382fb5242b36f8785
+151 files already formatted
+All checks passed!
+Success: no issues found in 88 source files
+============================= test session starts ==============================
+platform linux -- Python 3.12.13, pytest-9.0.2, pluggy-1.6.0
+rootdir: /home/runner/work/MiMicus-swarm/MiMicus-swarm
+configfile: pyproject.toml
+plugins: anyio-4.14.2, cov-7.0.0
+collected 112 items
+
+tests/unit/test_agents_coalition.py ....                                 [  3%]
+tests/unit/test_canonical_claims.py ..                                   [  5%]
+tests/unit/test_falsifiers.py ...................                        [ 22%]
+tests/unit/test_ledger_storage_security.py ....                          [ 25%]
+tests/unit/test_memory_germinal.py ...                                   [ 28%]
+tests/unit/test_order004_correctness.py .......................          [ 49%]
+tests/unit/test_order005_correctness.py .......                          [ 55%]
+tests/unit/test_order006_core.py .....                                   [ 59%]
+tests/unit/test_plugins.py ...                                           [ 62%]
+tests/unit/test_validation_coverage.py ..........                        [ 71%]
+tests/integration/test_cli_benchmark.py ..                               [ 73%]
+tests/integration/test_engine.py ...                                     [ 75%]
+tests/integration/test_openai_provider_mock.py .                         [ 76%]
+tests/integration/test_order003_runtime.py ........                      [ 83%]
+tests/integration/test_order004_runtime.py .......                       [ 90%]
+tests/integration/test_order005_runtime.py ......                        [ 95%]
+tests/integration/test_order006_runtime.py .....                         [100%]
+
+=============================== warnings summary ===============================
+tests/unit/test_validation_coverage.py::test_migration_adapter_and_cli_db
+tests/unit/test_validation_coverage.py::test_migration_adapter_and_cli_db
+  /opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/alembic/config.py:612: DeprecationWarning: No path_separator found in configuration; falling back to legacy splitting on spaces, commas, and colons for prepend_sys_path.  Consider adding path_separator=os to Alembic config.
+    util.warn_deprecated(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.12.13-final-0 _______________
+
+Name                                         Stmts   Miss Branch BrPart  Cover   Missing
+----------------------------------------------------------------------------------------
+src/mimicus/agents/auditions.py                 25      1      4      1    93%   44
+src/mimicus/agents/bankruptcy.py                25      1      8      1    94%   30
+src/mimicus/agents/identity.py                  58      3      8      3    91%   89, 91, 93
+src/mimicus/benchmark.py                       387      3     50      4    98%   189, 230, 399, 559->exit
+src/mimicus/canonical.py                        30      2     14      1    93%   24-25
+src/mimicus/claims/evidence.py                  34      7      8      3    76%   34-38, 45, 51
+src/mimicus/claims/evidence_bundle.py          114     11     26      6    88%   55, 89, 91, 111, 113-114, 118, 209-210, 217-218
+src/mimicus/coalition/selector.py               85      2     20      2    96%   60, 62
+src/mimicus/coalition/threat_profile.py         67      2     36      2    96%   82, 93
+src/mimicus/coalition/topology.py                9      1      6      1    87%   11
+src/mimicus/events/ledger.py                    48      1      6      1    96%   70
+src/mimicus/falsifiers/market.py               157      6     48      6    94%   17, 21, 28, 133, 182, 185
+src/mimicus/falsifiers/primitives.py           116     10     44      8    89%   37-38, 52, 67, 72-73, 75, 87, 99->104, 102->101, 120, 154
+src/mimicus/falsifiers/registry.py              18      2      4      2    82%   13, 20
+src/mimicus/germinal/center.py                  25      1      2      1    93%   20
+src/mimicus/germinal/promote.py                 53      5     10      1    87%   45-50
+src/mimicus/interfaces/cli.py                  160     38     34     12    73%   37, 45-46, 74, 76, 139-140, 166-187, 189-190, 194-195, 198-199, 203-207, 210, 224-229, 233
+src/mimicus/interfaces/mcp_server.py            40      2      4      0    95%   72-85
+src/mimicus/memory/retrieval.py                  8      1      0      0    88%   13
+src/mimicus/orchestration/attribution.py        20     20      2      0     0%   1-25
+src/mimicus/orchestration/budget.py             90      8     24      3    87%   62, 69-74, 92, 121
+src/mimicus/orchestration/communication.py      66      4     10      4    89%   76, 81, 83, 85
+src/mimicus/orchestration/dag_executor.py      141      7     26      4    93%   60, 98-100, 116, 120, 204
+src/mimicus/orchestration/legacy_engine.py     553     49    172     26    90%   89, 133-134, 170, 174, 176, 454->443, 476-477, 493, 504-507, 508->521, 511-520, 530, 593, 598-599, 606-613, 635, 658, 661, 664-665, 668-670, 677, 720, 740-745, 777, 791, 811, 839->860, 866, 867->920, 872->874, 918->920
+src/mimicus/orchestration/morphology.py        172      7     54      7    94%   98, 104, 109, 123, 159, 163, 219
+src/mimicus/orchestration/proximity.py          68      3     12      3    92%   20, 38, 88, 90->92
+src/mimicus/orchestration/swarm_core.py        428     20    134     12    94%   107, 226, 312-314, 345, 410-412, 542, 557-559, 604, 612, 615, 626, 668, 706, 711
+src/mimicus/orchestration/synthesis.py          64      1     24      1    98%   85
+src/mimicus/plugins/api.py                      17      2      0      0    88%   21, 25
+src/mimicus/plugins/profiles.py                 45      7      8      0    79%   35-41
+src/mimicus/plugins/registry.py                 67      3     28      4    93%   40, 49, 59->57, 71
+src/mimicus/providers/base.py                   75      6      0      0    92%   33, 81, 84, 88, 92, 102
+src/mimicus/providers/openai_agents.py         137     22     30      8    81%   79, 85, 100, 111, 123, 133, 149, 177, 221-245
+src/mimicus/providers/scripted.py               79      2     16      2    96%   104, 110
+src/mimicus/security.py                         25      3      8      2    85%   18, 22, 33
+src/mimicus/storage/repository.py              220     14     80     18    88%   56->61, 109, 149, 152-153, 233, 250->261, 262-271, 310->322, 325->exit, 367->377, 388, 389->exit, 394->exit, 426, 449->451, 453->464, 480->478, 491->489, 516, 555->560, 572-573
+src/mimicus/storage/swarm_state.py             108      8     28      7    89%   39, 69-70, 95, 177, 188, 258, 279, 306->exit
+src/mimicus/validation/e2e.py                   35      5      8      2    84%   49->52, 56-59, 63
+src/mimicus/validation/worker.py               151     26     10      1    80%   261-296, 342-344, 364-368, 372
+src/mimicus/verification/models.py              53      1      2      1    96%   31
+src/mimicus/verification/service.py            123     20     60     17    78%   28->25, 30, 39, 42, 44-45, 53->52, 55-58, 75-81, 88, 153, 157, 159, 161, 163, 167-168, 176->203, 190->177
+----------------------------------------------------------------------------------------
+TOTAL                                         5105    337   1146    177    91%
+
+44 files skipped due to complete coverage.
+Required test coverage of 90% reached. Total coverage: 91.27%
+======================= 112 passed, 2 warnings in 43.80s =======================
+{
+  "dynamic_findings": [],
+  "germinal_reject_then_promote": true,
+  "k3_compatibility": true,
+  "k3_vectors": [
+    {
+      "actual": "FAIL",
+      "execution_snapshot_hash": "3bc89fac1da5d7facb44d1475fc4e5b6be3f37119c0c956e97998a2f013c617c",
+      "expected": "FAIL",
+      "pass": true,
+      "primitive": "numeric_invariant",
+      "safe_spec_hash": "78ca6dab55f1814b601858324d993c4ec9a79ee6fd8f8c0ce3b782745bbda98f",
+      "vector_id": "c1_tam_12x_mismatch"
+    },
+    {
+      "actual": "INCONCLUSIVE",
+      "execution_snapshot_hash": "dabe063ddd26396d83d2734649858b1aadbe2c96f75a00678011067451a96115",
+      "expected": "INCONCLUSIVE",
+      "pass": true,
+      "primitive": "numeric_invariant",
+      "safe_spec_hash": "78ca6dab55f1814b601858324d993c4ec9a79ee6fd8f8c0ce3b782745bbda98f",
+      "vector_id": "c1_missing_is_inconclusive"
+    },
+    {
+      "actual": "FAIL",
+      "execution_snapshot_hash": "1797fe5a8cb4c74b82ca4cefe9c25fbaf184a0a697bc19b06367db6248966804",
+      "expected": "FAIL",
+      "pass": true,
+      "primitive": "freshness",
+      "safe_spec_hash": "714ba6685d8135eca61b7dcdbe409c35a4555aedee592f1de82ce9c12ccf00cb",
+      "vector_id": "c2_stale"
+    },
+    {
+      "actual": "INCONCLUSIVE",
+      "execution_snapshot_hash": "cb9675d2beb47620c113214137a31a991c37f5df6f174e1347cea46d982da4b5",
+      "expected": "INCONCLUSIVE",
+      "pass": true,
+      "primitive": "freshness",
+      "safe_spec_hash": "714ba6685d8135eca61b7dcdbe409c35a4555aedee592f1de82ce9c12ccf00cb",
+      "vector_id": "c2_missing_date_is_inconclusive"
+    },
+    {
+      "actual": "FAIL",
+      "execution_snapshot_hash": "6e8d0055de58fb924262b8b7b611df6ef7d13628aa0445f83ff86ad61a7a7dd6",
+      "expected": "FAIL",
+      "pass": true,
+      "primitive": "source_independence",
+      "safe_spec_hash": "18427321d73d4032165e2cae13baf57edf5669121d51e308db0b8bdf6e61e3ec",
+      "vector_id": "c3_echo_chamber"
+    },
+    {
+      "actual": "INCONCLUSIVE",
+      "execution_snapshot_hash": "73fc8389b174596ed8fcc728fa502449d78b9250edc5835bc13c02eee4bf556e",
+      "expected": "INCONCLUSIVE",
+      "pass": true,
+      "primitive": "source_independence",
+      "safe_spec_hash": "18427321d73d4032165e2cae13baf57edf5669121d51e308db0b8bdf6e61e3ec",
+      "vector_id": "c3_missing_provenance_is_inconclusive"
+    },
+    {
+      "actual": "FAIL",
+      "execution_snapshot_hash": "d69431b6cfafbc9d3aceaf843f27575a735c59dbb4797d0e3b4688d486b56699",
+      "expected": "FAIL",
+      "pass": true,
+      "primitive": "citation_entailment",
+      "safe_spec_hash": "e01656df1d1d990413bbcae594049e701841b465a0c9e30aa73a3c3989d3ba0b",
+      "vector_id": "c4_false_entailment"
+    },
+    {
+      "actual": "INCONCLUSIVE",
+      "execution_snapshot_hash": "c27c81b4f1d1ff238a345a7b5b0bbf34284810814502f10b5f3e7922a6ae406c",
+      "expected": "INCONCLUSIVE",
+      "pass": true,
+      "primitive": "citation_entailment",
+      "safe_spec_hash": "e01656df1d1d990413bbcae594049e701841b465a0c9e30aa73a3c3989d3ba0b",
+      "vector_id": "c4_missing_span_is_inconclusive"
+    },
+    {
+      "actual": "FAIL",
+      "execution_snapshot_hash": "04b770a2e480cecb513327e0285b81762446f32ef7a8d986c2cae75fe568be26",
+      "expected": "FAIL",
+      "pass": true,
+      "primitive": "counterexample_search",
+      "safe_spec_hash": "997e3c2f859c47198d57f67bd3083a02a869d313370ca4820057f0cca7a03773",
+      "vector_id": "c5_counterexample"
+    },
+    {
+      "actual": "INCONCLUSIVE",
+      "execution_snapshot_hash": "4cfadf76bdc54cbd06ca8e628e1c04c8526bef6b71b87c9b2796d01b7ba7cdab",
+      "expected": "INCONCLUSIVE",
+      "pass": true,
+      "primitive": "counterexample_search",
+      "safe_spec_hash": "997e3c2f859c47198d57f67bd3083a02a869d313370ca4820057f0cca7a03773",
+      "vector_id": "c5_unpinned_registry_is_inconclusive"
+    }
+  ],
+  "no_dynamic_code_execution": true,
+  "source_payload_rejected": true
+}
+{"gates": {"bankruptcy_lineage": true, "critical_path_metrics": true, "germinal_integrated": true, "mcp_restart": true, "memory_reuse": true, "morphology_dag": true, "parallel_execution": true, "persistence_restart": true, "semantic_proximity": true, "sparse_communication_real": true, "unverified_self_promotion_blocked": true}, "order": "ORDER-003", "passed": true, "process_level": true}
+{"passed": true, "scenarios": 12}

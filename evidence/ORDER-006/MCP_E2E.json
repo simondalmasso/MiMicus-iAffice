@@ -1,0 +1,76 @@
+{
+  "first_run": {
+    "claim_hash": "1768ca2aa1ced19c80064e4937699a93b514623bca34cb82f775a7c108a7ff7a",
+    "evidence_hashes": [
+      "1fdc4a2a0843af9ba6865b00c2cb3974bfc78c7f06aa68b4b1f3f5c05d3137f1"
+    ],
+    "execution_snapshot_hash": "6f7bae866c419498c5a566ec8743eaddd98d360045ca40f78d2d73d6fe04c1e0",
+    "parent_falsifier_verdict": "PASS",
+    "run_id": "d4afa5f6-36b8-4aa9-ad79-3e433d237d35"
+  },
+  "openai_key_required": false,
+  "pass": true,
+  "path": "/mcp",
+  "restart": {
+    "later_verdict": "FAIL",
+    "learned_state_reused": true,
+    "promoted_falsifier_reused": [
+      "bc44daf5618d37ac03287a52fad7a091ad756a9dcaf8178fb655b2ec6829ecff"
+    ],
+    "receipt_persisted": true,
+    "replay_verified": true,
+    "rerun_id": "89cb63d4-47e3-48d9-9c72-535ddf116143"
+  },
+  "server_process_restarted": true,
+  "transport": "streamable-http",
+  "verification": {
+    "accepted": true,
+    "attributions": [
+      {
+        "capability": "numeric",
+        "fingerprint": "7b92ac4afcb66cec6a35dac51f59eb4f75770b47ca7ccb251214a1d53192a950",
+        "outcome": false,
+        "test_family": "numeric_verified_task"
+      }
+    ],
+    "germinal": {
+      "candidate_hash": "bc44daf5618d37ac03287a52fad7a091ad756a9dcaf8178fb655b2ec6829ecff",
+      "evasion_hash": "e84043245ff330a9956f6bfed79c3262c2decaeb7a7101c3fdcba439d82b5f02",
+      "germinal_entry_state": "GERMINAL_QUARANTINE",
+      "metrics": {
+        "candidate": {
+          "critical_regressions": 0,
+          "fn": 0,
+          "fnr": 0.0,
+          "fp": 0,
+          "fpr": 0.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "tested": 20,
+          "tn": 10,
+          "tp": 10
+        },
+        "catches_triggering_evasion": true,
+        "fossils_tested": 20,
+        "parent": {
+          "critical_regressions": 0,
+          "fn": 0,
+          "fnr": 0.0,
+          "fp": 0,
+          "fpr": 0.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "tested": 20,
+          "tn": 10,
+          "tp": 10
+        },
+        "reason": "deterministic promotion gate passed",
+        "receipt_hash": "eb6bbf4220cb7286eeb2105bf06f190f440d11399c38c1c729c000c77f726ce7"
+      },
+      "parent_hash": "70723980fce09fad9eb891385d274cc1c7a088dc82689cff95a64edad380cfe4",
+      "receipt_hash": "eb6bbf4220cb7286eeb2105bf06f190f440d11399c38c1c729c000c77f726ce7",
+      "status": "PROMOTE"
+    },
+    "receipt_hash": "eb6bbf4220cb7286eeb2105bf06f190f440d11399c38c1c729c000c77f726ce7"
+  }
+}

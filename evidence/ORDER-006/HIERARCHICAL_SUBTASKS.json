@@ -1,0 +1,109 @@
+{
+  "assignments": {
+    "core-agent_task-00-2e9d15fdca": "712199adeecfebd308bd91d1b1ef2e0d2c7402985af405bfca7bf4d8c03cd834",
+    "core-agent_task-01-a1aee4e21c": "eb0798aeebd32c8f4199f073aa3eda983bff1f6ed5542ed0d735286b6fbde6f6",
+    "core-agent_task-02-7b842a3bc4": "570bd101a1a4741cfa70ce39b215c164e8bf113a177c96bb77785a5ecd6c1049",
+    "core-agent_task-03-cf4f2ce60d": "fc3a823d4d24d705c6a611436fcbe3c97fd052bd3276da8b399c1f0b940ea763"
+  },
+  "morphology": "hierarchical_fanout_fanin",
+  "original_task_replayed_to_workers": false,
+  "pass": true,
+  "run_id": "9884e3fa-66c8-47cf-a239-87b1539d2382",
+  "subtasks": [
+    {
+      "dependency_group": "capability-0",
+      "evidence_scope": [
+        "price",
+        "users",
+        "price_period",
+        "claimed",
+        "claim_figure"
+      ],
+      "objective": "Evaluate the numeric subproblem using only its structured evidence scope; return a bounded claim.",
+      "parent_task_hash": "a1b5caf60aad85dfe65a68fc228f997a0e9d2fbe968b2ec6d1e08c5d3aa53fd2",
+      "required_capabilities": [
+        "numeric"
+      ],
+      "subtask_hash": "712199adeecfebd308bd91d1b1ef2e0d2c7402985af405bfca7bf4d8c03cd834",
+      "subtask_id": "subtask-00-3267b56a8886"
+    },
+    {
+      "dependency_group": "capability-1",
+      "evidence_scope": [
+        "evidence_date",
+        "as_of"
+      ],
+      "objective": "Evaluate the freshness subproblem using only its structured evidence scope; return a bounded claim.",
+      "parent_task_hash": "a1b5caf60aad85dfe65a68fc228f997a0e9d2fbe968b2ec6d1e08c5d3aa53fd2",
+      "required_capabilities": [
+        "freshness"
+      ],
+      "subtask_hash": "eb0798aeebd32c8f4199f073aa3eda983bff1f6ed5542ed0d735286b6fbde6f6",
+      "subtask_id": "subtask-01-5015f165948e"
+    },
+    {
+      "dependency_group": "capability-0",
+      "evidence_scope": [
+        "clusters",
+        "texts",
+        "evidence_spans"
+      ],
+      "objective": "Evaluate the source subproblem using only its structured evidence scope; return a bounded claim.",
+      "parent_task_hash": "a1b5caf60aad85dfe65a68fc228f997a0e9d2fbe968b2ec6d1e08c5d3aa53fd2",
+      "required_capabilities": [
+        "source"
+      ],
+      "subtask_hash": "570bd101a1a4741cfa70ce39b215c164e8bf113a177c96bb77785a5ecd6c1049",
+      "subtask_id": "subtask-02-22f6bf00206f"
+    },
+    {
+      "dependency_group": "capability-1",
+      "evidence_scope": [
+        "clusters",
+        "texts"
+      ],
+      "objective": "Evaluate the independence subproblem using only its structured evidence scope; return a bounded claim.",
+      "parent_task_hash": "a1b5caf60aad85dfe65a68fc228f997a0e9d2fbe968b2ec6d1e08c5d3aa53fd2",
+      "required_capabilities": [
+        "independence"
+      ],
+      "subtask_hash": "fc3a823d4d24d705c6a611436fcbe3c97fd052bd3276da8b399c1f0b940ea763",
+      "subtask_id": "subtask-03-298ee4a12d53"
+    },
+    {
+      "dependency_group": "capability-0",
+      "evidence_scope": [
+        "claim_figure",
+        "evidence_spans"
+      ],
+      "objective": "Evaluate the entailment subproblem using only its structured evidence scope; return a bounded claim.",
+      "parent_task_hash": "a1b5caf60aad85dfe65a68fc228f997a0e9d2fbe968b2ec6d1e08c5d3aa53fd2",
+      "required_capabilities": [
+        "entailment"
+      ],
+      "subtask_hash": "7623e5bf08cf99395670245b9f8b927457379b08273f95d6894ee2f89636b976",
+      "subtask_id": "subtask-04-8e397a9e5e4a"
+    },
+    {
+      "dependency_group": "capability-1",
+      "evidence_scope": [
+        "absence_key",
+        "registry",
+        "registry_snapshot_hash"
+      ],
+      "objective": "Evaluate the counterexample subproblem using only its structured evidence scope; return a bounded claim.",
+      "parent_task_hash": "a1b5caf60aad85dfe65a68fc228f997a0e9d2fbe968b2ec6d1e08c5d3aa53fd2",
+      "required_capabilities": [
+        "counterexample"
+      ],
+      "subtask_hash": "e5850511f06afe02587f8925566e120e0b8a7f900c08bb4edfbb6566a422dca2",
+      "subtask_id": "subtask-05-2a5e0ec0d632"
+    }
+  ],
+  "worker_tasks": [
+    "Evaluate the numeric subproblem using only its structured evidence scope; return a bounded claim.",
+    "Evaluate the freshness subproblem using only its structured evidence scope; return a bounded claim.",
+    "Evaluate the source subproblem using only its structured evidence scope; return a bounded claim.",
+    "Evaluate the independence subproblem using only its structured evidence scope; return a bounded claim."
+  ]
+}
