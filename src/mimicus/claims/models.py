@@ -42,5 +42,37 @@ class Claim(BaseModel):
     status: ClaimStatus = ClaimStatus.PROPOSED
 
     @property
+    def identity_material(self) -> dict[str, object]:
+        """Immutable sealed semantic/evidence anchor.
+
+        Probability, epistemic status and revision metadata are deliberately
+        excluded so a challenge cannot orphan falsifier/receipt lineage.
+        """
+        return {
+            "claim_id": self.claim_id,
+            "statement": self.statement,
+            "domain": self.domain,
+            "claim_type": self.claim_type,
+            "evidence_refs": tuple(sorted(set(self.evidence_refs))),
+            "units": self.units,
+            "as_of": self.as_of,
+        }
+
+    @property
+    def identity_hash(self) -> str:
+        return sha256_obj(self.identity_material)
+
+    @property
+    def revision_hash(self) -> str:
+        return sha256_obj(
+            {
+                "claim_identity_hash": self.identity_hash,
+                "probability": self.probability,
+                "status": self.status.value,
+            }
+        )
+
+    @property
     def hash(self) -> str:
-        return sha256_obj(self)
+        """Compatibility alias: all target lineage now uses stable identity."""
+        return self.identity_hash
