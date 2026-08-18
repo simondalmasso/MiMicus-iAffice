@@ -1,27 +1,144 @@
-name: ORDER-005 format bootstrap
+name: ORDER-005 exact-head CI
 
 on:
   pull_request:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
+
+env:
+  PYTHONUNBUFFERED: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
 
 jobs:
-  format:
-    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'order-002-mimicus-v01' }}
+  quality-tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: order-002-mimicus-v01
       - uses: actions/setup-python@v5
-        with: {python-version: '3.12'}
-      - run: python -m pip install ruff==0.16.3
-      - run: ruff format scripts/order005_evidence.py scripts/order005_mcp_e2e.py
+        with: {python-version: "3.12"}
+      - run: python -m pip install -r requirements.lock && python -m pip install --no-deps -e .
+      - run: python -m pip check
+      - run: ruff format --check .
+      - run: ruff check .
+      - run: mypy src/mimicus
+      - run: pytest tests/unit tests/integration --cov=mimicus --cov-report=term-missing --cov-fail-under=90
+
+  security-historical-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: python -m pip install -r requirements.lock && python -m pip install --no-deps -e .
+      - run: python scripts/check_security.py
+      - run: python scripts/check_ledger.py
+      - run: python -m mimicus.validation.order003_e2e "$RUNNER_TEMP/ORDER-003"
+      - run: python -m mimicus.validation.e2e "$RUNNER_TEMP/ORDER-002"
+
+  order005-runtime-mcp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: python -m pip install -r requirements.lock && python -m pip install --no-deps -e .
+      - run: pytest tests/unit/test_order005_correctness.py tests/integration/test_order005_runtime.py
+      - run: python scripts/order005_evidence.py "$RUNNER_TEMP/ORDER-005"
+      - env:
+          OPENAI_API_KEY: ""
+        run: python scripts/order005_mcp_e2e.py "$RUNNER_TEMP/ORDER-005"
       - run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add scripts/order005_evidence.py scripts/order005_mcp_e2e.py
-          git commit -m 'ORDER-005: format executable evidence scripts'
-          git push origin HEAD:order-002-mimicus-v01
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          root = Path(os.environ["RUNNER_TEMP"]) / "ORDER-005"
+          required = [
+              "NO_SYNTHETIC_RUNTIME_EVIDENCE.json",
+              "IDENTITY_FINGERPRINT_RECOMPUTE.json",
+              "PROVIDER_EVIDENCE_BINDING.json",
+              "SKILL_CONDITIONAL_AUTHORITY.json",
+              "PROVIDER_CAPABILITY_TRUTH.json",
+              "ONLINE_COST_PREFLIGHT.json",
+              "MCP_RUNTIME_EVIDENCE_E2E.json",
+              "EVIDENCE_RESTART_RESOLUTION.json",
+              "MCP_E2E.json",
+          ]
+          for name in required:
+              payload = json.loads((root / name).read_text())
+              assert payload["pass"] is True, name
+          print("ORDER005_RUNTIME_MCP_GATES=PASS")
+          PY
+
+  migration-package-capability:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: python -m pip install -r requirements.lock && python -m pip install --no-deps -e .
+      - name: SQLite clean and ORDER-002 upgrade plus PostgreSQL compile
+        run: |
+          export MIMICUS_DATABASE_URL="sqlite:///$RUNNER_TEMP/order005-clean.db"
+          mimicus db upgrade
+          export MIMICUS_DATABASE_URL="sqlite:///$RUNNER_TEMP/order005-from-order002.db"
+          alembic upgrade 0001_order002
+          alembic upgrade head
+          python -c "from mimicus.storage.postgres_compat import compile_postgres_schema; d=compile_postgres_schema(); assert len(d)>=19 and 'CREATE TABLE runs' in d['runs']; print('POSTGRESQL_SCHEMA_COMPILE=PASS')"
+      - run: python -m build
+      - run: |
+          python -m venv "$RUNNER_TEMP/order005-wheel"
+          "$RUNNER_TEMP/order005-wheel/bin/python" -m pip install -r requirements.lock
+          "$RUNNER_TEMP/order005-wheel/bin/python" -m pip install dist/*.whl
+          "$RUNNER_TEMP/order005-wheel/bin/mimicus" doctor --profile offline
+      - env:
+          MIMICUS_OPENAI_MODEL: gpt-5-mini
+          OPENAI_API_KEY: ""
+        run: mimicus doctor --profile openai
+
+  benchmark-200-evidence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: python -m pip install -r requirements.lock && python -m pip install --no-deps -e .
+      - run: mimicus benchmark --profile offline --episodes 200 --output-dir "$RUNNER_TEMP/benchmark"
+      - run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          report = json.loads((Path(os.environ["RUNNER_TEMP"]) / "benchmark" / "BENCHMARK.json").read_text())
+          assert report["episodes_per_architecture"] == 200
+          assert report["total_architecture_episodes"] == 1000
+          assert report["anti_rigging"]["passed"]
+          assert report["leakage_probe"]["passed"]
+          assert report["metrics"]["E"]["avg_simulated_cost"] > 0
+          print(report["morphology_distribution"])
+          PY
+      - name: Verify committed ORDER-005 evidence manifest and shape
+        run: |
+          test -s evidence/ORDER-005/MANIFEST.sha256
+          (cd evidence/ORDER-005 && sha256sum -c MANIFEST.sha256)
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path("evidence/ORDER-005")
+          required = [
+              "REMOTE_TRUTH.md", "AUD_FINDINGS_CLOSURE.md", "NO_SYNTHETIC_RUNTIME_EVIDENCE.json",
+              "IDENTITY_FINGERPRINT_RECOMPUTE.json", "PROVIDER_EVIDENCE_BINDING.json",
+              "SKILL_CONDITIONAL_AUTHORITY.json", "PROVIDER_CAPABILITY_TRUTH.json",
+              "ONLINE_COST_PREFLIGHT.json", "MCP_RUNTIME_EVIDENCE_E2E.json",
+              "EVIDENCE_RESTART_RESOLUTION.json", "BENCHMARK.json", "BENCHMARK_RAW.jsonl",
+              "BENCHMARK_ANTI_RIGGING.json", "BENCHMARK_LEAKAGE.json", "MCP_E2E.json",
+              "LEDGER_VERIFY.json", "TEST_RESULTS.txt", "OPENAI_LIVE_SMOKE.txt", "MANIFEST.sha256",
+          ]
+          assert not [name for name in required if not (root / name).is_file() or (root / name).stat().st_size == 0]
+          for name in ["NO_SYNTHETIC_RUNTIME_EVIDENCE.json", "IDENTITY_FINGERPRINT_RECOMPUTE.json", "PROVIDER_EVIDENCE_BINDING.json", "SKILL_CONDITIONAL_AUTHORITY.json", "PROVIDER_CAPABILITY_TRUTH.json", "ONLINE_COST_PREFLIGHT.json", "MCP_RUNTIME_EVIDENCE_E2E.json", "EVIDENCE_RESTART_RESOLUTION.json", "MCP_E2E.json"]:
+              assert json.loads((root / name).read_text())["pass"] is True, name
+          committed = json.loads((root / "BENCHMARK.json").read_text())
+          assert committed["episodes_per_architecture"] == 200 and committed["total_architecture_episodes"] == 1000
+          assert committed["anti_rigging"]["passed"] and committed["leakage_probe"]["passed"]
+          print("ORDER005_COMMITTED_EVIDENCE=PASS")
+          PY
