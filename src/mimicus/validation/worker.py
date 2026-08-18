@@ -269,6 +269,14 @@ async def _mcp_call(url: str) -> dict[str, Any]:
                     {
                         "task": "K3 TAM 12x mismatch",
                         "domain": "finance",
+                        "evidence": [
+                            {
+                                "origin": "mcp://order003-tam",
+                                "independence_cluster": "order003-fixture",
+                                "content": "Explicit historical TAM evidence",
+                                "extracted_facts": {"price": 10.0, "users": 100.0, "price_period": "monthly", "claimed": 1000.0},
+                            }
+                        ],
                         "budget_usd": 0.0,
                         "max_agents": 4,
                         "depth": "normal",
