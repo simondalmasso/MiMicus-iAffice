@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import ConfigDict, Field
+from pydantic import ConfigDict, Field, model_validator
 
 from mimicus.orchestration.legacy_engine import (
     MiMicusEngine as LegacyMiMicusEngine,
@@ -28,7 +28,16 @@ from mimicus.verification.service import submit_verification
 
 class RunRequest(LegacyRunRequest):
     model_config = ConfigDict(extra="forbid")
+    # Compatibility marker only. It cannot disable accepted semantics in runtime.
     core_semantics: bool | None = None
+
+    @model_validator(mode="after")
+    def normal_runtime_is_core_locked(self) -> RunRequest:
+        if self.source_mode == "runtime" and self.core_semantics is False:
+            raise ValueError("normal runtime cannot disable swarm-core semantics")
+        if self.source_mode == "runtime" and self.fixture:
+            raise ValueError("fixture material is not accepted in normal runtime; use explicit source_mode=fixture compatibility lane")
+        return self
 
 
 class RunResult(LegacyRunResult):
@@ -36,20 +45,37 @@ class RunResult(LegacyRunResult):
     swarm_decision: dict[str, Any] = Field(default_factory=dict)
     subtasks: list[dict[str, Any]] = Field(default_factory=list)
     threat_profile: dict[str, Any] = Field(default_factory=dict)
+    hierarchy_execution: dict[str, Any] = Field(default_factory=dict)
 
 
 class MiMicusEngine(LegacyMiMicusEngine):
     async def run_async(self, request: LegacyRunRequest) -> RunResult:
         core_request = request if isinstance(request, RunRequest) else RunRequest.model_validate(request.model_dump(mode="json"))
-        use_core = (
-            core_request.core_semantics
-            if core_request.core_semantics is not None
-            else core_request.source_mode == "benchmark" or (core_request.source_mode == "runtime" and not core_request.fixture)
-        )
-        if use_core:
+        if core_request.source_mode != "fixture":
             return RunResult.model_validate(await execute_swarm_core(self, core_request))
-        legacy = await super().run_async(request)
+        # Explicit compatibility lane only; MCP and normal CLI do not expose it.
+        legacy_request = LegacyRunRequest.model_validate(core_request.model_dump(mode="json", exclude={"core_semantics"}))
+        legacy = await super().run_async(legacy_request)
         return RunResult.model_validate(legacy.model_dump(mode="json"))
+
+    def register_verifier_authority(
+        self,
+        *,
+        verifier_id: str,
+        authority_class: str,
+        source_independence_cluster: str,
+        auth_token: str,
+        verification_method: str = "run_bound_token",
+    ) -> dict[str, Any]:
+        """Administrative/internal trust provisioning; intentionally not MCP/CLI-exposed."""
+        store = SwarmStateStore(self.repository.engine)
+        return store.register_verifier_authority(
+            verifier_id=verifier_id,
+            authority_class=authority_class,
+            source_cluster=source_independence_cluster,
+            verification_method=verification_method,
+            auth_token=auth_token,
+        )
 
     def submit_verification(self, submission: VerificationSubmission | dict[str, Any]) -> dict[str, Any]:
         parsed = submission if isinstance(submission, VerificationSubmission) else VerificationSubmission.model_validate(submission)
