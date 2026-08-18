@@ -1,0 +1,15 @@
+{
+  "claim_evidence_refs": [
+    "e2e71ba00d2239f9b0de407de4e71293f18535193e33e6be32a7b5838e625ce9"
+  ],
+  "pass": true,
+  "provider_input_evidence_hashes": [
+    "e2e71ba00d2239f9b0de407de4e71293f18535193e33e6be32a7b5838e625ce9",
+    "efe9daca9c9f8d9401470edf94e59193e334645e731f24d11f412e7df78b44a9"
+  ],
+  "replay_verified": true,
+  "resolved_after_restart": [
+    "e2e71ba00d2239f9b0de407de4e71293f18535193e33e6be32a7b5838e625ce9"
+  ],
+  "run_id": "cfd49d12-8814-483a-acbf-00b7cd672cb8"
+}

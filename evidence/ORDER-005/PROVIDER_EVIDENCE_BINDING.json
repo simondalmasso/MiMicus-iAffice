@@ -1,0 +1,20 @@
+{
+  "base_evidence_auto_attach": false,
+  "claimed": [
+    "e2e71ba00d2239f9b0de407de4e71293f18535193e33e6be32a7b5838e625ce9",
+    "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+  ],
+  "pass": true,
+  "provider_calls": 1,
+  "rejected": [
+    "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+  ],
+  "supplied": [
+    "e2e71ba00d2239f9b0de407de4e71293f18535193e33e6be32a7b5838e625ce9",
+    "efe9daca9c9f8d9401470edf94e59193e334645e731f24d11f412e7df78b44a9"
+  ],
+  "unknown_reference_rejected": true,
+  "validated": [
+    "e2e71ba00d2239f9b0de407de4e71293f18535193e33e6be32a7b5838e625ce9"
+  ]
+}

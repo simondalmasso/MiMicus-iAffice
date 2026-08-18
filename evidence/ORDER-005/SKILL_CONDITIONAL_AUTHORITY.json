@@ -1,0 +1,20 @@
+{
+  "domain_aggregate_grants_positive_authority": false,
+  "fingerprint": "f27f47eaa60e9d68135a3a29a5a5736f7dc941cae72634506d7e9c350d20ae3f",
+  "freshness_authority": {
+    "audition_score": 1.0,
+    "calibration_score": 1.0,
+    "direct_trust": 1.0,
+    "state": "ACTIVE"
+  },
+  "freshness_state": "ACTIVE",
+  "independence_authority": {
+    "audition_score": 0.0,
+    "calibration_score": 0.0,
+    "direct_trust": 0.0,
+    "state": "BANKRUPT"
+  },
+  "independence_state": "BANKRUPT",
+  "pass": true,
+  "restart_preserved": true
+}

@@ -1,0 +1,24 @@
+{
+  "blocked_memory_id": "dc12165c-4307-49a2-9eef-f9651c32b1f7",
+  "blocked_memory_reused": false,
+  "fixture_flags_exposed": false,
+  "openai_key_required": false,
+  "pass": true,
+  "path": "/mcp",
+  "restart_evidence_resolved": true,
+  "restart_replay_verified": true,
+  "server_process_restarted": true,
+  "transport": "streamable-http",
+  "with_evidence": {
+    "provider_input_evidence_hashes": [
+      "67ad9d9c253c2123a2d074ed507cdc37b62db1f3b26a5ebfc01fb6829cbc301b"
+    ],
+    "run_id": "8f349ff9-e06a-42c5-a9a4-beae33480913",
+    "status": "answered"
+  },
+  "words_only": {
+    "provider_input_evidence_hashes": [],
+    "run_id": "638415fd-4d7c-4845-92f9-98b401ffaa01",
+    "status": "inconclusive"
+  }
+}
