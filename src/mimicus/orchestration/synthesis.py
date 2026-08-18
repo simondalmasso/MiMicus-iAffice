@@ -55,11 +55,11 @@ def synthesize_swarm(
         falsified = any(row.verdict == Verdict.FAIL for row in linked)
         passed = bool(linked) and all(row.verdict == Verdict.PASS for row in linked)
         local_status = "FALSIFIED" if falsified else ("SUPPORTED" if passed else "INCONCLUSIVE")
+        # Select candidate content from calibrated authority/probability/evidence.
+        # Deterministic verification is applied to the selected content as its
+        # epistemic status rather than silently causing a falsified claim to
+        # disappear from the user-facing decision.
         score = 0.50 * max(0.0, min(1.0, authority)) + 0.35 * claim.probability + 0.05 * min(2, len(claim.evidence_refs))
-        if local_status == "SUPPORTED":
-            score += 0.10
-        if local_status == "FALSIFIED":
-            score -= 0.35
         ranked.append((score, fingerprint, claim, local_status))
     ranked.sort(key=lambda row: (-row[0], row[2].hash))
     best = ranked[0]
