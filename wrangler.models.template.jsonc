@@ -1,0 +1,10 @@
+{
+  "name": "aria-models",
+  "main": "apps/model-worker/src/index.ts",
+  "compatibility_date": "2026-08-19",
+  "workers_dev": false,
+  "minify": true,
+  "ai": { "binding": "AI" },
+  "vars": { "ARIA_GIT_SHA": "__ARIA_GIT_SHA__" },
+  "observability": { "enabled": true }
+}

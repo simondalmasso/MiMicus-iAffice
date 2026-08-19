@@ -1,15 +1,13 @@
 # Architecture
 
-AriaOS is a Cloudflare-native, event-driven business control plane with a strict physical effect boundary.
+AriaOS has three physically separated Cloudflare capability domains.
 
-`aria-core` owns ingress, deterministic projections, agents, model routing, AUD, policy, approvals, cockpit API, scheduling and canonical D1 memory. It has Workers AI, Queues, Workflows, a SQLite-backed Durable Object coordinator, static cockpit assets and a private Service Binding named `EFFECTS`. It has no external write credentials.
+`aria-core` owns ingress, D1 canonical memory, agents, deterministic business/compute routing, PolicyEngine, AUD, approvals, Workflows, Queues, cockpit, Coordinator and ComputeGovernor Durable Objects. It has neither business-write authority nor direct model-provider execution authority.
 
-`aria-effects` is a separate Worker with `workers_dev=false` and no public route. It has no Workers AI, planner, agent roles, Workflow or Durable Object bindings. It accepts only typed `ActionIntent` execution through the Service Binding, revalidates action digest, canonical signed approval, policy/approval version, expiry and precondition witness, then calls a small allowlisted effect adapter. Side-effecting vendor calls exist only under `packages/effects` / `apps/effects-worker`.
+`aria-effects` remains the private ORDER-002+A1 business-effect kernel. It alone can execute validated business ActionIntents. It has no model execution role.
 
-Canonical path:
+`aria-models` is the private inference gateway. It accepts typed `InferenceExecution` messages through a Service Binding and uses a fixed internal provider manifest. Callers cannot supply arbitrary provider base URLs. It has no business-effect adapters, approval authority, planner role, or binding to `aria-effects`.
 
-`INPUT → SQL/RULES/AGENTS → CLAIM/DECISION → ActionIntent → PolicyEngine → AUD as required → digest-bound approval → D1 atomic state+outbox batch → aria-effects → idempotent effect → effect_receipt/result event → ledger/replay`.
+Business writes preserve `ActionIntent → D1 outbox → aria-effects`. Model calls follow `classification/policy → durable free-capacity reservation → route decision → typed inference → aria-models → receipt → quota reconciliation`. Model completion never expands A1 effect authority.
 
-D1 is the system of record. `action_intents` and `effect_receipts` are durable outbox/receipt tables. If dispatch, Queue or a Free quota fails, the committed intent remains `PENDING/RETRYABLE`; core never bypasses the gateway. D1 `batch()` is used for the state+intent transaction.
-
-Required read connectors remain isolated from authority: authenticated webhook ingest, allowlisted REST reads, GitHub reads, Notion mirror planning, CSV import/export and optional Swarm delegation. Notion/GitHub writes are effect adapters only. The reference SafeOutbound effect is idempotent and never contacts a real customer.
+Migration `0002_compute_market.sql` stores provider/model/evidence/health/quota/reservation/route/call/benchmark/incident state. `ComputeGovernorDO` serializes shared reservations. Existing `business_tick` reclaims expired reservations; ORDER-003 adds no cron.

@@ -5,11 +5,12 @@ node_modules/
 .dev.vars
 .env
 .env.*
+!.env.example
 playwright-report/
 test-results/
 ariaos-local.db
-
 .aria/
 wrangler.generated.jsonc
 wrangler.core.generated.jsonc
 wrangler.effects.generated.jsonc
+wrangler.models.generated.jsonc

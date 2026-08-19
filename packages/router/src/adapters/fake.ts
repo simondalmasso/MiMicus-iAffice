@@ -1,0 +1,2 @@
+import type { ModelProvider, ModelProviderResult } from "../modelRouter.js";
+export class FakeModelProvider implements ModelProvider{async run(modelId:string,prompt:string,maxOutputTokens=256):Promise<ModelProviderResult>{const normalized=prompt.replace(/\s+/g," ").trim();const text=`FAKE:${modelId}:${normalized.slice(0,Math.min(120,maxOutputTokens*4))}`;return{text,inputTokens:Math.ceil(normalized.length/4),outputTokens:24,latencyMs:1,finishReason:"stop",quotaHeaders:{},usageUnits:Math.ceil(normalized.length/4)+24};}}

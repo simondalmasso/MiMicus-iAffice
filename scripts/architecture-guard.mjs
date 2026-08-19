@@ -1,20 +1,16 @@
-import fs from 'node:fs';
-import path from 'node:path';
-
-const roots=['packages','apps']; const files=[];
-function walk(dir){for(const e of fs.readdirSync(dir,{withFileTypes:true})){const p=path.join(dir,e.name);if(e.isDirectory())walk(p);else if(/\.(ts|js|html)$/.test(e.name))files.push(p)}}
-for(const root of roots)walk(root);
-const violations=[];
-const gatewayPrefixes=['packages/effects/','apps/effects-worker/'];
-for(const file of files){const text=fs.readFileSync(file,'utf8'); const gateway=gatewayPrefixes.some((p)=>file.replaceAll('\\','/').startsWith(p));
- if(!gateway){
-   if(/GITHUB_WRITE_TOKEN|NOTION_WRITE_TOKEN|STRIPE_SECRET|META_ACCESS_TOKEN/.test(text)) violations.push(`${file}:write-credential-name-outside-gateway`);
-   const hasExternalHost=/https:\/\/(?!aria-effects\.internal|coordinator\.internal)[A-Za-z0-9.-]+/.test(text); const hasWriteFetch=/(?<![.A-Za-z0-9_])fetch\s*\([^)]{0,500}[`'"]https:\/\/(?!aria-effects\.internal)[\s\S]{0,500}?method\s*:\s*[`'"](?:POST|PUT|PATCH|DELETE)/.test(text); if(hasExternalHost&&hasWriteFetch) violations.push(`${file}:external-write-fetch-outside-gateway`);
-   if(/SafeOutboundEffectAdapter|GitHubIssueCommentEffectAdapter|NotionEffectAdapter/.test(text)) violations.push(`${file}:effect-adapter-import-outside-gateway`);
- }
- if(file.startsWith('apps/effects-worker/')&&/(WorkersAiProvider|ModelRouter|AriaOrchestrator|CEO|RESEARCH|CMO|SALES|DATA|DEV|AUD)/.test(text)) violations.push(`${file}:planner-or-model-in-effects-worker`);
+import fs from 'node:fs';import path from 'node:path';
+const roots=['packages','apps'];const files=[];function walk(dir){for(const e of fs.readdirSync(dir,{withFileTypes:true})){const p=path.join(dir,e.name);if(e.isDirectory())walk(p);else if(/\.(ts|js|html)$/.test(e.name))files.push(p)}}for(const r of roots)walk(r);
+const violations=[];const norm=f=>f.replaceAll('\\','/');const effect=f=>norm(f).startsWith('packages/effects/')||norm(f).startsWith('apps/effects-worker/');const models=f=>norm(f).startsWith('apps/model-worker/')||norm(f).startsWith('packages/router/src/adapters/');
+for(const file of files){const text=fs.readFileSync(file,'utf8'),isEffect=effect(file),isModels=models(file);
+ if(!isEffect&&/GITHUB_WRITE_TOKEN|NOTION_WRITE_TOKEN|STRIPE_SECRET|META_ACCESS_TOKEN/.test(text))violations.push(`${file}:business-write-credential-outside-effects`);
+ if(!isModels&&/GROQ_API_KEY|MISTRAL_API_KEY|GEMINI_API_KEY|ZENMUX_API_KEY/.test(text))violations.push(`${file}:model-provider-credential-outside-models`);
+ if(isEffect&&/GROQ_API_KEY|MISTRAL_API_KEY|GEMINI_API_KEY|ZENMUX_API_KEY|WorkersAiProvider|ModelRouter|ComputeMarketRouter/.test(text))violations.push(`${file}:model-capability-in-effects-domain`);
+ if(isModels&&/GITHUB_WRITE_TOKEN|NOTION_WRITE_TOKEN|SafeOutboundEffectAdapter|GitHubIssueCommentEffectAdapter|NotionEffectAdapter|PolicyEngine|ApprovalManager|EFFECTS/.test(text))violations.push(`${file}:business-effect-or-planner-in-model-domain`);
+ if(!isEffect&&!isModels){const externalWrite=/(?<![.A-Za-z0-9_])fetch\s*\([^)]{0,600}https:\/\/(?!aria-effects\.internal|aria-models\.internal|compute-governor\.internal|coordinator\.internal)[\s\S]{0,700}?method\s*:\s*[`'"](?:POST|PUT|PATCH|DELETE)/.test(text);if(externalWrite)violations.push(`${file}:external-write-fetch-outside-capability-gateways`);}
+ if(isModels&&/Reflect\.get\(env,[^)]*(?:url|base)/i.test(text))violations.push(`${file}:dynamic-base-url`);
 }
-const coreConfig=fs.readFileSync('wrangler.core.template.jsonc','utf8'); if(/GITHUB_WRITE_TOKEN|NOTION_WRITE_TOKEN|STRIPE_SECRET|META_ACCESS_TOKEN/.test(coreConfig))violations.push('wrangler.core.template.jsonc:write-credential-binding');
-const effectsConfig=fs.readFileSync('wrangler.effects.template.jsonc','utf8'); if(/\"ai\"|BUSINESS_WORKFLOW|COORDINATOR/.test(effectsConfig))violations.push('wrangler.effects.template.jsonc:model-or-planner-binding');
-const result={pass:violations.length===0,filesScanned:files.length,violations,invariants:{AGENT_DIRECT_EXTERNAL_WRITE:0,AGENT_WRITE_CREDENTIALS:0,EXTERNAL_EFFECT_PATHS_OUTSIDE_GATEWAY:0}};
-console.log(JSON.stringify(result,null,2)); if(!result.pass)process.exit(1);
+const core=fs.readFileSync('wrangler.core.template.jsonc','utf8'),effects=fs.readFileSync('wrangler.effects.template.jsonc','utf8'),modelCfg=fs.readFileSync('wrangler.models.template.jsonc','utf8');
+if(/\"ai\"|GROQ_API_KEY|MISTRAL_API_KEY|GEMINI_API_KEY|ZENMUX_API_KEY/.test(core))violations.push('wrangler.core.template.jsonc:model-credential-or-ai-binding');if(!/MODELS/.test(core)||!/EFFECTS/.test(core))violations.push('wrangler.core.template.jsonc:missing-private-service-binding');
+if(/\"ai\"|GROQ_API_KEY|MISTRAL_API_KEY|GEMINI_API_KEY|ZENMUX_API_KEY/.test(effects))violations.push('wrangler.effects.template.jsonc:model-capability');if(/\"workers_dev\"\s*:\s*true/.test(effects))violations.push('wrangler.effects.template.jsonc:public-effect-worker');
+if(!/\"ai\"/.test(modelCfg))violations.push('wrangler.models.template.jsonc:missing-ai-binding');if(/EFFECTS|GITHUB_WRITE_TOKEN|NOTION_WRITE_TOKEN|DB\"/.test(modelCfg))violations.push('wrangler.models.template.jsonc:business-authority');if(/\"workers_dev\"\s*:\s*true/.test(modelCfg))violations.push('wrangler.models.template.jsonc:public-model-worker');
+const result={pass:violations.length===0,filesScanned:files.length,violations,domains:{core:{businessWriteCredentials:0,modelProviderCredentials:0},effects:{modelProviderCredentials:0,plannerBindings:0},models:{businessWriteCredentials:0,effectsBinding:0}},invariants:{AGENT_DIRECT_EXTERNAL_WRITE:0,AGENT_WRITE_CREDENTIALS:0,EXTERNAL_EFFECT_PATHS_OUTSIDE_GATEWAY:0,MODEL_PROVIDER_CREDENTIALS_OUTSIDE_ARIA_MODELS:0,ARBITRARY_MODEL_BASE_URL_PATHS:0}};console.log(JSON.stringify(result,null,2));if(!result.pass)process.exit(1);

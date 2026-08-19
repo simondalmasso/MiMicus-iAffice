@@ -1,101 +1,37 @@
 import { sha256, stableId } from "../../core/src/hash.js";
 import type { AgentRole, ModelCallRecord, ModelTier } from "../../core/src/types.js";
 import { BudgetGovernor } from "./budgetGovernor.js";
+import type { ComputeCallResult, ComputeModelRecord, ComputeRequest, ComputeRouteDecision, InferenceExecution, InferenceReceipt, ProviderEvidenceRecord, RouteReasonCode } from "./computeTypes.js";
+import { ProviderRegistry } from "./providerRegistry.js";
+import { billingSafetyGate, capabilityReasons, deterministicDataClass, estimateTokens, privacyReasons, redactModelSecrets } from "./computePolicy.js";
+import type { ComputeGovernor } from "./computeGovernor.js";
+import { ProviderHealthManager } from "./providerHealth.js";
+import { BenchmarkRegistry } from "./providerBenchmarks.js";
+import { scoreRoute } from "./routeScorer.js";
+export { FakeModelProvider } from "./adapters/fake.js";
+export { WorkersAiProvider } from "./adapters/workersAi.js";
 
-export const FREE_MODEL_ALLOWLIST = [
-  "@cf/zai-org/glm-4.7-flash",
-  "@cf/qwen/qwen3-30b-a3b-fp8",
-  "@cf/openai/gpt-oss-20b",
-  "@cf/openai/gpt-oss-120b",
-  "@cf/nvidia/nemotron-3-120b-a12b"
-] as const;
-
-export const PAID_MODEL_DENYLIST = [
-  "@cf/zai-org/glm-5.2",
-  "@cf/moonshotai/kimi-k2.6",
-  "@cf/moonshotai/kimi-k2.7-code"
-] as const;
-
-export interface ModelRequest {
-  role: AgentRole;
-  taskId: string;
-  tier: ModelTier;
-  prompt: string;
-  reason: string;
-  critical?: boolean;
-}
-
-export interface ModelProviderResult { text: string; inputTokens: number; outputTokens: number; latencyMs: number; }
-export interface ModelProvider { run(modelId: string, prompt: string): Promise<ModelProviderResult>; }
-
-export class FakeModelProvider implements ModelProvider {
-  async run(modelId: string, prompt: string): Promise<ModelProviderResult> {
-    const normalized = prompt.replace(/\s+/g, " ").trim();
-    return { text: `FAKE:${modelId}:${normalized.slice(0, 120)}`, inputTokens: Math.ceil(normalized.length / 4), outputTokens: 24, latencyMs: 1 };
-  }
-}
-
-export interface WorkersAiBinding { run(model: string, input: Record<string, unknown>): Promise<unknown>; }
-export class WorkersAiProvider implements ModelProvider {
-  constructor(private readonly ai: WorkersAiBinding) {}
-  async run(modelId: string, prompt: string): Promise<ModelProviderResult> {
-    const started = Date.now();
-    try {
-      const raw = await this.ai.run(modelId, { prompt, max_tokens: 256, temperature: 0 });
-      const obj = raw as Record<string, unknown>;
-      const response = String(obj.response ?? obj.result ?? JSON.stringify(raw));
-      const usage = (obj.usage ?? {}) as Record<string, unknown>;
-      return {
-        text: response,
-        inputTokens: Number(usage.prompt_tokens ?? usage.input_tokens ?? Math.ceil(prompt.length / 4)),
-        outputTokens: Number(usage.completion_tokens ?? usage.output_tokens ?? Math.ceil(response.length / 4)),
-        latencyMs: Date.now() - started
-      };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (/3036|free allocation|quota|429/i.test(message)) throw new Error("FREE_QUOTA_EXHAUSTED");
-      if (/5035|paid plan|403/i.test(message)) throw new Error("PAID_MODEL_FORBIDDEN_OR_ACCOUNT_DENIED");
-      throw error;
-    }
-  }
-}
-
-const neuronsPerMillion: Record<string, { input: number; output: number }> = {
-  "@cf/qwen/qwen3-30b-a3b-fp8": { input: 4625, output: 30475 },
-  "@cf/openai/gpt-oss-20b": { input: 18182, output: 27273 },
-  "@cf/openai/gpt-oss-120b": { input: 31818, output: 68182 },
-  "@cf/zai-org/glm-4.7-flash": { input: 5500, output: 36364 },
-  "@cf/nvidia/nemotron-3-120b-a12b": { input: 32000, output: 65000 }
-};
-
-export class ModelRouter {
-  constructor(private readonly provider: ModelProvider, private readonly budget: BudgetGovernor) {}
-
-  select(tier: ModelTier, role: AgentRole): string {
-    if (tier === "T0") return "NO_MODEL";
-    if (tier === "T4") throw new Error("EXTERNAL_PROVIDER_DISABLED_BY_DEFAULT");
-    if (tier === "T1") return "@cf/zai-org/glm-4.7-flash";
-    if (tier === "T2") return role === "DEV" ? "@cf/openai/gpt-oss-20b" : "@cf/qwen/qwen3-30b-a3b-fp8";
-    return role === "DEV" ? "@cf/nvidia/nemotron-3-120b-a12b" : "@cf/openai/gpt-oss-120b";
-  }
-
-  async run(request: ModelRequest): Promise<{ text: string; record: ModelCallRecord }> {
-    if (request.tier === "T0") throw new Error("T0_MUST_NOT_CALL_MODEL");
-    const modelId = this.select(request.tier, request.role);
-    if ((PAID_MODEL_DENYLIST as readonly string[]).includes(modelId)) throw new Error("PAID_MODEL_DENIED");
-    if (!(FREE_MODEL_ALLOWLIST as readonly string[]).includes(modelId)) throw new Error("MODEL_NOT_FREE_ALLOWLISTED");
-    if (this.budget.state("ai_neurons") === "HARD_CAP") throw new Error("FREE_QUOTA_HARD_CAP:ai_neurons");
-    const result = await this.provider.run(modelId, request.prompt);
-    const rate = neuronsPerMillion[modelId] ?? { input: 50_000, output: 100_000 };
-    const estimatedNeurons = (result.inputTokens * rate.input + result.outputTokens * rate.output) / 1_000_000;
-    const quotaState = this.budget.consume("ai_neurons", estimatedNeurons, request.critical === true);
-    const textHash = await sha256(result.text);
-    const record: ModelCallRecord = {
-      id: await stableId("model", { taskId: request.taskId, modelId, textHash }), role: request.role, taskId: request.taskId,
-      modelId, tier: request.tier, inputTokens: result.inputTokens, outputTokens: result.outputTokens, estimatedNeurons,
-      latencyMs: result.latencyMs, reasonSelected: request.reason, resultHash: textHash,
-      quotaState: quotaState === "OK" ? "OK" : quotaState
-    };
-    return { text: result.text, record };
-  }
+export const FREE_MODEL_ALLOWLIST=["@cf/zai-org/glm-4.7-flash","@cf/qwen/qwen3-30b-a3b-fp8","@cf/openai/gpt-oss-20b","@cf/openai/gpt-oss-120b","@cf/nvidia/nemotron-3-120b-a12b"] as const;
+export const PAID_MODEL_DENYLIST=["@cf/zai-org/glm-5.2","@cf/moonshotai/kimi-k2.6","@cf/moonshotai/kimi-k2.7-code"] as const;
+export interface ModelRequest{role:AgentRole;taskId:string;tier:ModelTier;prompt:string;reason:string;critical?:boolean;}
+export interface ModelProviderResult{text:string;inputTokens:number;outputTokens:number;latencyMs:number;finishReason?:string;providerRequestId?:string;quotaHeaders?:Record<string,number|string>;usageUnits?:number;}
+export interface ModelProvider{run(modelId:string,prompt:string,maxOutputTokens?:number):Promise<ModelProviderResult>;}
+export interface WorkersAiBinding{run(model:string,input:Record<string,unknown>):Promise<unknown>;}
+class LegacyFakeProvider implements ModelProvider{async run(modelId:string,prompt:string):Promise<ModelProviderResult>{const normalized=prompt.replace(/\s+/g," ").trim();return{text:`FAKE:${modelId}:${normalized.slice(0,120)}`,inputTokens:Math.ceil(normalized.length/4),outputTokens:24,latencyMs:1};}}
+const neuronsPerMillion:Record<string,{input:number;output:number}>={"@cf/qwen/qwen3-30b-a3b-fp8":{input:4625,output:30475},"@cf/openai/gpt-oss-20b":{input:18182,output:27273},"@cf/openai/gpt-oss-120b":{input:31818,output:68182},"@cf/zai-org/glm-4.7-flash":{input:5500,output:36364},"@cf/nvidia/nemotron-3-120b-a12b":{input:32000,output:65000}};
+export class ModelRouter{constructor(private readonly provider:ModelProvider=new LegacyFakeProvider(),private readonly budget:BudgetGovernor=new BudgetGovernor()){}select(tier:ModelTier,role:AgentRole):string{if(tier==="T0")return"NO_MODEL";if(tier==="T4")throw new Error("EXTERNAL_PROVIDER_DISABLED_BY_DEFAULT");if(tier==="T1")return"@cf/zai-org/glm-4.7-flash";if(tier==="T2")return role==="DEV"?"@cf/openai/gpt-oss-20b":"@cf/qwen/qwen3-30b-a3b-fp8";return role==="DEV"?"@cf/nvidia/nemotron-3-120b-a12b":"@cf/openai/gpt-oss-120b";}async run(request:ModelRequest):Promise<{text:string;record:ModelCallRecord}>{if(request.tier==="T0")throw new Error("T0_MUST_NOT_CALL_MODEL");const modelId=this.select(request.tier,request.role);if((PAID_MODEL_DENYLIST as readonly string[]).includes(modelId))throw new Error("PAID_MODEL_DENIED");if(!(FREE_MODEL_ALLOWLIST as readonly string[]).includes(modelId))throw new Error("MODEL_NOT_FREE_ALLOWLISTED");if(this.budget.state("ai_neurons")==="HARD_CAP")throw new Error("FREE_QUOTA_HARD_CAP:ai_neurons");const result=await this.provider.run(modelId,request.prompt),rate=neuronsPerMillion[modelId]??{input:50000,output:100000},estimatedNeurons=(result.inputTokens*rate.input+result.outputTokens*rate.output)/1_000_000,quotaState=this.budget.consume("ai_neurons",estimatedNeurons,request.critical===true),textHash=await sha256(result.text);const record:ModelCallRecord={id:await stableId("model",{taskId:request.taskId,modelId,textHash}),role:request.role,taskId:request.taskId,modelId,tier:request.tier,inputTokens:result.inputTokens,outputTokens:result.outputTokens,estimatedNeurons,latencyMs:result.latencyMs,reasonSelected:request.reason,resultHash:textHash,quotaState:quotaState==="OK"?"OK":quotaState};return{text:result.text,record};}}
+export interface ModelGateway{execute(execution:InferenceExecution):Promise<{text:string;receipt:InferenceReceipt}>;}
+const billingReason:Record<string,RouteReasonCode|undefined>={DENY_PRICE_NONZERO:"PRICE_NONZERO",DENY_PRICE_UNKNOWN:"PRICE_UNKNOWN",DENY_BILLING_UNKNOWN:"BILLING_UNSAFE",DENY_OVERAGE_POSSIBLE:"BILLING_UNSAFE",DENY_GRANT_EXHAUSTED:"GRANT_EXHAUSTED",DENY_EVIDENCE_STALE:"FREE_EVIDENCE_STALE"};
+function healthUnsafe(state:string):RouteReasonCode|undefined{if(state==="AUTH_FAILED")return"AUTH_FAILED";if(state==="BILLING_RISK")return"BILLING_RISK";if(["MODEL_MISSING","DISABLED"].includes(state))return"MODEL_MISSING";if(["OUTAGE","QUOTA_EXHAUSTED"].includes(state))return"HEALTH_CIRCUIT_OPEN";return undefined;}
+function worstCaseUnits(_model:ComputeModelRecord,input:number,output:number):number{return Math.max(1,input+output);}
+export class ComputeMarketRouter{
+ private decisions=new Map<string,ComputeRouteDecision>();
+ constructor(private readonly registry:ProviderRegistry,private readonly evidence:ProviderEvidenceRecord[],private readonly governor:ComputeGovernor,private readonly health:ProviderHealthManager,private readonly benchmarks:BenchmarkRegistry,private readonly gateway:ModelGateway){}
+ async route(request:ComputeRequest,now:string,excluded=new Set<string>()):Promise<{route:ComputeRouteDecision;reservation:import("./computeTypes.js").ComputeReservation}>{const classified=deterministicDataClass({declared:request.dataClass,pii:request.pii,prompt:request.prompt});if(classified.dataClass==="SECRET")throw new Error("SECRET_DATA_MODEL_DENIED");const safeRequest:ComputeRequest={...request,dataClass:classified.dataClass,prompt:redactModelSecrets(request.prompt)};this.registry.refreshStates(now);const candidates:ComputeRouteDecision["candidates"]=[];
+  for(const model of this.registry.listModels()){const provider=this.registry.getProvider(model.providerId);if(!provider)continue;const key=`${provider.providerId}:${model.modelId}`,reasons:RouteReasonCode[]=[];if(excluded.has(key))reasons.push("HEALTH_CIRCUIT_OPEN");if(!provider.enabled||!provider.productionEligible)reasons.push(provider.routeState==="STALE_EVIDENCE"?"FREE_EVIDENCE_STALE":"PROVIDER_DISABLED");if(!model.enabled||model.routeState!=="ACTIVE")reasons.push(model.routeState==="STALE_EVIDENCE"?"FREE_EVIDENCE_STALE":"MODEL_DISABLED");const billingOutcome=billingSafetyGate(provider,this.evidence,now),bReason=billingReason[billingOutcome];if(bReason)reasons.push(bReason);reasons.push(...privacyReasons(safeRequest,provider,model),...capabilityReasons(safeRequest,model));const hs=this.health.get(provider.providerId,model.modelId),hReason=healthUnsafe(hs.state);if(hReason)reasons.push(hReason);const benchmark=this.benchmarks.get(provider.providerId,model.modelId,safeRequest.taskClass);if(!benchmark?.qualified)reasons.push("QUALITY_THRESHOLD_FAILED");const pool=await this.governor.pool(model.freePoolId);let headroom=0;if(!pool||pool.verifiedFreeCeiling===null)reasons.push("QUOTA_UNAVAILABLE");else{const usable=pool.verifiedFreeCeiling*pool.localHardFraction;headroom=Math.max(0,(usable-pool.consumed-pool.reserved)/Math.max(1,usable));if(headroom<=0)reasons.push("QUOTA_UNAVAILABLE");}const unique=[...new Set(reasons)];let score:number|null=null;if(unique.length===0&&benchmark)score=scoreRoute({benchmark,health:hs,quotaHeadroom:headroom,providerDiversity:provider.providerId!==safeRequest.preferredDifferentProviderFrom}).total;candidates.push({providerId:provider.providerId,modelId:model.modelId,eligible:unique.length===0,reasons:unique,score,billingOutcome});}
+  candidates.sort((a,b)=>(b.score??-1)-(a.score??-1)||`${a.providerId}:${a.modelId}`.localeCompare(`${b.providerId}:${b.modelId}`));const winner=candidates.find(x=>x.eligible&&x.score!==null),promptHash=await sha256(safeRequest.prompt),routeDecisionId=await stableId("compute-route",{taskId:safeRequest.taskId,promptHash,now,candidates:candidates.map(c=>({p:c.providerId,m:c.modelId,e:c.eligible,s:c.score,r:c.reasons}))});const selected=winner?{selectedProviderId:winner.providerId,selectedModelId:winner.modelId,...(winner.score!==null?{selectedScore:winner.score}:{})}:{};const route:ComputeRouteDecision={routeDecisionId,taskId:safeRequest.taskId,dataClass:safeRequest.dataClass,promptHash,estimatedInputTokens:estimateTokens(safeRequest.prompt),requiredContextWindow:estimateTokens(safeRequest.prompt)+safeRequest.requestedMaxOutputTokens,requiredCapabilities:safeRequest.requiredCapabilities,candidates,...selected,reason:winner?"DETERMINISTIC_ELIGIBILITY_AND_SCORE":"NO_SAFE_MODEL_ROUTE",createdAt:now};this.decisions.set(safeRequest.taskId,structuredClone(route));if(!winner)throw new Error(safeRequest.dataClass==="CONFIDENTIAL"?"CONFIDENTIAL_ROUTE_UNAVAILABLE":"NO_SAFE_MODEL_ROUTE");const model=this.registry.getModel(winner.providerId,winner.modelId)!;const input=estimateTokens(safeRequest.prompt),units=worstCaseUnits(model,input,safeRequest.requestedMaxOutputTokens);try{const reservation=await this.governor.reserve({routeDecisionId,providerId:winner.providerId,modelId:winner.modelId,quotaPoolId:model.freePoolId,estimatedInput:input,reservedOutput:safeRequest.requestedMaxOutputTokens,reservedUsageUnits:units,idempotencyKey:`infer:${safeRequest.taskId}:${promptHash}`,now});return{route,reservation};}catch(error){const c=route.candidates.find(x=>x.providerId===winner.providerId&&x.modelId===winner.modelId);if(c){c.eligible=false;c.reasons.push("QUOTA_RESERVATION_FAILED");c.score=null;}this.decisions.set(safeRequest.taskId,route);throw error;}}
+ async run(request:ComputeRequest,now:string):Promise<ComputeCallResult>{const excluded=new Set<string>();let last:Error|undefined;for(let attempt=0;attempt<Math.max(1,this.registry.listModels().length);attempt++){const selected=await this.route(request,now,excluded),{route,reservation}=selected,providerId=route.selectedProviderId!,modelId=route.selectedModelId!,provider=this.registry.getProvider(providerId)!;const prompt=redactModelSecrets(request.prompt),promptHash=await sha256(prompt),providerConfigHash=await sha256({providerId:provider.providerId,baseUrlId:provider.baseUrlId,protocol:provider.apiProtocol}),base={executionId:await stableId("compute-exec",{reservationId:reservation.reservationId,taskId:request.taskId}),reservationId:reservation.reservationId,taskId:request.taskId,role:request.role,dataClass:request.dataClass,providerId,modelId,adapterVersion:"aria-model-gateway-v1",providerConfigHash,prompt,promptHash,maxOutputTokens:request.requestedMaxOutputTokens,requiredCapabilities:request.requiredCapabilities,policyVersion:"aria-compute-policy-v1",routeDecisionId:route.routeDecisionId,requestedAt:now,expiresAt:new Date(new Date(now).getTime()+120000).toISOString()},execution:InferenceExecution={...base,executionDigest:await sha256(base)};
+   try{const output=await this.gateway.execute(execution);if(output.receipt.status==="UNKNOWN_COMPLETION"){const unknown=this.governor as ComputeGovernor&{markUnknown?:(id:string)=>Promise<void>};if(unknown.markUnknown)await unknown.markUnknown(reservation.reservationId);last=new Error("PROVIDER_OUTAGE:UNKNOWN_COMPLETION");}else if(output.receipt.status!=="SUCCESS"){await this.governor.release(reservation.reservationId,now);throw new Error(output.receipt.errorClass??"MODEL_RESPONSE_INVALID");}else{await this.governor.commit(reservation.reservationId,output.receipt.usageUnits,now);this.health.success(providerId,modelId,now);return{text:output.text,receipt:output.receipt,route,reservation:(await this.governor.get(reservation.reservationId))!};}}catch(error){last=error instanceof Error?error:new Error(String(error));const message=last.message;if(!/UNKNOWN_COMPLETION/.test(message)){try{await this.governor.release(reservation.reservationId,now);}catch{}}let status:number|undefined;if(/BILLING_REQUIRED/.test(message))status=402;else if(/AUTH_INVALID/.test(message))status=401;else if(/MODEL_REMOVED/.test(message))status=404;else if(/RATE_LIMITED|FREE_QUOTA/.test(message))status=429;else if(/PROVIDER_OUTAGE/.test(message))status=503;this.health.failure(providerId,modelId,{now,error:message,...(status!==undefined?{status}:{})});excluded.add(`${providerId}:${modelId}`);if(/BILLING_REQUIRED|AUTH_INVALID/.test(message))this.registry.disable(providerId,message);continue;}}
+  throw last??new Error("NO_SAFE_MODEL_ROUTE");}
+ explainRoute(taskId:string):ComputeRouteDecision|undefined{const r=this.decisions.get(taskId);return r?structuredClone(r):undefined;}
 }

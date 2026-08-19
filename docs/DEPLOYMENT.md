@@ -1,11 +1,19 @@
 # Deployment
 
-Target is two Cloudflare Workers plus shared Free-compatible resources.
+ORDER-003 deploys three capability domains: private `aria-models`, private `aria-effects`, then control-plane `aria-core`, plus existing D1/Queues/Workflows/Durable Objects.
 
-`aria-effects` deploys first with `workers_dev=false`, shared D1, no AI/planner/scheduler binding and only effect-scoped secrets when an external write adapter is enabled. `aria-core` deploys second with static cockpit, D1, Workers AI, Queues+DLQ, SQLite Durable Object, Workflow and a private `EFFECTS` Service Binding to `aria-effects`. Core runtime secrets are `ADMIN_TOKEN_HASH`, `WEBHOOK_SECRET` and `APPROVAL_SIGNING_KEY`; the same approval signing key is required by effects only to validate terminal authorization. External write tokens must never be bound to core.
+`wrangler.models.template.jsonc` has `workers_dev=false` and model execution bindings only. `wrangler.effects.template.jsonc` remains private and contains effect-domain bindings only. `wrangler.core.template.jsonc` contains D1, private Service Bindings `MODELS` and `EFFECTS`, queues/workflows and two Durable Objects; it does not directly invoke model vendors or business-effect vendors.
 
-`scripts/cloudflare-preflight.mjs` checks credential names only, validates the two-worker boundary and denies paid model configuration. `scripts/render-wrangler.mjs` renders exact D1 ID/SHA into ignored generated configs. `scripts/deploy-cloudflare.sh` applies migrations, deploys `aria-effects`, then deploys `aria-core`, pinned to Wrangler 4.122.0.
+Deployment sequence:
 
-Live acceptance requires core deployment URL/version, exact SHA at `/api/health`, effect-gateway SHA, migration state, live Workers AI inference, the full reference E2E through the Service Binding, persistence across redeploy/re-instantiation, and `$0` evidence.
+```bash
+node scripts/cloudflare-preflight.mjs
+node scripts/render-wrangler.mjs
+./scripts/deploy-cloudflare.sh
+```
 
-If no authorized Cloudflare account/token is available in the execution/repository surfaces, local success cannot be represented as deployment. That external credential absence is a strict `BLOCKED_REAL` only after the rest of the branch/evidence package is complete.
+The deploy script applies both D1 migrations, then deploys models, effects and core using pinned Wrangler. Exact code SHA and D1 identifier are supplied by the authorized deployment environment and are never committed.
+
+Live acceptance requires exact SHA/version from all three Workers; remote migration state; a real Workers AI benchmark/call; a distinct direct first-party Free provider benchmark/call; controlled safe fallback; sanitized inference receipts; durable quota reconciliation; parent reference E2E; no effect-authority expansion; and cumulative monetary spend USD 0.
+
+If the execution environment lacks authorized deployment/account access or a distinct external provider capability, local success is recorded but cannot be promoted to the live gates.

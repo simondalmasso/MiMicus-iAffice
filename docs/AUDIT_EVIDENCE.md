@@ -1,25 +1,7 @@
 # Audit evidence
 
-All ORDER-002 artifacts live in `evidence/ORDER-002/` and include a taxonomy, timestamp and exact code HEAD used for deterministic validation. No `ASSUMPTION` or `UNKNOWN` artifact can satisfy a DONE gate.
+ORDER-003 evidence lives in `evidence/ORDER-003/`; parent ORDER-002 evidence remains immutable under `evidence/ORDER-002/`.
 
-Gate mapping:
+G0 STACKED_LINEAGE: base ancestry, parent head and stacked PR base. G1 PARENT_REGRESSION: parent tests, reference E2E, A1 architecture and parent >=10x benchmark. G2 MODEL_GATEWAY_BOUNDARY: capability graph and binding inspection. G3 REGISTRY_EVIDENCE: provider/model registry, evidence TTL and candidate/retirement handling. G4 ZERO_COST_BILLING: zero-cost gate and monetary-risk denials. G5 PRIVACY: four data classes plus redaction/secret denial. G6 DURABLE_QUOTA: reservations, concurrency, expiry and unknown-completion accounting. G7 ROUTING: deterministic reasons/scoring/context and all-unsafe state. G8 HEALTH_DRIFT: circuit breaker and recovery. G9 QUALITY: public 70-case corpus and frozen thresholds; production profiles require controlled provider execution. G10 PARENT_TEN_X: parent benchmark re-run. G11 COCKPIT_OPERATIONS: compute API/CLI and browser smoke. G12 SECURITY_ADVERSARIAL: secret/architecture gates and 20 chaos cases. G13 LIVE_WORKERS_AI: deployed real call. G14 LIVE_EXTERNAL_FREE_PROVIDER: distinct direct first-party Free call with current account/billing evidence. G15 LIVE_FALLBACK: controlled live primary failure and independently eligible fallback. G16 TOTAL_ZERO_COST: monetary spend and billable attempts remain zero. G17 FINAL_EXACT_HEAD: final branch/PR/deployment/evidence SHA agreement.
 
-- G0 legacy cleanup: `legacy-cleanup.json`.
-- G1 build/reproducibility: `run-metadata.json`, `tests.json`, `migrations.json`.
-- G2 zero cost: `platform-baseline.json`, `model-baseline.json`, `cost-guard.json`, `quota-simulation.json`.
-- G3 memory/ledger: `ledger-verification.json`, `replay.json`, `tamper-test.json`.
-- G4 agent system and G5 policy: reference E2E + `policy-matrix.json`.
-- G6 autonomy: tests/migrations/config plus scheduler/workflow evidence.
-- G7 cockpit: `ui-smoke.json`.
-- G8 connectors: test evidence/security suite.
-- G9 reference E2E: `reference-e2e.json`.
-- G10 live E2E: `live-deploy.json`, `live-e2e.json` only when truly deployed.
-- G11 security: `security.json`.
-- G12 10x: `benchmark.json`.
-- G13 exact head: `final-gates.json`, with no subsequent code-changing commit.
-
-A blocked live gate is recorded as blocked, not converted to PASS.
-
-## Amendment A1 hard evidence
-
-`tests/effects.test.mjs`, `scripts/architecture-guard.mjs`, `action_intents` / `effect_receipts`, and the reference E2E prove the binding amendment: no agent direct write, no agent write credentials, no effect path outside the gateway, digest-bound approvals, stale-policy/precondition denial, replay denial, duplicate-delivery exact-once behavior, crash recovery and quota retry without paid fallback. `aria-core` and `aria-effects` configs are independently inspected by preflight/security evidence.
+Candidate-only catalogs, local fake calls, assumptions and unknowns cannot satisfy G13-G15. A blocked live gate is recorded as blocked rather than converted to PASS.
