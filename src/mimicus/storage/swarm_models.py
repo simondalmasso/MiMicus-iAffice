@@ -1,9 +1,15 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from sqlalchemy import Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from mimicus.storage.models import Base
+
+
+def _now() -> str:
+    return datetime.now(UTC).isoformat()
 
 
 class VerifierAuthorityRow(Base):
@@ -73,7 +79,7 @@ class RemovalAttributionRow(Base):
     decision_without_hash: Mapped[str | None] = mapped_column(String(64))
     verified_scope_json: Mapped[str | None] = mapped_column(Text)
     active: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
-    created_at: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[str] = mapped_column(String(64), nullable=False, default=_now)
     __table_args__ = (UniqueConstraint("receipt_hash", "fingerprint", "capability", name="uq_removal_attribution"),)
 
 
