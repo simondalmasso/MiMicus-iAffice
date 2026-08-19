@@ -20,7 +20,8 @@ from mimicus.orchestration.legacy_engine import (
     default_candidates,
     scenario_fixture,
 )
-from mimicus.orchestration.swarm_core import execute_swarm_core
+from mimicus.orchestration.production_core import execute_production_core
+from mimicus.orchestration.semantic_replay import semantic_replay
 from mimicus.storage.swarm_state import SwarmStateStore
 from mimicus.verification.models import VerificationSubmission
 from mimicus.verification.service import submit_verification
@@ -46,13 +47,18 @@ class RunResult(LegacyRunResult):
     subtasks: list[dict[str, Any]] = Field(default_factory=list)
     threat_profile: dict[str, Any] = Field(default_factory=dict)
     hierarchy_execution: dict[str, Any] = Field(default_factory=dict)
+    persistent_state: dict[str, Any] = Field(default_factory=dict)
+    learning_policy: dict[str, Any] = Field(default_factory=dict)
+    production_core: dict[str, Any] = Field(default_factory=dict)
+    progress: list[dict[str, Any]] = Field(default_factory=list)
+    semantic_replay: dict[str, Any] = Field(default_factory=dict)
 
 
 class MiMicusEngine(LegacyMiMicusEngine):
     async def run_async(self, request: LegacyRunRequest) -> RunResult:
         core_request = request if isinstance(request, RunRequest) else RunRequest.model_validate(request.model_dump(mode="json"))
         if core_request.source_mode != "fixture":
-            return RunResult.model_validate(await execute_swarm_core(self, core_request))
+            return RunResult.model_validate(await execute_production_core(self, core_request))
         # Explicit compatibility lane only; MCP and normal CLI do not expose it.
         legacy_request = LegacyRunRequest.model_validate(core_request.model_dump(mode="json", exclude={"core_semantics"}))
         legacy = await super().run_async(legacy_request)
@@ -86,9 +92,11 @@ class MiMicusEngine(LegacyMiMicusEngine):
         if result is None:
             return None
         store = SwarmStateStore(self.repository.engine)
+        replay = semantic_replay(self.repository, run_id)
         return result | {
             "verification_receipts": store.receipts_for_run(run_id),
             "swarm_learning": store.learned_state(),
+            "replay_state": replay,
         }
 
 
