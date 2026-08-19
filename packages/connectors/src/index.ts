@@ -48,9 +48,7 @@ export function validatePublicUrl(raw: string, allowHosts: readonly string[]): U
   const url = new URL(raw);
   if (url.protocol !== "https:") throw new Error("SSRF_SCHEME_DENIED");
   const host = url.hostname.toLowerCase().replace(/\.$/, "");
-  if (host === "localhost" || host === "localhost.localdomain" || host.endsWith(".local") || host === "::1" || host.startsWith("[") || isPrivateIpv4(host)) {
-    throw new Error("SSRF_PRIVATE_NETWORK_DENIED");
-  }
+  if (host === "localhost" || host === "localhost.localdomain" || host.endsWith(".local") || host === "::1" || host.startsWith("[") || isPrivateIpv4(host)) throw new Error("SSRF_PRIVATE_NETWORK_DENIED");
   if (!allowHosts.some((allowed) => host === allowed || host.endsWith(`.${allowed}`))) throw new Error("SSRF_HOST_NOT_ALLOWLISTED");
   if (url.username || url.password) throw new Error("SSRF_CREDENTIAL_URL_DENIED");
   return url;
@@ -58,7 +56,6 @@ export function validatePublicUrl(raw: string, allowHosts: readonly string[]): U
 
 export class GenericRESTReadConnector {
   constructor(private readonly allowHosts: readonly string[], private readonly fetcher: typeof fetch = fetch) {}
-
   async get<T>(rawUrl: string, options: { etag?: string; cursor?: string; maxRetries?: number } = {}): Promise<ConnectorResult<T>> {
     const url = validatePublicUrl(rawUrl, this.allowHosts);
     if (options.cursor) url.searchParams.set("cursor", options.cursor);
@@ -75,8 +72,7 @@ export class GenericRESTReadConnector {
       }
       if (!response.ok) return { ok: false, error: `HTTP_${response.status}` };
       const data = await response.json() as T;
-      const etag = response.headers.get("etag");
-      const cursor = response.headers.get("x-next-cursor");
+      const etag = response.headers.get("etag"), cursor = response.headers.get("x-next-cursor");
       return { ok: true, data, ...(etag ? { etag } : {}), ...(cursor ? { cursor } : {}) };
     }
     return { ok: false, error: "UNREACHABLE" };
@@ -85,21 +81,42 @@ export class GenericRESTReadConnector {
 
 export class GitHubConnector {
   constructor(private readonly rest: GenericRESTReadConnector, private readonly policy: PolicyEngine) {}
+  private readAllowed(): boolean { return this.policy.decision("READ_PUBLIC", { sourceAllowlisted: true }) === "ALLOW"; }
   async readRepo(owner: string, repo: string): Promise<ConnectorResult<Record<string, unknown>>> {
-    if (this.policy.decision("READ_PUBLIC", { sourceAllowlisted: true }) !== "ALLOW") return { ok: false, error: "POLICY_DENIED" };
+    if (!this.readAllowed()) return { ok: false, error: "POLICY_DENIED" };
     return this.rest.get(`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`);
+  }
+  async readIssue(owner: string, repo: string, issueNumber: number): Promise<ConnectorResult<Record<string, unknown>>> {
+    if (!this.readAllowed()) return { ok: false, error: "POLICY_DENIED" };
+    if (!Number.isInteger(issueNumber) || issueNumber <= 0) return { ok: false, error: "GITHUB_ISSUE_NUMBER_INVALID" };
+    return this.rest.get(`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/issues/${issueNumber}`);
+  }
+  async readPullRequest(owner: string, repo: string, prNumber: number): Promise<ConnectorResult<Record<string, unknown>>> {
+    if (!this.readAllowed()) return { ok: false, error: "POLICY_DENIED" };
+    if (!Number.isInteger(prNumber) || prNumber <= 0) return { ok: false, error: "GITHUB_PR_NUMBER_INVALID" };
+    return this.rest.get(`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls/${prNumber}`);
   }
   writeCapability(requestedBy: AgentRole): ActionRecord {
     const policyDecision = this.policy.decision("CODE_WRITE", { isolatedCodeWorkspace: true });
-    return { id: `github-write-${Date.now()}`, actionClass: "CODE_WRITE", payload: { scope: "isolated-branch" }, requestedBy, policyDecision, status: policyDecision === "ALLOW" ? "APPROVED" : "BLOCKED", createdAt: new Date().toISOString() };
+    return { id: `github-write-${Date.now()}`, actionClass: "CODE_WRITE", payload: { scope: "isolated-branch", externalEffect: false }, requestedBy, policyDecision, status: policyDecision === "ALLOW" ? "APPROVED" : "BLOCKED", createdAt: new Date().toISOString() };
   }
 }
 
 export class NotionMirrorConnector {
   private cursor = "";
-  constructor(private readonly minIntervalMs = 500) {}
+  constructor(private readonly minIntervalMs = 500, private readonly fetcher: typeof fetch = fetch, private readonly readToken?: string) {}
   checkpoint(): string { return this.cursor; }
   throttleMs(lastRequestAt: number, now: number): number { return Math.max(0, this.minIntervalMs - (now - lastRequestAt)); }
+  async readPage(pageId: string, options: { lastRequestAt?: number; now?: number } = {}): Promise<ConnectorResult<Record<string, unknown>>> {
+    if (!/^[A-Za-z0-9-]+$/.test(pageId)) return { ok: false, error: "NOTION_PAGE_ID_INVALID" };
+    if (!this.readToken) return { ok: false, error: "NOTION_READ_CAPABILITY_NOT_CONFIGURED" };
+    const delay = this.throttleMs(options.lastRequestAt ?? 0, options.now ?? Date.now());
+    if (delay > 0) await new Promise<void>((resolve) => setTimeout(resolve, delay));
+    const response = await this.fetcher(`https://api.notion.com/v1/pages/${encodeURIComponent(pageId)}`, { method: "GET", headers: { authorization: `Bearer ${this.readToken}`, accept: "application/json", "notion-version": "2025-09-03" }, redirect: "error" });
+    if (response.status === 429) return { ok: false, error: "HTTP_429", retryAfterMs: Number(response.headers.get("retry-after") ?? "1") * 1000 };
+    if (!response.ok) return { ok: false, error: `HTTP_${response.status}` };
+    return { ok: true, data: await response.json() as Record<string, unknown> };
+  }
   planUpsert(pageId: string, payload: Record<string, unknown>, cursor: string): { connector: string; operation: string; target: string; canonicalParameters: Record<string, unknown>; cursor: string } {
     if (!/^[A-Za-z0-9-]+$/.test(pageId)) throw new Error("NOTION_PAGE_ID_INVALID");
     this.cursor = cursor;
@@ -109,28 +126,17 @@ export class NotionMirrorConnector {
 
 export class CSVImportExportConnector {
   parse(csv: string): Array<Record<string, string>> {
-    const lines = csv.trim().split(/\r?\n/);
-    if (lines.length === 0 || !lines[0]) return [];
+    const lines = csv.trim().split(/\r?\n/); if (lines.length === 0 || !lines[0]) return [];
     const headers = this.parseLine(lines[0]);
-    return lines.slice(1).filter(Boolean).map((line) => {
-      const values = this.parseLine(line);
-      return Object.fromEntries(headers.map((h, i) => [h, values[i] ?? ""]));
-    });
+    return lines.slice(1).filter(Boolean).map((line) => { const values = this.parseLine(line); return Object.fromEntries(headers.map((h, i) => [h, values[i] ?? ""])); });
   }
   stringify(rows: Array<Record<string, unknown>>): string {
-    if (rows.length === 0) return "";
-    const headers = Object.keys(rows[0]!);
+    if (rows.length === 0) return ""; const headers = Object.keys(rows[0]!);
     return [headers, ...rows.map((row) => headers.map((h) => String(row[h] ?? "")))].map((cols) => cols.map(this.escape).join(",")).join("\n");
   }
   private parseLine(line: string): string[] {
-    const out: string[] = []; let current = ""; let quoted = false;
-    for (let i = 0; i < line.length; i += 1) {
-      const ch = line[i]!;
-      if (ch === '"' && line[i + 1] === '"' && quoted) { current += '"'; i += 1; }
-      else if (ch === '"') quoted = !quoted;
-      else if (ch === "," && !quoted) { out.push(current); current = ""; }
-      else current += ch;
-    }
+    const out: string[] = []; let current = "", quoted = false;
+    for (let i = 0; i < line.length; i += 1) { const ch = line[i]!; if (ch === '"' && line[i + 1] === '"' && quoted) { current += '"'; i += 1; } else if (ch === '"') quoted = !quoted; else if (ch === "," && !quoted) { out.push(current); current = ""; } else current += ch; }
     out.push(current); return out;
   }
   private escape(value: string): string { return /[",\n]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value; }
@@ -139,19 +145,12 @@ export class CSVImportExportConnector {
 export interface SwarmRuntimeEnvelope { taskId: string; authority: string[]; evidenceRefs: string[]; budget: Record<string, number>; payload: Record<string, unknown>; }
 export interface SwarmRuntimeResult { taskId: string; claims: string[]; provenance: string[]; auditVerdict: "PASS" | "FAIL" | "UNCERTAIN"; }
 export class LocalSwarmRuntimeAdapter {
-  async dispatch(envelope: SwarmRuntimeEnvelope): Promise<SwarmRuntimeResult> {
-    if (envelope.authority.includes("MONEY_MUTATION")) throw new Error("SWARM_AUTHORITY_DENIED");
-    return { taskId: envelope.taskId, claims: [`handled:${String(envelope.payload.kind ?? "task")}`], provenance: envelope.evidenceRefs, auditVerdict: "PASS" };
-  }
+  async dispatch(envelope: SwarmRuntimeEnvelope): Promise<SwarmRuntimeResult> { if (envelope.authority.includes("MONEY_MUTATION")) throw new Error("SWARM_AUTHORITY_DENIED"); return { taskId: envelope.taskId, claims: [`handled:${String(envelope.payload.kind ?? "task")}`], provenance: envelope.evidenceRefs, auditVerdict: "PASS" }; }
 }
 
 export function redactSecrets(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(redactSecrets);
-  if (value && typeof value === "object") {
-    return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([k, v]) =>
-      [/authorization/i, /cookie/i, /token/i, /secret/i, /password/i].some((p) => p.test(k)) ? [k, "[REDACTED]"] : [k, redactSecrets(v)]
-    ));
-  }
+  if (value && typeof value === "object") return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([k, v]) => [/authorization/i, /cookie/i, /token/i, /secret/i, /password/i].some((p) => p.test(k)) ? [k, "[REDACTED]"] : [k, redactSecrets(v)]));
   if (typeof value === "string") return value.replace(/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [REDACTED]");
   return value;
 }
