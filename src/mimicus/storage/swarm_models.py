@@ -66,8 +66,13 @@ class RemovalAttributionRow(Base):
     baseline_utility: Mapped[float] = mapped_column(Float, nullable=False)
     without_agent_utility: Mapped[float] = mapped_column(Float, nullable=False)
     marginal_delta: Mapped[float] = mapped_column(Float, nullable=False)
+    original_marginal_delta: Mapped[float | None] = mapped_column(Float)
     method: Mapped[str] = mapped_column(String(64), nullable=False)
     provenance_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    decision_before_hash: Mapped[str | None] = mapped_column(String(64))
+    decision_without_hash: Mapped[str | None] = mapped_column(String(64))
+    verified_scope_json: Mapped[str | None] = mapped_column(Text)
+    active: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     created_at: Mapped[str] = mapped_column(String(64), nullable=False)
     __table_args__ = (UniqueConstraint("receipt_hash", "fingerprint", "capability", name="uq_removal_attribution"),)
 
