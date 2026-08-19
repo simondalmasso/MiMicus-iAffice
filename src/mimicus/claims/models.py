@@ -80,11 +80,7 @@ class CounterexampleAssertion(BaseModel):
 
 
 class OpaqueAssertion(BaseModel):
-    """Typed non-deterministic proposition marker.
-
-    Opaque assertions remain valid claims but deterministic falsifiers must
-    return INCONCLUSIVE rather than infer truth from free text.
-    """
+    """Typed non-deterministic proposition marker."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
     kind: Literal["opaque"] = "opaque"
@@ -113,12 +109,17 @@ class Claim(BaseModel):
     statement: str
     domain: str
     probability: float = Field(ge=0.0, le=1.0)
-    claim_type: Literal["numeric", "factual", "causal", "temporal", "comparative", "other"] = "other"
+    claim_type: Literal[
+        "numeric", "factual", "causal", "temporal", "comparative", "other"
+    ] = "other"
     assertion: ClaimAssertion | None = None
     evidence_refs: list[str] = Field(default_factory=list)
     units: str | None = None
     as_of: datetime | None = None
     status: ClaimStatus = ClaimStatus.PROPOSED
+    contributor_fingerprint: str | None = None
+    contributor_authority: float | None = None
+    subtask_hash: str | None = None
 
     @property
     def assertion_hash(self) -> str | None:
@@ -126,19 +127,14 @@ class Claim(BaseModel):
 
     @property
     def identity_material(self) -> dict[str, object]:
-        """Immutable sealed semantic/evidence/assertion anchor.
-
-        Probability, epistemic status and revision metadata are deliberately
-        excluded so a challenge cannot orphan falsifier/receipt lineage. The
-        typed assertion is included because changing the predicate being tested
-        is a different claim identity even when free text happens to match.
-        """
         return {
             "claim_id": self.claim_id,
             "statement": self.statement,
             "domain": self.domain,
             "claim_type": self.claim_type,
-            "assertion": None if self.assertion is None else self.assertion.model_dump(mode="json"),
+            "assertion": (
+                None if self.assertion is None else self.assertion.model_dump(mode="json")
+            ),
             "evidence_refs": tuple(sorted(set(self.evidence_refs))),
             "units": self.units,
             "as_of": self.as_of,
@@ -160,5 +156,4 @@ class Claim(BaseModel):
 
     @property
     def hash(self) -> str:
-        """Compatibility alias: all target lineage uses stable identity."""
         return self.identity_hash
