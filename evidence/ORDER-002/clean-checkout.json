@@ -1,0 +1,3 @@
+{
+  "taxonomy":"DETERMINISTIC_TEST","path":"fresh copy excluding build/runtime/evidence artifacts","commands":["npm ci --offline --ignore-scripts","npm run typecheck","npm test","npm run e2e"],"npm_ci_offline":"PASS","typecheck":"PASS","tests":"29/29 PASS","reference_e2e":"20/20 PASS","pass":true,"timestamp":"2026-08-19T17:00:00Z","head_sha":"e778e745003b25eb608792566585d3f3c0326d8b"
+}

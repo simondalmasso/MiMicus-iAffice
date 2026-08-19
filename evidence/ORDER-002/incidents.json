@@ -1,0 +1,3 @@
+{
+  "taxonomy":"LIVE_EXTERNAL","incidents":[{"id":"ORDER-002-G10-AUTH","severity":"BLOCKING","status":"OPEN_EXTERNAL","summary":"No authorized Cloudflare deployment credential/account binding in execution surfaces","impact":"G10 live deployment and real Workers AI reference E2E cannot execute","local_system_effect":"none; all non-live gates completed","unblock":"Provide least-privilege Cloudflare API token + account ID externally"}],"pass_no_unhandled_internal_incidents":true,"timestamp":"2026-08-19T17:00:00Z","head_sha":"e778e745003b25eb608792566585d3f3c0326d8b"
+}

@@ -1,0 +1,12 @@
+{
+  "taxonomy": "DETERMINISTIC_TEST",
+  "timestamp": "2026-08-19T16:58:38.080Z",
+  "head_sha": "e778e745003b25eb608792566585d3f3c0326d8b",
+  "node": "v22.16.0",
+  "platform": "linux",
+  "arch": "x64",
+  "total_incremental_cost_usd": 0,
+  "results": {"tests":{"pass":true,"status":0},"coverage":{"pass":true,"status":0},"reference-e2e":{"pass":true,"status":0},"benchmark":{"pass":true,"status":0},"security":{"pass":true,"status":0},"doctor":{"pass":true,"status":0}},
+  "pass": true,
+  "commands": ["npm test","npm run test:coverage","npm run e2e","npm run benchmark","npm run security","npm run doctor"]
+}

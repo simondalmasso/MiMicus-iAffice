@@ -1,0 +1,3 @@
+{
+  "taxonomy":"DETERMINISTIC_TEST","timestamp":"2026-08-19T16:58:40Z","head_sha":"e778e745003b25eb608792566585d3f3c0326d8b","playwright_version":"1.57.0","browser":"system-chromium","results":[{"viewport":"desktop","pass":true,"width":1440,"height":900},{"viewport":"mobile","pass":true,"width":390,"height":844}],"accessibility_smoke":{"navigation_landmark":true,"aria_live":true,"named_buttons":true,"viewport_meta":true},"pass":true
+}
