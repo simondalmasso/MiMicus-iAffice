@@ -8,7 +8,9 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from mimicus.canonical import sha256_obj
 
 ACCEPTED_AUTHORITY_CLASSES = frozenset({"deterministic_oracle", "signed_registry", "trusted_human"})
-ACCEPTED_VERIFICATION_METHODS = frozenset({"run_bound_token", "signed_external_object"})
+# No external-signature verifier exists yet. Do not advertise a cryptographic
+# method that is implemented as a bearer-token comparison.
+ACCEPTED_VERIFICATION_METHODS = frozenset({"run_bound_token"})
 
 
 class VerificationSubmission(BaseModel):
@@ -53,16 +55,35 @@ class VerificationSubmission(BaseModel):
         return lowered
 
     @property
-    def origin_key_hash(self) -> str:
-        """Deduplicate same-authority reports without persisting credentials."""
+    def adjudication_origin_hash(self) -> str:
+        """Stable authority origin independent of verdict or update linkage."""
         return sha256_obj(
             {
                 "run_id": self.run_id,
                 "claim_hash": self.claim_hash,
-                "verified_status": self.verified_status,
                 "authority_class": self.authority_class,
                 "verifier_id": self.verifier_id,
                 "source_cluster": self.source_independence_cluster,
+            }
+        )
+
+    def policy_adjudication_origin_hash(self, verifier_policy_hash: str) -> str:
+        return sha256_obj(
+            {
+                "run_id": self.run_id,
+                "claim_hash": self.claim_hash,
+                "verifier_policy_hash": verifier_policy_hash,
+                "source_cluster": self.source_independence_cluster,
+            }
+        )
+
+    @property
+    def origin_key_hash(self) -> str:
+        """Receipt-event dedup key, distinct from immutable adjudication origin."""
+        return sha256_obj(
+            {
+                "adjudication_origin_hash": self.adjudication_origin_hash,
+                "verified_status": self.verified_status,
                 "supersedes": self.supersedes_receipt_hash,
                 "appeal_of": self.appeal_of_receipt_hash,
             }
@@ -77,6 +98,7 @@ class VerificationReceipt(BaseModel):
     receipt_id: str
     receipt_hash: str
     origin_key_hash: str
+    adjudication_origin_hash: str
     run_id: str
     claim_hash: str
     verified_status: str
@@ -102,12 +124,15 @@ def build_receipt(
     rejection_reason: str | None = None,
     verifier_policy_hash: str | None = None,
     verification_method: str | None = None,
+    adjudication_origin_hash: str | None = None,
 ) -> VerificationReceipt:
     created_at = datetime.now(UTC)
     receipt_id = str(uuid5(NAMESPACE_URL, f"mimicus-verification:{submission.origin_key_hash}"))
+    bound_origin = adjudication_origin_hash or submission.adjudication_origin_hash
     material = submission.public_material() | {
         "receipt_id": receipt_id,
         "origin_key_hash": submission.origin_key_hash,
+        "adjudication_origin_hash": bound_origin,
         "verifier_policy_hash": verifier_policy_hash,
         "verification_method": verification_method,
         "accepted": accepted,
@@ -118,6 +143,7 @@ def build_receipt(
         receipt_id=receipt_id,
         receipt_hash=receipt_hash,
         origin_key_hash=submission.origin_key_hash,
+        adjudication_origin_hash=bound_origin,
         run_id=submission.run_id,
         claim_hash=submission.claim_hash,
         verified_status=submission.verified_status,
