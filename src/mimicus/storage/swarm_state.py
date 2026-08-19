@@ -215,7 +215,11 @@ class SwarmStateStore:
 
     def persist_receipt(self, receipt: VerificationReceipt) -> bool:
         with self.engine.begin() as connection:
-            existing = connection.execute(select(VerificationReceiptRow.receipt_hash).where(VerificationReceiptRow.origin_key_hash == receipt.origin_key_hash)).scalar_one_or_none()
+            existing = connection.execute(
+                select(VerificationReceiptRow.receipt_hash).where(
+                    VerificationReceiptRow.origin_key_hash == receipt.origin_key_hash
+                )
+            ).scalar_one_or_none()
             if existing is not None:
                 return False
             connection.execute(
@@ -243,11 +247,17 @@ class SwarmStateStore:
 
     def deactivate_receipt(self, receipt_hash: str, superseded_by_hash: str) -> bool:
         with self.engine.begin() as connection:
-            current = connection.execute(select(VerificationReceiptRow.learning_active).where(VerificationReceiptRow.receipt_hash == receipt_hash)).scalar_one_or_none()
+            current = connection.execute(
+                select(VerificationReceiptRow.learning_active).where(
+                    VerificationReceiptRow.receipt_hash == receipt_hash
+                )
+            ).scalar_one_or_none()
             if current is None or not bool(current):
                 return False
             connection.execute(
-                update(VerificationReceiptRow).where(VerificationReceiptRow.receipt_hash == receipt_hash).values(learning_active=0, superseded_by_hash=superseded_by_hash)
+                update(VerificationReceiptRow)
+                .where(VerificationReceiptRow.receipt_hash == receipt_hash)
+                .values(learning_active=0, superseded_by_hash=superseded_by_hash)
             )
         return True
 
@@ -266,11 +276,25 @@ class SwarmStateStore:
                 .mappings()
                 .all()
             )
-        return [json.loads(str(row["payload_json"])) | {"learning_active": bool(row["learning_active"]), "superseded_by_hash": row["superseded_by_hash"]} for row in rows]
+        return [
+            json.loads(str(row["payload_json"]))
+            | {
+                "learning_active": bool(row["learning_active"]),
+                "superseded_by_hash": row["superseded_by_hash"],
+            }
+            for row in rows
+        ]
 
     def receipt_exists(self, receipt_hash: str) -> bool:
         with self.engine.connect() as connection:
-            return connection.execute(select(VerificationReceiptRow.receipt_hash).where(VerificationReceiptRow.receipt_hash == receipt_hash)).scalar_one_or_none() is not None
+            return (
+                connection.execute(
+                    select(VerificationReceiptRow.receipt_hash).where(
+                        VerificationReceiptRow.receipt_hash == receipt_hash
+                    )
+                ).scalar_one_or_none()
+                is not None
+            )
 
     def record_attribution(
         self,
@@ -344,18 +368,31 @@ class SwarmStateStore:
                     baseline_utility=baseline_utility,
                     without_agent_utility=without_agent_utility,
                     marginal_delta=marginal_delta,
+                    original_marginal_delta=marginal_delta,
                     method="leave_one_out_semantic_decision_v1",
                     provenance_hash=provenance_hash,
+                    active=1,
                     created_at=_now(),
                 )
             )
         return True
 
-    def verified_authority(self, fingerprint: str, domain: str, capability: str) -> dict[str, Any]:
+    def verified_authority(
+        self,
+        fingerprint: str,
+        domain: str,
+        capability: str,
+    ) -> dict[str, Any]:
         with self.engine.connect() as connection:
             rows = connection.execute(
-                select(ReceiptAttributionRow.outcome, ReceiptAttributionRow.predicted_probability)
-                .join(VerificationReceiptRow, VerificationReceiptRow.receipt_hash == ReceiptAttributionRow.receipt_hash)
+                select(
+                    ReceiptAttributionRow.outcome,
+                    ReceiptAttributionRow.predicted_probability,
+                )
+                .join(
+                    VerificationReceiptRow,
+                    VerificationReceiptRow.receipt_hash == ReceiptAttributionRow.receipt_hash,
+                )
                 .where(
                     VerificationReceiptRow.accepted == 1,
                     VerificationReceiptRow.learning_active == 1,
@@ -368,14 +405,15 @@ class SwarmStateStore:
         successes = sum(int(bool(row.outcome)) for row in rows)
         failures = attempts - successes
         trust = 0.5 if attempts < 3 else successes / max(1, attempts)
-        return {"attempts": attempts, "successes": successes, "failures": failures, "trust": trust}
+        return {
+            "attempts": attempts,
+            "successes": successes,
+            "failures": failures,
+            "trust": trust,
+        }
 
     def rebuild_learning(self) -> dict[str, int]:
-        """Rebuild aggregates solely from active authenticated receipts.
-
-        This makes supersession/appeal non-destructive but prevents stale receipt
-        contributions from being double-counted.
-        """
+        """Rebuild aggregates solely from active authenticated authority."""
         with self.engine.begin() as connection:
             attrs = (
                 connection.execute(
@@ -389,8 +427,14 @@ class SwarmStateStore:
                         ReceiptAttributionRow.cost_contribution,
                         ReceiptAttributionRow.decisive_test_contribution,
                     )
-                    .join(VerificationReceiptRow, VerificationReceiptRow.receipt_hash == ReceiptAttributionRow.receipt_hash)
-                    .where(VerificationReceiptRow.accepted == 1, VerificationReceiptRow.learning_active == 1)
+                    .join(
+                        VerificationReceiptRow,
+                        VerificationReceiptRow.receipt_hash == ReceiptAttributionRow.receipt_hash,
+                    )
+                    .where(
+                        VerificationReceiptRow.accepted == 1,
+                        VerificationReceiptRow.learning_active == 1,
+                    )
                 )
                 .mappings()
                 .all()
@@ -405,8 +449,15 @@ class SwarmStateStore:
                         RemovalAttributionRow.capability,
                         RemovalAttributionRow.marginal_delta,
                     )
-                    .join(VerificationReceiptRow, VerificationReceiptRow.receipt_hash == RemovalAttributionRow.receipt_hash)
-                    .where(VerificationReceiptRow.accepted == 1, VerificationReceiptRow.learning_active == 1)
+                    .join(
+                        VerificationReceiptRow,
+                        VerificationReceiptRow.receipt_hash == RemovalAttributionRow.receipt_hash,
+                    )
+                    .where(
+                        VerificationReceiptRow.accepted == 1,
+                        VerificationReceiptRow.learning_active == 1,
+                        RemovalAttributionRow.active == 1,
+                    )
                 )
                 .mappings()
                 .all()
@@ -415,18 +466,36 @@ class SwarmStateStore:
             connection.execute(delete(PairwiseCofailureRow))
             connection.execute(delete(AgentMarginalValueRow))
 
-            raw_groups: dict[tuple[str, str, str], dict[str, Any]] = defaultdict(lambda: {"runs": set(), "successes": 0, "failures": 0, "cost": 0.0, "decisive": 0})
+            raw_groups: dict[tuple[str, str, str], dict[str, Any]] = defaultdict(
+                lambda: {
+                    "runs": set(),
+                    "successes": 0,
+                    "failures": 0,
+                    "cost": 0.0,
+                    "decisive": 0,
+                }
+            )
             for row in attrs:
-                key = (str(row["fingerprint"]), str(row["domain"]), str(row["capability"]))
+                key = (
+                    str(row["fingerprint"]),
+                    str(row["domain"]),
+                    str(row["capability"]),
+                )
                 raw_groups[key]["runs"].add(str(row["run_id"]))
                 raw_groups[key]["successes"] += int(bool(row["outcome"]))
                 raw_groups[key]["failures"] += int(not bool(row["outcome"]))
                 raw_groups[key]["cost"] += float(row["cost_contribution"])
                 raw_groups[key]["decisive"] += int(row["decisive_test_contribution"])
 
-            removal_groups: dict[tuple[str, str, str], dict[str, Any]] = defaultdict(lambda: {"runs": set(), "marginal": 0.0})
+            removal_groups: dict[tuple[str, str, str], dict[str, Any]] = defaultdict(
+                lambda: {"runs": set(), "marginal": 0.0}
+            )
             for row in removals:
-                key = (str(row["fingerprint"]), str(row["domain"]), str(row["capability"]))
+                key = (
+                    str(row["fingerprint"]),
+                    str(row["domain"]),
+                    str(row["capability"]),
+                )
                 removal_groups[key]["runs"].add(str(row["run_id"]))
                 removal_groups[key]["marginal"] += float(row["marginal_delta"])
 
@@ -452,10 +521,16 @@ class SwarmStateStore:
 
             per_episode: dict[tuple[str, str, str], dict[str, bool]] = defaultdict(dict)
             for row in attrs:
-                key = (str(row["run_id"]), str(row["domain"]), str(row["capability"]))
+                key = (
+                    str(row["run_id"]),
+                    str(row["domain"]),
+                    str(row["capability"]),
+                )
                 fp = str(row["fingerprint"])
                 per_episode[key][fp] = per_episode[key].get(fp, True) and bool(row["outcome"])
-            pair_acc: dict[tuple[str, str, str, str], dict[str, int]] = defaultdict(lambda: {"episodes": 0, "cofailures": 0, "independent": 0})
+            pair_acc: dict[tuple[str, str, str, str], dict[str, int]] = defaultdict(
+                lambda: {"episodes": 0, "cofailures": 0, "independent": 0}
+            )
             pair_updates = 0
             for (run_id, domain, capability), outcomes in sorted(per_episode.items()):
                 fps = sorted(outcomes)
@@ -465,10 +540,26 @@ class SwarmStateStore:
                         left_outcome, right_outcome = outcomes[a], outcomes[b]
                         pair_key = (a, b, domain, capability)
                         pair_acc[pair_key]["episodes"] += 1
-                        pair_acc[pair_key]["cofailures"] += int(not left_outcome and not right_outcome)
-                        pair_acc[pair_key]["independent"] += int(left_outcome != right_outcome)
-                        episode_hash = sha256_obj({"run_id": run_id, "agents": (a, b), "domain": domain, "capability": capability})
-                        connection.execute(insert(PairEpisodeRow).values(episode_hash=episode_hash, created_at=_now()))
+                        pair_acc[pair_key]["cofailures"] += int(
+                            not left_outcome and not right_outcome
+                        )
+                        pair_acc[pair_key]["independent"] += int(
+                            left_outcome != right_outcome
+                        )
+                        episode_hash = sha256_obj(
+                            {
+                                "run_id": run_id,
+                                "agents": (a, b),
+                                "domain": domain,
+                                "capability": capability,
+                            }
+                        )
+                        connection.execute(
+                            insert(PairEpisodeRow).values(
+                                episode_hash=episode_hash,
+                                created_at=_now(),
+                            )
+                        )
                         pair_updates += 1
             for (a, b, domain, capability), values in sorted(pair_acc.items()):
                 connection.execute(
@@ -483,13 +574,22 @@ class SwarmStateStore:
                         updated_at=_now(),
                     )
                 )
-        return {"active_attributions": len(attrs), "active_removals": len(removals), "pair_updates": pair_updates}
+        return {
+            "active_attributions": len(attrs),
+            "active_removals": len(removals),
+            "pair_updates": pair_updates,
+        }
 
     def update_pair_learning_for_run(self, run_id: str) -> int:
         del run_id
         return self.rebuild_learning()["pair_updates"]
 
-    def signals(self, fingerprints: list[str], domain: str, capabilities: tuple[str, ...]) -> tuple[dict[str, dict[str, float]], dict[str, dict[str, float]]]:
+    def signals(
+        self,
+        fingerprints: list[str],
+        domain: str,
+        capabilities: tuple[str, ...],
+    ) -> tuple[dict[str, dict[str, float]], dict[str, dict[str, float]]]:
         pair: dict[str, dict[str, float]] = {fp: {} for fp in fingerprints}
         marginal: dict[str, dict[str, float]] = {fp: {} for fp in fingerprints}
         with self.engine.connect() as connection:
@@ -500,7 +600,10 @@ class SwarmStateStore:
                         PairwiseCofailureRow.agent_b,
                         PairwiseCofailureRow.verified_episodes,
                         PairwiseCofailureRow.cofailures,
-                    ).where(PairwiseCofailureRow.domain == domain, PairwiseCofailureRow.capability.in_(list(capabilities)))
+                    ).where(
+                        PairwiseCofailureRow.domain == domain,
+                        PairwiseCofailureRow.capability.in_(list(capabilities)),
+                    )
                 )
                 .mappings()
                 .all()
@@ -512,9 +615,15 @@ class SwarmStateStore:
                     continue
                 episodes = int(pair_row["verified_episodes"])
                 confidence = episodes / (episodes + 5.0)
-                penalty = (int(pair_row["cofailures"]) / max(1, episodes)) * confidence
-                pair[agent_a][agent_b] = max(pair[agent_a].get(agent_b, 0.0), penalty)
-                pair[agent_b][agent_a] = max(pair[agent_b].get(agent_a, 0.0), penalty)
+                penalty = (
+                    int(pair_row["cofailures"]) / max(1, episodes)
+                ) * confidence
+                pair[agent_a][agent_b] = max(
+                    pair[agent_a].get(agent_b, 0.0), penalty
+                )
+                pair[agent_b][agent_a] = max(
+                    pair[agent_b].get(agent_a, 0.0), penalty
+                )
             marginal_rows = (
                 connection.execute(
                     select(
@@ -522,7 +631,10 @@ class SwarmStateStore:
                         AgentMarginalValueRow.capability,
                         AgentMarginalValueRow.marginal_sum,
                         AgentMarginalValueRow.verified_episodes,
-                    ).where(AgentMarginalValueRow.domain == domain, AgentMarginalValueRow.fingerprint.in_(fingerprints))
+                    ).where(
+                        AgentMarginalValueRow.domain == domain,
+                        AgentMarginalValueRow.fingerprint.in_(fingerprints),
+                    )
                 )
                 .mappings()
                 .all()
@@ -534,7 +646,11 @@ class SwarmStateStore:
                 fingerprint = str(marginal_row["fingerprint"])
                 marginal[fingerprint][capability] = max(
                     -1.0,
-                    min(1.0, float(marginal_row["marginal_sum"]) / max(1.0, float(marginal_row["verified_episodes"]))),
+                    min(
+                        1.0,
+                        float(marginal_row["marginal_sum"])
+                        / max(1.0, float(marginal_row["verified_episodes"])),
+                    ),
                 )
         return pair, marginal
 
@@ -552,11 +668,29 @@ class SwarmStateStore:
                 .mappings()
                 .all()
             )
-        return tuple(sorted({str(row["capability"]) for row in rows if int(row["verified_episodes"]) >= 3 and int(row["failures"]) > int(row["successes"])}))
+        return tuple(
+            sorted(
+                {
+                    str(row["capability"])
+                    for row in rows
+                    if int(row["verified_episodes"]) >= 3
+                    and int(row["failures"]) > int(row["successes"])
+                }
+            )
+        )
 
-    def record_germinal_outcome(self, receipt_hash: str, status: str, payload: dict[str, Any]) -> None:
+    def record_germinal_outcome(
+        self,
+        receipt_hash: str,
+        status: str,
+        payload: dict[str, Any],
+    ) -> None:
         with self.engine.begin() as connection:
-            existing = connection.execute(select(ReceiptGerminalOutcomeRow.receipt_hash).where(ReceiptGerminalOutcomeRow.receipt_hash == receipt_hash)).scalar_one_or_none()
+            existing = connection.execute(
+                select(ReceiptGerminalOutcomeRow.receipt_hash).where(
+                    ReceiptGerminalOutcomeRow.receipt_hash == receipt_hash
+                )
+            ).scalar_one_or_none()
             if existing is None:
                 connection.execute(
                     insert(ReceiptGerminalOutcomeRow).values(
@@ -597,13 +731,22 @@ class SwarmStateStore:
                 RemovalAttributionRow.baseline_utility,
                 RemovalAttributionRow.without_agent_utility,
                 RemovalAttributionRow.marginal_delta,
+                RemovalAttributionRow.original_marginal_delta,
+                RemovalAttributionRow.decision_before_hash,
+                RemovalAttributionRow.decision_without_hash,
+                RemovalAttributionRow.verified_scope_json,
+                RemovalAttributionRow.active,
                 RemovalAttributionRow.method,
                 RemovalAttributionRow.provenance_hash,
             )
-            .join(VerificationReceiptRow, VerificationReceiptRow.receipt_hash == RemovalAttributionRow.receipt_hash)
+            .join(
+                VerificationReceiptRow,
+                VerificationReceiptRow.receipt_hash == RemovalAttributionRow.receipt_hash,
+            )
             .where(
                 VerificationReceiptRow.accepted == 1,
                 VerificationReceiptRow.learning_active == 1,
+                RemovalAttributionRow.active == 1,
             )
         )
         if domain is not None:
@@ -623,7 +766,8 @@ class SwarmStateStore:
                     "capability": row["capability"],
                     "verified_episodes": row["verified_episodes"],
                     "cofailures": row["cofailures"],
-                    "confidence": int(row["verified_episodes"]) / (int(row["verified_episodes"]) + 5.0),
+                    "confidence": int(row["verified_episodes"])
+                    / (int(row["verified_episodes"]) + 5.0),
                 }
                 for row in pairs
             ],
