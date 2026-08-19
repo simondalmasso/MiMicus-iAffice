@@ -1,0 +1,10 @@
+{
+  "name": "aria-effects",
+  "main": "apps/effects-worker/src/index.ts",
+  "compatibility_date": "2026-08-19",
+  "workers_dev": false,
+  "minify": true,
+  "d1_databases": [ { "binding": "DB", "database_name": "ariaos-v1", "database_id": "__D1_DATABASE_ID__", "migrations_dir": "migrations" } ],
+  "vars": { "ARIA_GIT_SHA": "__ARIA_GIT_SHA__" },
+  "observability": { "enabled": true }
+}

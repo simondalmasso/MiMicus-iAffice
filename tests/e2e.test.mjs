@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { AriaOrchestrator } from '../dist/packages/core/src/orchestrator.js';
+import { InMemoryStateStore } from '../dist/packages/memory/src/store.js';
+import { referenceEvents } from '../dist/packages/fixtures/src/reference.js';
+import { runBusinessWorkflow } from '../dist/apps/worker/src/workflow-logic.js';
+import { AriaCoordinator } from '../dist/apps/worker/src/coordinator.js';
+import { LocalEffectGateway } from '../dist/packages/effects/src/local.js';
+test('mandatory reference business E2E completes deterministic chain',async()=>{const o=new AriaOrchestrator(new InMemoryStateStore(), undefined, 'local-reference-signing-key', ()=>new Date('2026-08-19T15:00:00.000Z')); const r=await o.runReferenceE2E(await referenceEvents(), new LocalEffectGateway()); assert.equal(r.steps.length,20); assert.ok(r.steps.every(s=>s.pass)); assert.equal(r.preRestartHash,r.postRestartHash); assert.equal(r.ledgerVerified,true); assert.equal(r.tamperDetected,true); assert.equal(r.costUsd,0); assert.equal(r.modelCalls,2);});
+test('workflow step structure resumes idempotent logical phases',async()=>{const calls=[]; const step={do:async(name,fn)=>{calls.push(name);return fn()}}; const r=await runBusinessWorkflow({taskId:'t',kind:'research'},step); assert.equal(r.status,'DONE'); assert.deepEqual(calls,['accept','policy-preflight','complete']);});
+test('durable coordinator uses SQLite-like storage API',()=>{const map=new Map(); const storage={sql:{exec:(q,...bindings)=>{if(q.startsWith('CREATE'))return{toArray:()=>[]}; if(q.startsWith('INSERT')){map.set(bindings[0],bindings[1]);return{toArray:()=>[]}} if(q.startsWith('SELECT'))return{toArray:()=>map.has(bindings[0])?[{value:map.get(bindings[0])}]:[]}; return{toArray:()=>[]}}}}; const c=new AriaCoordinator({storage}); assert.equal(c.put('x',{a:1}).ok,true); assert.deepEqual(c.get('x'),{a:1}); assert.equal(c.get('none'),null);});

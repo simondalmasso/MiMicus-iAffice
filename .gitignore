@@ -1,0 +1,15 @@
+dist/
+.coverage/
+node_modules/
+.wrangler/
+.dev.vars
+.env
+.env.*
+playwright-report/
+test-results/
+ariaos-local.db
+
+.aria/
+wrangler.generated.jsonc
+wrangler.core.generated.jsonc
+wrangler.effects.generated.jsonc

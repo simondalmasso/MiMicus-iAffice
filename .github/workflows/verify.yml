@@ -1,0 +1,19 @@
+name: zero-cost-self-hosted-verify
+on:
+  workflow_dispatch:
+jobs:
+  exact-head:
+    runs-on: self-hosted
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --offline --ignore-scripts
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run test:coverage
+      - run: npm run security

@@ -1,0 +1,27 @@
+{
+  "name": "ariaos",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "clean": "rm -rf dist .coverage",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test tests/*.test.mjs",
+    "test:coverage": "npm run build && node --experimental-test-coverage --test-coverage-lines=90 --test-coverage-functions=85 --test-coverage-branches=80 --test-coverage-include='dist/packages/memory/src/*.js' --test-coverage-include='dist/packages/policy/src/*.js' --test-coverage-include='dist/packages/router/src/*.js' --test tests/*.test.mjs",
+    "e2e": "npm run build && node scripts/reference-e2e.mjs",
+    "benchmark": "npm run build && node scripts/benchmark.mjs",
+    "security": "npm run build && node scripts/security-scan.mjs && node scripts/architecture-guard.mjs",
+    "doctor": "npm run build && node scripts/doctor.mjs",
+    "evidence": "npm run build && node scripts/export-evidence.mjs",
+    "aria": "npm run build --silent && node scripts/aria.mjs",
+    "ui:smoke": "python scripts/ui_smoke.py",
+    "architecture": "npm run build && node scripts/architecture-guard.mjs"
+  },
+  "bin": {
+    "aria": "scripts/aria.mjs"
+  }
+}
