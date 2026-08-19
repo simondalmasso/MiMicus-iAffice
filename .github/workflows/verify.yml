@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - order-003-zero-cost-compute-market-v1
+  pull_request:
+    branches:
+      - order-002-ariaos-business-os-v1
 jobs:
   exact-head:
     runs-on: self-hosted
