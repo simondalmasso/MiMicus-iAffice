@@ -118,7 +118,7 @@ class Claim(BaseModel):
     as_of: datetime | None = None
     status: ClaimStatus = ClaimStatus.PROPOSED
     contributor_fingerprint: str | None = None
-    contributor_authority: float | None = None
+    contributor_authority: float = Field(default=0.5, ge=0.0, le=1.0)
     subtask_hash: str | None = None
 
     @property
