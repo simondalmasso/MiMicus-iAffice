@@ -49,7 +49,7 @@ class FalsifierSpec(BaseModel):
 
 
 class FalsifierExecution(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     spec_hash: str
     verdict: Verdict
@@ -60,3 +60,7 @@ class FalsifierExecution(BaseModel):
     reason: str | None = None
     target_claim_hashes: tuple[str, ...] = ()
     selection_reason: str | None = None
+    tested_assertion_hash: str | None = None
+    tested_revision_hash: str | None = None
+    evidence_projection_hashes: tuple[str, ...] = ()
+    deterministic_equivalence_hash: str | None = None
