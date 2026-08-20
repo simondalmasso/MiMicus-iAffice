@@ -29,6 +29,10 @@ from mimicus.verification.service import submit_verification
 
 class RunRequest(LegacyRunRequest):
     model_config = ConfigDict(extra="forbid")
+    # Python runtime API preserves historical verified-learning behavior by
+    # default. CLI/MCP pass their explicit public learn=False default, while an
+    # explicit False here remains fully authoritative and mutation-inert.
+    learn: bool = True
     # Compatibility marker only. It cannot disable accepted semantics in runtime.
     core_semantics: bool | None = None
 
