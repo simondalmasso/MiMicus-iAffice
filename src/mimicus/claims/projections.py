@@ -104,7 +104,7 @@ def derive_projection(parent: dict[str, Any], declared_scope: tuple[str, ...] | 
     raw_facts = parent.get("extracted_facts", {})
     facts = raw_facts if isinstance(raw_facts, dict) else {}
     projected_facts = {key: facts[key] for key in scope if key in facts}
-    projected_material = {
+    projected_material: dict[str, Any] = {
         "origin": str(parent.get("origin", "")),
         "source_class": str(parent.get("source_class", "unknown")),
         "observed_at": parent.get("observed_at"),
@@ -132,9 +132,16 @@ def derive_projection(parent: dict[str, Any], declared_scope: tuple[str, ...] | 
         parent_evidence_hash=parent_hash,
         parent_canonical_evidence_hash=(str(parent["canonical_evidence_hash"]) if parent.get("canonical_evidence_hash") is not None else None),
         declared_scope=scope,
-        **projected_material,
+        origin=str(projected_material["origin"]),
+        source_class=str(projected_material["source_class"]),
+        observed_at=projected_material["observed_at"],
+        as_of=projected_material["as_of"],
+        independence_cluster=str(projected_material["independence_cluster"]),
+        content=str(projected_material["content"]),
+        extracted_facts=projected_facts,
+        extraction_method=str(projected_material["extraction_method"]),
+        authority_class=str(projected_material["authority_class"]),
+        units=(str(projected_material["units"]) if projected_material["units"] is not None else None),
     )
-    # Explicitly force serialization now so malformed/unbounded material fails
-    # before the provider boundary, not after execution.
     canonical_json(projection.provider_payload())
     return projection
