@@ -263,7 +263,9 @@ def _claim_rows_for_synthesis(result: dict[str, Any]) -> list[tuple[str, Claim, 
     return rows
 
 
-async def _extend_bounded_communication(boundary: ProductionProviderBoundary, result: dict[str, Any], executions: list[FalsifierExecution], request: Any) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+async def _extend_bounded_communication(
+    boundary: ProductionProviderBoundary, result: dict[str, Any], executions: list[FalsifierExecution], request: Any
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     communications = list(result.get("persistent_state", {}).get("communications", []))
     if not communications:
         return communications, []
@@ -352,7 +354,9 @@ def _apply_decision(result: dict[str, Any], decision: Any, executions: list[Fals
             row["status"] = local_status_by_claim.get(claim_hash, status_map[decision.epistemic_status])
 
 
-def _semantic_record(result: dict[str, Any], request: Any, boundary: ProductionProviderBoundary, executions: list[FalsifierExecution], specs: dict[str, FalsifierSpec]) -> dict[str, Any]:
+def _semantic_record(
+    result: dict[str, Any], request: Any, boundary: ProductionProviderBoundary, executions: list[FalsifierExecution], specs: dict[str, FalsifierSpec]
+) -> dict[str, Any]:
     claim_rows = [
         {key: row[key] for key in Claim.model_fields if key in row}
         | {
@@ -426,13 +430,22 @@ def _semantic_record(result: dict[str, Any], request: Any, boundary: ProductionP
     }
 
 
-def _persist_postprocessed(host: Any, result: dict[str, Any], boundary: ProductionProviderBoundary, executions: list[FalsifierExecution], communications: list[dict[str, Any]], progress_rows: list[dict[str, Any]]) -> None:
+def _persist_postprocessed(
+    host: Any,
+    result: dict[str, Any],
+    boundary: ProductionProviderBoundary,
+    executions: list[FalsifierExecution],
+    communications: list[dict[str, Any]],
+    progress_rows: list[dict[str, Any]],
+) -> None:
     run_id = str(result["run_id"])
     with host.repository.engine.begin() as connection:
         connection.execute(update(RunRow).where(RunRow.run_id == run_id).values(status=str(result["status"]), result_json=canonical_json(result)))
         connection.execute(delete(ClaimRow).where(ClaimRow.run_id == run_id))
         for row in result.get("final_claims", []):
-            connection.execute(insert(ClaimRow).values(claim_hash=str(row["claim_hash"]), run_id=run_id, status=str(row.get("status", "proposed")), payload_json=canonical_json(row)))
+            connection.execute(
+                insert(ClaimRow).values(claim_hash=str(row["claim_hash"]), run_id=run_id, status=str(row.get("status", "proposed")), payload_json=canonical_json(row))
+            )
         for projection in boundary.projections.values():
             payload = projection.persisted_row()
             exists = connection.execute(select(EvidenceRow.evidence_hash).where(EvidenceRow.evidence_hash == projection.projection_hash)).scalar_one_or_none()

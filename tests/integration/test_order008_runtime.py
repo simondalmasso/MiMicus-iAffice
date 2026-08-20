@@ -403,11 +403,7 @@ def test_f044_semantic_reexecution_tamper_and_nonreplayable_truth(tmp_path) -> N
     tampered = copy.deepcopy(persisted)
     tampered["semantic_replay"]["input_material"]["task"] = "tampered semantic task"
     with engine.repository.engine.begin() as connection:
-        connection.execute(
-            update(RunRow)
-            .where(RunRow.run_id == run.run_id)
-            .values(result_json=canonical_json(tampered))
-        )
+        connection.execute(update(RunRow).where(RunRow.run_id == run.run_id).values(result_json=canonical_json(tampered)))
     detected = semantic_replay(engine.repository, run.run_id)
     assert detected["verified"] is False
     assert detected["integrity_verified"] is True

@@ -552,11 +552,18 @@ class Repository:
             identity_manifests = connection.execute(select(AgentFingerprintRow.manifest_json)).scalars().all()
             communications: list[str] = []
             evidence_rows: list[str] = []
+            progress_rows: list[str] = []
             if run_id is not None:
                 communication_rows = connection.execute(select(CommunicationRow.payload_json).where(CommunicationRow.run_id == run_id)).scalars().all()
                 communications = [str(row) for row in communication_rows if row is not None]
                 raw_evidence = connection.execute(select(EvidenceRow.payload_json).where(EvidenceRow.run_id == run_id)).scalars().all()
                 evidence_rows = [str(row) for row in raw_evidence if row is not None]
+                raw_progress = (
+                    connection.execute(select(ProgressLedgerRow.payload_json).where(ProgressLedgerRow.run_id == run_id).order_by(ProgressLedgerRow.step, ProgressLedgerRow.id))
+                    .scalars()
+                    .all()
+                )
+                progress_rows = [str(row) for row in raw_progress if row is not None]
         return {
             "run_count": len(runs),
             "memory": [{"memory_id": a, "status": b, "domain": c} for a, b, c in memories],
@@ -566,6 +573,7 @@ class Repository:
             "identities": [json.loads(row) for row in identity_manifests],
             "communications": [json.loads(row) for row in communications if row],
             "evidence": [json.loads(row) for row in evidence_rows if row],
+            "progress": [json.loads(row) for row in progress_rows if row],
         }
 
     def reset_run_for_test(self, run_id: str) -> None:
