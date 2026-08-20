@@ -19,7 +19,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Patch persisted replay inputs and LOO parser
+      - name: Patch exact persisted replay inputs and LOO parser
         shell: bash
         run: |
           python - <<'PY'
@@ -39,19 +39,21 @@ jobs:
           )
 
           replace(
-              'src/mimicus/orchestration/production_core.py',
-              '''def _semantic_record(\n    result: dict[str, Any],\n    request: Any,\n    boundary: ProductionProviderBoundary,\n    executions: list[FalsifierExecution],\n    specs: dict[str, FalsifierSpec],\n) -> dict[str, Any]:\n''',
-              '''def _semantic_record(\n    result: dict[str, Any],\n    request: Any,\n    boundary: ProductionProviderBoundary,\n    executions: list[FalsifierExecution],\n    specs: dict[str, FalsifierSpec],\n    canonical_evidence_context: dict[str, Any],\n) -> dict[str, Any]:\n''',
+              'src/mimicus/falsifiers/primitives.py',
+              '''    bound_evidence: dict[str, object] = {\n        "primitive_evidence": raw.evidence,\n        "target_claim_identity_hash": claim.identity_hash,\n''',
+              '''    bound_evidence: dict[str, object] = {\n        "primitive_evidence": raw.evidence,\n        "tested_evidence_context": dict(context),\n        "target_claim_identity_hash": claim.identity_hash,\n''',
           )
+
           replace(
               'src/mimicus/orchestration/production_core.py',
-              '''        projections = [boundary.projections[value] for value in execution.evidence_projection_hashes if value in boundary.projections]\n        replay_executions.append(\n            {\n                "spec": specs[execution.spec_hash].model_dump(mode="json"),\n                "claim": claim.model_dump(mode="json"),\n                "evidence_context": _merge_projection_context(projections),\n''',
-              '''        projections = [boundary.projections[value] for value in execution.evidence_projection_hashes if value in boundary.projections]\n        replay_context = (\n            _merge_projection_context(projections)\n            if projections\n            else dict(canonical_evidence_context)\n        )\n        replay_executions.append(\n            {\n                "spec": specs[execution.spec_hash].model_dump(mode="json"),\n                "claim": claim.model_dump(mode="json"),\n                "evidence_context": replay_context,\n''',
+              '''        projections = [boundary.projections[value] for value in execution.evidence_projection_hashes if value in boundary.projections]\n        replay_executions.append(\n            {\n                "spec": specs[execution.spec_hash].model_dump(mode="json"),\n                "claim": claim.model_dump(mode="json"),\n                "evidence_context": _merge_projection_context(projections),\n                "evidence_projection_hashes": list(execution.evidence_projection_hashes),\n''',
+              '''        tested_context = execution.evidence.get("tested_evidence_context")\n        if not isinstance(tested_context, dict):\n            raise RuntimeError("claim-bound execution is missing exact persisted evidence context")\n        replay_executions.append(\n            {\n                "spec": specs[execution.spec_hash].model_dump(mode="json"),\n                "claim": claim.model_dump(mode="json"),\n                "evidence_context": dict(tested_context),\n                "evidence_context_hash": sha256_obj(tested_context),\n                "evidence_projection_hashes": list(execution.evidence_projection_hashes),\n''',
           )
+
           replace(
-              'src/mimicus/orchestration/production_core.py',
-              '''    result["progress"] = progress_rows\n    semantic = _semantic_record(result, request, boundary, executions, spec_rows)\n''',
-              '''    result["progress"] = progress_rows\n    canonical_evidence_context: dict[str, Any] = {}\n    evidence_conflicts: set[str] = set()\n    for evidence_row in host.repository.get_evidence(str(result["run_id"])):\n        facts = evidence_row.get("extracted_facts", {})\n        if not isinstance(facts, dict):\n            continue\n        for key, value in facts.items():\n            if key in evidence_conflicts:\n                continue\n            if key in canonical_evidence_context and sha256_obj(canonical_evidence_context[key]) != sha256_obj(value):\n                canonical_evidence_context.pop(key, None)\n                evidence_conflicts.add(key)\n            else:\n                canonical_evidence_context[key] = value\n    if evidence_conflicts:\n        canonical_evidence_context["evidence_conflicts"] = sorted(evidence_conflicts)\n    semantic = _semantic_record(\n        result,\n        request,\n        boundary,\n        executions,\n        spec_rows,\n        canonical_evidence_context,\n    )\n''',
+              'src/mimicus/orchestration/semantic_replay.py',
+              '''            execution = execute_claim_bound(\n                spec,\n                claim,\n                dict(row.get("evidence_context", {})),\n                evidence_projection_hashes=tuple(row.get("evidence_projection_hashes", [])),\n                selection_reason=row.get("selection_reason"),\n            )\n            replayed_executions.append(execution)\n            execution_ok = execution_ok and execution.execution_snapshot_hash == row.get("expected_snapshot_hash") and execution.verdict.value == row.get("expected_verdict")\n''',
+              '''            exact_context = dict(row.get("evidence_context", {}))\n            context_hash_ok = sha256_obj(exact_context) == row.get("evidence_context_hash")\n            execution = execute_claim_bound(\n                spec,\n                claim,\n                exact_context,\n                evidence_projection_hashes=tuple(row.get("evidence_projection_hashes", [])),\n                selection_reason=row.get("selection_reason"),\n            )\n            replayed_executions.append(execution)\n            execution_ok = (\n                execution_ok\n                and context_hash_ok\n                and execution.execution_snapshot_hash == row.get("expected_snapshot_hash")\n                and execution.verdict.value == row.get("expected_verdict")\n            )\n''',
           )
           PY
           python -m pip install -r requirements.lock >/dev/null
@@ -60,11 +62,12 @@ jobs:
           ruff check . --fix --unsafe-fixes
           ruff check .
           mypy src/mimicus
-      - name: Probe historical verification and semantic replay
+      - name: Probe historical verification and exact semantic replay
         shell: bash
         run: |
           python scripts/order007_evidence.py "$RUNNER_TEMP/ORDER-007"
           python - <<'PY'
+          from mimicus.canonical import sha256_obj
           from mimicus.claims.evidence_bundle import EvidenceInput
           from mimicus.claims.models import Claim, NumericAssertion
           from mimicus.orchestration.engine import MiMicusEngine, RunRequest
@@ -84,12 +87,18 @@ jobs:
                       usage={"simulated": True, "calls": 1, "monetary_cost_status": "KNOWN", "monetary_cost_usd": 0.0},
                   )
 
-          engine = MiMicusEngine("sqlite:////tmp/order008-replay-fix.db", provider=DivergentProvider())
+          db = "/tmp/order008-replay-fix.db"
+          engine = MiMicusEngine(f"sqlite:///{db}", provider=DivergentProvider())
           ev = EvidenceInput(origin="probe", independence_cluster="a", content="numeric", extracted_facts={"price": 100, "users": 12, "claimed": 1200, "price_period": "annual", "clusters": ["a", "b"], "texts": ["alpha independent", "beta independent"]})
           run = engine.run(RunRequest(task="Audit annual total using independent evidence.", domain="finance", source_mode="runtime", evidence=[ev], depth="deep", max_agents=4, max_concurrency=4))
           numeric = [row for row in run.falsifiers if row.get("primitive") == "numeric_invariant"]
           assert {row.get("verdict") for row in numeric} >= {"PASS", "FAIL"}
-          replay = engine.get_run(run.run_id)["replay_state"]
+          for row in numeric:
+              context = row["evidence"].get("tested_evidence_context")
+              assert isinstance(context, dict)
+              assert sha256_obj(context) == row["evidence"]["evidence_context_hash"]
+          restarted = MiMicusEngine(f"sqlite:///{db}", provider=DivergentProvider())
+          replay = restarted.get_run(run.run_id)["replay_state"]
           assert replay["integrity_verified"] is True
           assert replay["semantic_reexecution_verified"] is True, replay
           PY
@@ -100,5 +109,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
-          git commit -m 'ORDER-008: persist exact replay context and normalize LOO execution rows'
+          git commit -m 'ORDER-008: persist exact falsifier context for semantic replay'
           git push origin HEAD:order-002-mimicus-v01
