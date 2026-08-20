@@ -1,8 +1,8 @@
 name: ORDER-008 production diagnostics
 
 on:
-  pull_request:
-    branches: [main]
+  push:
+    branches: [order-002-mimicus-v01]
 
 permissions:
   contents: write
