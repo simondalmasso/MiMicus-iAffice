@@ -81,11 +81,7 @@ def revoke_receipt_derivatives(engine: Engine, receipt_hash: str, superseded_by_
     counts = {"removals": 0, "memory": 0, "evasions": 0, "mutations": 0, "promotions": 0, "germinal": 0}
     with engine.begin() as connection:
         receipt_target = (
-            connection.execute(
-                select(VerificationReceiptRow.run_id, VerificationReceiptRow.claim_hash).where(
-                    VerificationReceiptRow.receipt_hash == receipt_hash
-                )
-            )
+            connection.execute(select(VerificationReceiptRow.run_id, VerificationReceiptRow.claim_hash).where(VerificationReceiptRow.receipt_hash == receipt_hash))
             .mappings()
             .one_or_none()
         )
@@ -116,11 +112,7 @@ def revoke_receipt_derivatives(engine: Engine, receipt_hash: str, superseded_by_
                 continue
             if revoked_run_id is not None and str(row["run_id"]) != revoked_run_id:
                 continue
-            depends_on_receipt = (
-                str(row["receipt_hash"]) == receipt_hash
-                or receipt_hash in scope
-                or (revoked_claim_hash is not None and revoked_claim_hash in scope)
-            )
+            depends_on_receipt = str(row["receipt_hash"]) == receipt_hash or receipt_hash in scope or (revoked_claim_hash is not None and revoked_claim_hash in scope)
             if not depends_on_receipt:
                 continue
             original = row["original_marginal_delta"]
