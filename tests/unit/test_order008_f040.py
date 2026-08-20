@@ -95,9 +95,7 @@ def test_one_active_origin_and_promotion_cascade_revocation(tmp_path) -> None:
     assert candidate_hash in {spec.hash for spec in engine.repository.promoted_falsifiers("finance")}
     first_hash = str(first["receipt"]["receipt_hash"])
 
-    unlinked_flip = engine.submit_verification(
-        _submission(run, claim_hash, snapshot, status="SUPPORTED", token=token, minute=1)
-    )
+    unlinked_flip = engine.submit_verification(_submission(run, claim_hash, snapshot, status="SUPPORTED", token=token, minute=1))
     assert unlinked_flip["accepted"] is False
     assert unlinked_flip["receipt"]["rejection_reason"] == "active_adjudication_requires_supersession"
 
