@@ -10,6 +10,39 @@ from mimicus.falsifiers.spec import FalsifierExecution
 from mimicus.types import Verdict
 
 
+class ClaimDecision(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    claim_hash: str
+    statement: str
+    status: Literal["SUPPORTED", "FALSIFIED", "INCONCLUSIVE"]
+    authority: float = Field(ge=0.0, le=1.0)
+    probability: float = Field(ge=0.0, le=1.0)
+    decisive_falsifier_hashes: tuple[str, ...] = ()
+    provenance_hashes: tuple[str, ...] = ()
+
+
+class SubtaskDecision(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    subtask_hash: str
+    dependency_group: str | None = None
+    status: Literal["SUPPORTED", "FALSIFIED", "INCONCLUSIVE"]
+    claims: tuple[ClaimDecision, ...]
+    disagreement: bool = False
+    provenance_hashes: tuple[str, ...] = ()
+
+
+class HierarchicalFanIn(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    required_subtasks: tuple[str, ...]
+    subtask_decisions: tuple[SubtaskDecision, ...]
+    status: Literal["SUPPORTED", "FALSIFIED", "INCONCLUSIVE"]
+    provenance_identities: tuple[str, ...]
+    falsifier_snapshot_hashes: tuple[str, ...]
+    unresolved_subtasks: tuple[str, ...] = ()
+    falsified_subtasks: tuple[str, ...] = ()
+    disagreement_subtasks: tuple[str, ...] = ()
+
+
 class SwarmDecision(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
     candidate_answer: str
@@ -20,6 +53,7 @@ class SwarmDecision(BaseModel):
     unresolved_disagreements: tuple[dict[str, Any], ...]
     early_stop_reason: str
     provenance_hashes: tuple[str, ...]
+    hierarchical_fan_in: HierarchicalFanIn | None = None
 
     @property
     def hash(self) -> str:
