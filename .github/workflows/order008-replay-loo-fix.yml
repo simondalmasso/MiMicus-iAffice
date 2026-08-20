@@ -19,7 +19,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Patch exact persisted replay inputs and LOO parser
+      - name: Patch exact persisted replay inputs
         shell: bash
         run: |
           python - <<'PY'
@@ -31,12 +31,6 @@ jobs:
               if old not in text:
                   raise SystemExit(f'expected snippet missing: {path}: {old[:120]!r}')
               p.write_text(text.replace(old, new), encoding='utf-8')
-
-          replace(
-              'src/mimicus/orchestration/production_synthesis.py',
-              '''        claims.append((fp, claim, float(row.get("contributor_authority", row.get("probability", 0.5))), row.get("subtask_hash")))\n    executions = [FalsifierExecution.model_validate(row) for row in run.get("falsifiers", [])]\n''',
-              '''        raw_authority = row.get("contributor_authority")\n        authority = float(raw_authority) if isinstance(raw_authority, (int, float)) else float(row.get("probability", 0.5))\n        claims.append((fp, claim, authority, row.get("subtask_hash")))\n    executions = [\n        FalsifierExecution.model_validate(\n            {key: row[key] for key in FalsifierExecution.model_fields if key in row}\n        )\n        for row in run.get("falsifiers", [])\n        if isinstance(row, dict)\n    ]\n''',
-          )
 
           replace(
               'src/mimicus/falsifiers/primitives.py',
