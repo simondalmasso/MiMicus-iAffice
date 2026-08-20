@@ -187,6 +187,14 @@ def runtime_evidence_bundle(run_id: str, inputs: list[EvidenceInput]) -> Evidenc
     return EvidenceBundle(source_mode="runtime", items=rows)
 
 
+def build_evidence_bundle(inputs: list[EvidenceInput], *, run_id: str | None = None) -> EvidenceBundle:
+    """Build deterministic runtime evidence when a run identifier is not yet available."""
+    effective_run_id = run_id or sha256_obj(
+        {"standalone_evidence_inputs": [item.model_dump(mode="json") for item in inputs]}
+    )
+    return runtime_evidence_bundle(effective_run_id, inputs)
+
+
 def explicit_fixture_bundle(
     run_id: str,
     fixture: dict[str, Any],
