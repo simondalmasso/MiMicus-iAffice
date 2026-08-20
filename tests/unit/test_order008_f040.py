@@ -119,6 +119,8 @@ def test_one_active_origin_and_promotion_cascade_revocation(tmp_path) -> None:
 
     restarted = MiMicusEngine(database, provider=NearMissProvider())
     assert candidate_hash not in {spec.hash for spec in restarted.repository.promoted_falsifiers("finance")}
-    active = [row for row in restarted.repository.get_run(run.run_id)["verification_receipts"] if row.get("learning_active")]
+    enriched = restarted.get_run(run.run_id)
+    assert enriched is not None
+    active = [row for row in enriched["verification_receipts"] if row.get("learning_active")]
     assert len(active) == 1
     assert active[0]["verified_status"] == "SUPPORTED"
