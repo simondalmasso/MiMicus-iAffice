@@ -199,7 +199,8 @@ def run(output_dir: Path) -> dict[str, Any]:
             assert after_restart["found"] is True
             assert any(row["receipt_hash"] == first_receipt_hash and row["learning_active"] for row in after_restart["verification_receipts"])
             reused = asyncio.run(_call(second_url, "run_mimicus", _run_args("reuse", learn=False)))
-            assert memory_id in reused["persistent_memory_reused"]
+            memory_reused = memory_id in reused["persistent_memory_reused"]
+            assert memory_reused
 
             superseding = asyncio.run(
                 _call(
@@ -220,8 +221,10 @@ def run(output_dir: Path) -> dict[str, Any]:
                     },
                 )
             )
-            assert superseding["accepted"] is True
-            assert superseding["revocation"]["memory"] >= 1
+            supersession_accepted = superseding["accepted"] is True
+            memory_revoked = int(superseding["revocation"]["memory"]) >= 1
+            removal_revoked = int(superseding["revocation"]["removals"]) >= 1
+            assert supersession_accepted and memory_revoked and removal_revoked
             superseding_hash = str(superseding["receipt"]["receipt_hash"])
         finally:
             _stop(second_process)
@@ -232,45 +235,43 @@ def run(output_dir: Path) -> dict[str, Any]:
             assert final_state["found"] is True
             old = next(row for row in final_state["verification_receipts"] if row["receipt_hash"] == first_receipt_hash)
             new = next(row for row in final_state["verification_receipts"] if row["receipt_hash"] == superseding_hash)
-            assert old["learning_active"] is False
-            assert old["superseded_by_hash"] == superseding_hash
-            assert new["learning_active"] is True
-            assert final_state["replay_state"]["verified"] is True
+            old_inactive = old["learning_active"] is False
+            new_active = new["learning_active"] is True
+            replay_verified = final_state["replay_state"]["verified"] is True
+            assert old_inactive and old["superseded_by_hash"] == superseding_hash
+            assert new_active and replay_verified
 
             excluded = asyncio.run(_call(third_url, "run_mimicus", _run_args("after-revoke", learn=False)))
-            assert memory_id not in excluded["persistent_memory_reused"]
+            revoked_memory_excluded = memory_id not in excluded["persistent_memory_reused"]
+            assert revoked_memory_excluded
         finally:
             _stop(third_process)
 
         policies = SwarmStateStore(MiMicusEngine(database_url).repository.engine).verifier_policies()
-        assert any(row["verifier_id"] == verifier_id for row in policies)
+        policy_persisted = any(row["verifier_id"] == verifier_id for row in policies)
+        assert policy_persisted
 
     payload = {
         "pass": True,
         "transport": "streamable-http",
         "path": "/mcp",
-        "runtime_schema_properties": sorted(properties),
         "legacy_escape_fields_exposed": sorted({"fixture", "core_semantics", "source_mode"} & properties),
-        "first_run_id": first["run_id"],
-        "claim_hash": claim_hash,
-        "snapshot_hash": snapshot_hash,
-        "memory_id": memory_id,
-        "first_receipt_hash": first_receipt_hash,
         "restart_before_revocation": {
             "receipt_persisted_active": True,
-            "verified_memory_reused": memory_id in reused["persistent_memory_reused"],
+            "verified_memory_reused": memory_reused,
         },
         "supersession": {
-            "receipt_hash": superseding_hash,
-            "revocation": superseding["revocation"],
+            "accepted": supersession_accepted,
+            "memory_revoked": memory_revoked,
+            "removal_revoked": removal_revoked,
         },
         "restart_after_revocation": {
-            "old_receipt_inactive": old["learning_active"] is False,
-            "new_receipt_active": new["learning_active"] is True,
-            "revoked_memory_excluded": memory_id not in excluded["persistent_memory_reused"],
-            "semantic_replay_verified": final_state["replay_state"]["verified"],
+            "old_receipt_inactive": old_inactive,
+            "new_receipt_active": new_active,
+            "revoked_memory_excluded": revoked_memory_excluded,
+            "semantic_replay_verified": replay_verified,
         },
-        "policy_persisted": any(row["verifier_id"] == verifier_id for row in policies),
+        "policy_persisted": policy_persisted,
     }
     (output_dir / "MCP_E2E.json").write_text(
         json.dumps(payload, indent=2, sort_keys=True) + "\n",
@@ -282,7 +283,7 @@ def run(output_dir: Path) -> dict[str, Any]:
 def main() -> int:
     output = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("evidence/ORDER-008")
     payload = run(output)
-    print(json.dumps({"ORDER_008_MCP_E2E": "PASS", "run_id": payload["first_run_id"]}, sort_keys=True))
+    print(json.dumps({"ORDER_008_MCP_E2E": "PASS", "restart_after_revocation": payload["restart_after_revocation"]}, sort_keys=True))
     return 0
 
 
