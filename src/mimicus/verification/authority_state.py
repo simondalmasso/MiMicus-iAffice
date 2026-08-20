@@ -9,7 +9,7 @@ from sqlalchemy.engine import Engine
 
 from mimicus.canonical import canonical_json, sha256_obj
 from mimicus.memory.models import MemoryItem
-from mimicus.storage.models import EvasionEventRow, MemoryItemRow, MutationCandidateRow
+from mimicus.storage.models import EvasionEventRow, FalsifierVersionRow, MemoryItemRow, MutationCandidateRow
 from mimicus.storage.swarm_models import ReceiptGerminalOutcomeRow, RemovalAttributionRow, VerificationReceiptRow
 from mimicus.types import MemoryStatus
 
@@ -78,7 +78,7 @@ def _memory_depends_on_receipt(payload_json: str, receipt_hash: str) -> bool:
 
 
 def revoke_receipt_derivatives(engine: Engine, receipt_hash: str, superseded_by_hash: str) -> dict[str, int]:
-    counts = {"removals": 0, "memory": 0, "evasions": 0, "mutations": 0, "germinal": 0}
+    counts = {"removals": 0, "memory": 0, "evasions": 0, "mutations": 0, "promotions": 0, "germinal": 0}
     with engine.begin() as connection:
         removal_rows = (
             connection.execute(
@@ -157,6 +157,21 @@ def revoke_receipt_derivatives(engine: Engine, receipt_hash: str, superseded_by_
             mutation_hashes = list(connection.execute(select(MutationCandidateRow.candidate_hash).where(MutationCandidateRow.evasion_hash.in_(evasion_hashes))).scalars())
             if mutation_hashes:
                 connection.execute(update(MutationCandidateRow).where(MutationCandidateRow.candidate_hash.in_(mutation_hashes)).values(status="REVOKED_AUTHORITY"))
+                promoted = list(
+                    connection.execute(
+                        select(FalsifierVersionRow.id).where(
+                            FalsifierVersionRow.spec_hash.in_(mutation_hashes),
+                            FalsifierVersionRow.lifecycle_state == "PROMOTE",
+                        )
+                    ).scalars()
+                )
+                if promoted:
+                    connection.execute(
+                        update(FalsifierVersionRow)
+                        .where(FalsifierVersionRow.id.in_(promoted))
+                        .values(lifecycle_state="REVOKED_AUTHORITY")
+                    )
+                    counts["promotions"] = len(promoted)
                 counts["mutations"] = len(mutation_hashes)
 
         germinal = connection.execute(select(ReceiptGerminalOutcomeRow.receipt_hash).where(ReceiptGerminalOutcomeRow.receipt_hash == receipt_hash)).scalar_one_or_none()
