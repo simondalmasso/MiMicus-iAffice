@@ -1,3 +1,3 @@
-PROBE=ORDER-008-final-kills-and-historical-compatibility
-COMMAND=python -m pytest tests/integration/test_engine.py::test_full_flow_and_persistence tests/integration/test_order003_runtime.py::test_engine_restart_memory_reuse_and_falsifier_germinal_reuse tests/integration/test_order004_runtime.py::test_evidence_persists_and_all_claim_refs_resolve_after_restart tests/unit/test_order008_f039.py tests/unit/test_order008_f040.py tests/unit/test_order008_f041.py tests/integration/test_order008_runtime.py -vv
+PROBE=ORDER-008-final-kills-historical-compatibility-and-quickstart
+COMMAND=python -m pytest tests/integration/test_engine.py::test_full_flow_and_persistence tests/integration/test_order003_runtime.py::test_engine_restart_memory_reuse_and_falsifier_germinal_reuse tests/integration/test_order004_runtime.py::test_evidence_persists_and_all_claim_refs_resolve_after_restart tests/unit/test_order008_f038_claim_bound.py tests/unit/test_order008_f039.py tests/unit/test_order008_f040.py tests/unit/test_order008_f041.py tests/integration/test_order008_runtime.py tests/integration/test_order008_quickstart_cli.py -vv
 RETURN_CODE=0

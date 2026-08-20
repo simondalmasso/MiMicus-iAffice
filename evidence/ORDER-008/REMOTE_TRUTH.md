@@ -1,13 +1,14 @@
 # ORDER-008 Remote Truth
 
 - Repository: `simonkey888/MiMicus-swarm`
-- Pull request: `#3`, OPEN and unmerged.
-- Working branch: `order-002-mimicus-v01`.
-- Protected baseline for this order: `main=2d50fd91f4346618acfa87928987e131f54159c7`.
-- Historical compatibility closure was proven on branch commit `9769ad1c6da69ac2def02fe3637f7c34266e0a92` by exact-head Actions run `32392639227`, with the full quality suite and F038-F044 green.
-- Executable ORDER-008 evidence and MCP restart/revocation probes were proven by Actions job `order008-runtime-evidence-mcp` in run `32393339379`.
-- `ATM_WORK` remains deferred and out of scope.
-- `OPENAI_LIVE` remains deferred and out of scope.
-- No merge or `main` write is part of this evidence bundle.
+- Authority issue: `#10` / ORDER-008.
+- Pull request: `#3`, branch `order-002-mimicus-v01`, remains open and unmerged.
+- Binding latest AUD reviewed for this closure: comment `5359208502`.
+- Baseline `main`: `2d50fd91f4346618acfa87928987e131f54159c7`; ORDER-008 does not write to `main`.
+- Functional proof candidate before evidence materialization: `ae6a1dc913412a2ba5ae12c65d49bf5589bac767`.
+- Exact-head run `32398665327` proved the regenerated ORDER-008 evidence, MCP restart/revocation chain, F038-F044 gates, security/history, migrations/package, and benchmark; its committed-evidence comparison intentionally rejected the older evidence bytes.
+- The committed evidence bundle is accepted only when a subsequent exact-head CI regenerates the same generated evidence byte-for-byte and `sha256sum -c MANIFEST.sha256` succeeds.
 
-The final audit gate must be the exact-head CI run on the commit that contains this bundle and its manifest.
+`ATM_WORK=DEFERRED_OUT_OF_SCOPE`
+
+`OPENAI_LIVE=DEFERRED_OUT_OF_SCOPE`
