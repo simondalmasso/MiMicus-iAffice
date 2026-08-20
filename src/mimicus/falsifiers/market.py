@@ -111,7 +111,23 @@ class FalsifierMarket:
         )
 
     @staticmethod
+    def _assertion_primitive(claim: Claim) -> str | None:
+        assertion = claim.assertion
+        if assertion is None:
+            return None
+        return {
+            "numeric": "numeric_invariant",
+            "temporal": "freshness",
+            "source_independence": "source_independence",
+            "citation_entailment": "citation_entailment",
+            "counterexample_absence": "counterexample_search",
+        }.get(str(assertion.kind))
+
+    @staticmethod
     def _applicability(spec: FalsifierSpec, claim: Claim, evidence: dict[str, Any]) -> float:
+        assertion_primitive = FalsifierMarket._assertion_primitive(claim)
+        if assertion_primitive is not None:
+            return 1.0 if spec.primitive == assertion_primitive else 0.0
         keys = set(evidence)
         if not evidence and claim.claim_type == "other":
             return 0.10
@@ -141,7 +157,13 @@ class FalsifierMarket:
         max_tests: int,
         evidence_quality: float = 1.0,
     ) -> tuple[list[ClaimFalsifierBid], list[ClaimFalsifierBid]]:
-        """Claim-first market with the same F014 proximity/novelty discipline as select()."""
+        """Claim-first market with F014 novelty and required per-claim coverage.
+
+        The first phase retains at most one compatible deterministic test for
+        every claim that can be covered within budget. `max_tests` then limits
+        only supplemental tests. This prevents hierarchical fan-in from losing
+        a required predicate merely because unrelated claims won a global top-k.
+        """
         if not claims:
             return [], []
         probabilities = [claim.probability for claim in claims]
@@ -171,20 +193,47 @@ class FalsifierMarket:
                 )
         candidates.sort(key=lambda row: (-row.utility, row.target_claim_hash, row.spec_hash))
         selected: list[ClaimFalsifierBid] = []
-        spent = 0.0
         selected_pairs: set[tuple[str, str]] = set()
         selected_specs: list[FalsifierSpec] = []
         selected_spec_hashes: set[str] = set()
+        covered_claims: set[str] = set()
         spec_by_hash = {spec.hash: spec for spec in specs}
+        spent = 0.0
+
+        # Coverage precedes global top-k. Reusing an already selected primitive
+        # for another target is still a separate claim-bound execution, but does
+        # not reserve the spec's fixed market cost twice.
         for bid in candidates:
-            if len(selected) >= max_tests:
+            if bid.target_claim_hash in covered_claims:
+                continue
+            spec = spec_by_hash[bid.spec_hash]
+            additional_cost = 0.0 if spec.hash in selected_spec_hashes else spec.estimated_cost
+            if spent + additional_cost > budget_usd + 1e-12:
+                continue
+            closest = max((falsifier_proximity(spec, chosen) for chosen in selected_specs), default=0.0)
+            selected.append(
+                replace(
+                    bid,
+                    selection_reason=f"{bid.selection_reason}; novelty=required_claim_coverage; proximity={closest:.2f}",
+                )
+            )
+            selected_pairs.add((bid.target_claim_hash, bid.spec_hash))
+            covered_claims.add(bid.target_claim_hash)
+            if spec.hash not in selected_spec_hashes:
+                selected_specs.append(spec)
+                selected_spec_hashes.add(spec.hash)
+                spent += spec.estimated_cost
+            if len(covered_claims) == len({claim.hash for claim in claims}):
+                break
+
+        target_limit = max(max_tests, len(selected))
+        for bid in candidates:
+            if len(selected) >= target_limit:
                 break
             pair = (bid.target_claim_hash, bid.spec_hash)
             if pair in selected_pairs:
                 continue
             spec = spec_by_hash[bid.spec_hash]
-            # Reusing one already-selected deterministic spec for another target
-            # is free at execution time; a near-duplicate different spec is not.
             if spec.hash in selected_spec_hashes:
                 selected.append(replace(bid, selection_reason=f"{bid.selection_reason}; novelty=reuse_same_spec; proximity=1.00"))
                 selected_pairs.add(pair)
