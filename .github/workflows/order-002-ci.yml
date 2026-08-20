@@ -181,7 +181,7 @@ jobs:
           required = {
               "runs","verification_receipts","receipt_attributions","pairwise_cofailure",
               "pair_episode_updates","agent_marginal_value","receipt_germinal_outcomes",
-              "verifier_authorities","removal_attributions","progress_ledger",
+              "verifier_authorities","removal_attributions","progress_ledgers",
           }
           assert required <= set(d), sorted(required - set(d))
           print("POSTGRESQL_ORDER008_SCHEMA_COMPILE=PASS")
