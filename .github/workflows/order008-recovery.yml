@@ -3,13 +3,14 @@ name: ORDER-008 recovery repair
 on:
   push:
     branches: [order-002-mimicus-v01]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: write
 
 jobs:
   repair:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -62,6 +63,7 @@ jobs:
           pytest -q tests/integration/test_order005_runtime.py::test_provider_refs_are_bound_to_supplied_evidence_and_resolve_after_restart
           pytest -q tests/unit/test_order008_f039.py tests/unit/test_order008_f040.py tests/unit/test_order008_f041.py
       - name: Commit repaired branch and remove temporary workflows
+        if: github.event_name == 'push'
         shell: bash
         run: |
           rm -f .github/workflows/order008-recovery.yml .github/workflows/order008-diagnostics.yml .github/workflows/order008-f039-fix.yml
