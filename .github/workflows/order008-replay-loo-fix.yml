@@ -49,6 +49,12 @@ jobs:
               '''            execution = execute_claim_bound(\n                spec,\n                claim,\n                dict(row.get("evidence_context", {})),\n                evidence_projection_hashes=tuple(row.get("evidence_projection_hashes", [])),\n                selection_reason=row.get("selection_reason"),\n            )\n            replayed_executions.append(execution)\n            execution_ok = execution_ok and execution.execution_snapshot_hash == row.get("expected_snapshot_hash") and execution.verdict.value == row.get("expected_verdict")\n''',
               '''            exact_context = dict(row.get("evidence_context", {}))\n            context_hash_ok = sha256_obj(exact_context) == row.get("evidence_context_hash")\n            execution = execute_claim_bound(\n                spec,\n                claim,\n                exact_context,\n                evidence_projection_hashes=tuple(row.get("evidence_projection_hashes", [])),\n                selection_reason=row.get("selection_reason"),\n            )\n            replayed_executions.append(execution)\n            execution_ok = (\n                execution_ok\n                and context_hash_ok\n                and execution.execution_snapshot_hash == row.get("expected_snapshot_hash")\n                and execution.verdict.value == row.get("expected_verdict")\n            )\n''',
           )
+
+          replace(
+              'scripts/order007_evidence.py',
+              '''            task="Assess this structured context.",\n            domain="research",\n            evidence=_evidence(sparse_facts, cluster="sparse"),\n            max_agents=4,\n            depth="deep",\n''',
+              '''            task="Assess this structured context.",\n            domain="research",\n            evidence=_evidence(sparse_facts, cluster="sparse"),\n            max_agents=4,\n            depth="deep",\n            learn=True,\n''',
+          )
           PY
           python -m pip install -r requirements.lock >/dev/null
           python -m pip install --no-deps -e . >/dev/null
