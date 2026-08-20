@@ -193,8 +193,8 @@ def _restore_projection_claims(result: dict[str, Any], boundary: ProductionProvi
         if record is None:
             continue
         exact_claim = Claim.model_validate(record["response"]["claim"])
-        exact_hashes = {str(value) for value in record["request"].get("evidence_hashes", [])}
-        validated_refs = [ref for ref in exact_claim.evidence_refs if ref in exact_hashes]
+        exact_hash_set = {str(value) for value in record["request"].get("evidence_hashes", [])}
+        validated_refs = [ref for ref in exact_claim.evidence_refs if ref in exact_hash_set]
         current = _claim_from_row(claim_row)
         exact_current = current.model_copy(update={"assertion": exact_claim.assertion, "evidence_refs": validated_refs})
         old_hash = str(claim_row.get("claim_hash") or current.identity_hash)
