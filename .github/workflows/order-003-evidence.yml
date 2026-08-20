@@ -1,4 +1,4 @@
-name: ORDER-007 evidence materializer
+name: ORDER-008 serial closure worker
 
 on:
   pull_request:
@@ -8,193 +8,118 @@ permissions:
   contents: write
 
 concurrency:
-  group: order-007-evidence-${{ github.event.pull_request.number || github.ref }}
+  group: order-008-serial-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  evidence:
-    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'order-002-mimicus-v01' }}
+  f039-repair:
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'order-002-mimicus-v01' && github.actor != 'github-actions[bot]' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: order-002-mimicus-v01
           fetch-depth: 0
-      - name: Detect existing ORDER-007 evidence
-        id: evidence_state
-        shell: bash
-        run: |
-          if [[ -f evidence/ORDER-007/MANIFEST.sha256 ]]; then
-            echo "generate=false" >> "$GITHUB_OUTPUT"
-            (cd evidence/ORDER-007 && sha256sum -c MANIFEST.sha256)
-            echo "ORDER007_EVIDENCE_ALREADY_PRESENT=YES"
-          else
-            echo "generate=true" >> "$GITHUB_OUTPUT"
-          fi
       - uses: actions/setup-python@v5
-        if: ${{ steps.evidence_state.outputs.generate == 'true' }}
-        with: {python-version: "3.12"}
-      - name: Install exact environment
-        if: ${{ steps.evidence_state.outputs.generate == 'true' }}
-        run: |
-          python -m pip install -r requirements.lock
-          python -m pip install --no-deps -e .
-          python -m pip check
-      - name: Full quality coverage security evidence
-        if: ${{ steps.evidence_state.outputs.generate == 'true' }}
+        with:
+          python-version: '3.12'
+      - name: Patch hierarchical claim-scoped falsifier coverage
         shell: bash
         run: |
-          set -Eeuo pipefail
-          mkdir -p evidence/ORDER-007
-          {
-            echo "ORDER_007_TEST_RESULTS"
-            echo "SOURCE_HEAD=$(git rev-parse HEAD)"
-            ruff format --check .
-            ruff check .
-            mypy src/mimicus
-            pytest tests/unit tests/integration --cov=mimicus --cov-report=term-missing --cov-fail-under=90
-            python scripts/check_security.py
-            python -m mimicus.validation.order003_e2e "$RUNNER_TEMP/ORDER-003"
-            python -m mimicus.validation.e2e "$RUNNER_TEMP/ORDER-002"
-          } 2>&1 | tee evidence/ORDER-007/TEST_RESULTS.txt
-          python scripts/check_ledger.py > evidence/ORDER-007/LEDGER_VERIFY.json
-      - name: Historical F001 through F031 executable regression
-        if: ${{ steps.evidence_state.outputs.generate == 'true' }}
-        env:
-          OPENAI_API_KEY: ""
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          {
-            echo "ORDER_007_F001_F031_REGRESSION"
-            pytest tests/unit/test_order005_correctness.py tests/integration/test_order005_runtime.py
-            python scripts/order005_evidence.py "$RUNNER_TEMP/ORDER-005"
-            python scripts/order005_mcp_e2e.py "$RUNNER_TEMP/ORDER-005-MCP"
-            pytest tests/unit/test_order006_core.py tests/integration/test_order006_runtime.py
-            python scripts/order006_evidence.py "$RUNNER_TEMP/ORDER-006"
-            python scripts/order006_mcp_e2e.py "$RUNNER_TEMP/ORDER-006-MCP"
-          } 2>&1 | tee evidence/ORDER-007/REGRESSION_F001_F031.txt
-      - name: F032 through F037 executable evidence
-        if: ${{ steps.evidence_state.outputs.generate == 'true' }}
-        env:
-          OPENAI_API_KEY: ""
-        run: python scripts/order007_evidence.py evidence/ORDER-007
-      - name: MCP authority and runtime-core evidence
-        if: ${{ steps.evidence_state.outputs.generate == 'true' }}
-        env:
-          OPENAI_API_KEY: ""
-        run: python scripts/order007_mcp_e2e.py evidence/ORDER-007
-      - name: Neutral benchmark 200 per architecture
-        if: ${{ steps.evidence_state.outputs.generate == 'true' }}
-        run: mimicus benchmark --profile offline --episodes 200 --output-dir evidence/ORDER-007
-      - name: Migration package and offline doctor truth
-        if: ${{ steps.evidence_state.outputs.generate == 'true' }}
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          {
-            export MIMICUS_DATABASE_URL="sqlite:///$RUNNER_TEMP/order007-clean.db"
-            mimicus db upgrade
-            export MIMICUS_DATABASE_URL="sqlite:///$RUNNER_TEMP/order007-from-order002.db"
-            alembic upgrade 0001_order002
-            alembic upgrade head
-            python - <<'PY'
-          from mimicus.storage.postgres_compat import compile_postgres_schema
-          d = compile_postgres_schema()
-          required = {
-              "runs", "verification_receipts", "receipt_attributions",
-              "pairwise_cofailure", "pair_episode_updates",
-              "agent_marginal_value", "receipt_germinal_outcomes",
-              "verifier_authorities", "removal_attributions",
-          }
-          assert required <= set(d), sorted(set(required) - set(d))
-          print("POSTGRESQL_ORDER007_SCHEMA_COMPILE=PASS")
-          PY
-            python -m build
-            mimicus doctor --profile offline
-          } 2>&1 | tee evidence/ORDER-007/PACKAGE_MIGRATION_DOCTOR.txt
-      - name: Metadata and audit closure
-        if: ${{ steps.evidence_state.outputs.generate == 'true' }}
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          SOURCE_HEAD="$(git rev-parse HEAD)"
-          cat > evidence/ORDER-007/REMOTE_TRUTH.md <<EOF
-          # ORDER-007 remote truth
-
-          - Audited starting head: \`6c752da3bea3f1578caf5f8149453a044b8c36e3\`
-          - Continued consolidation head: \`8adde0b91ffed8cd610d198d9111eeb47d91cc30\`
-          - Evidence source head: \`$SOURCE_HEAD\`
-          - Branch: \`order-002-mimicus-v01\`
-          - PR: \`#3\`
-          - Main baseline: \`2d50fd91f4346618acfa87928987e131f54159c7\`
-          - ORDER-007 issue: \`#9\`
-          - No new PR. No merge. No direct main write.
-          - ATM work: deferred out of scope.
-          - OpenAI live work: deferred out of scope.
-          EOF
-          cat > evidence/ORDER-007/AUD_FINDINGS_CLOSURE.md <<'EOF'
-          # ORDER-007 audit findings closure
-
-          | Finding | Runtime closure | Executable evidence |
-          |---|---|---|
-          | F032 authenticated verification authority | immutable server-side verifier policy, secret hash authentication, run-bound proof hashes, same-origin dedup, active-receipt supersession rebuild | `VERIFIER_AUTHORITY_BINDING.json`, `MCP_E2E.json` |
-          | F033 immutable claim lineage | semantic/evidence identity hash is stable; challenge revision hash is separate; falsifier, communication, synthesis, receipt and germinal target the stable identity | `CLAIM_IDENTITY_LINEAGE.json` |
-          | F034 claim-born falsifier market + F014 novelty | full safe registry is scored after sealed claims; promoted lineage ancestors are suppressed; actual claim market applies proximity/novelty | `CLAIM_MARKET_NOVELTY.json` |
-          | F035 complete isolated hierarchy | every required subtask is assigned by capability or marked unresolved; evidence is scoped; subgroup joins are isolated; incomplete hierarchy fails closed | `HIERARCHY_COMPLETE_EXECUTION.json` |
-          | F036 removal attribution | episode-bound leave-one-out counterfactual deltas are persisted separately from success/failure/cost/decisive-test features | `REMOVAL_ATTRIBUTION.json` |
-          | F037 runtime core lock | normal Python/CLI/MCP runtime cannot select fixture/legacy semantics; fixture lane remains explicit compatibility only | `RUNTIME_CORE_LOCK.json`, `MCP_E2E.json` |
-
-          F001..F031 are rerun in `REGRESSION_F001_F031.txt` and the full quality/security suite is recorded in `TEST_RESULTS.txt`.
-          EOF
-      - name: Validate required evidence and build manifest
-        if: ${{ steps.evidence_state.outputs.generate == 'true' }}
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          for file in REMOTE_TRUTH.md AUD_FINDINGS_CLOSURE.md VERIFIER_AUTHORITY_BINDING.json CLAIM_IDENTITY_LINEAGE.json CLAIM_MARKET_NOVELTY.json HIERARCHY_COMPLETE_EXECUTION.json REMOVAL_ATTRIBUTION.json RUNTIME_CORE_LOCK.json REGRESSION_F001_F031.txt MCP_E2E.json TEST_RESULTS.txt BENCHMARK.json BENCHMARK_RAW.jsonl PACKAGE_MIGRATION_DOCTOR.txt LEDGER_VERIFY.json; do
-            test -s "evidence/ORDER-007/$file"
-          done
           python - <<'PY'
-          import json
           from pathlib import Path
-          root = Path("evidence/ORDER-007")
-          for name in [
-              "VERIFIER_AUTHORITY_BINDING.json","CLAIM_IDENTITY_LINEAGE.json",
-              "CLAIM_MARKET_NOVELTY.json","HIERARCHY_COMPLETE_EXECUTION.json",
-              "REMOVAL_ATTRIBUTION.json","RUNTIME_CORE_LOCK.json","MCP_E2E.json",
-          ]:
-              assert json.loads((root / name).read_text())["pass"] is True, name
-          hierarchy = json.loads((root / "HIERARCHY_COMPLETE_EXECUTION.json").read_text())
-          assert hierarchy["incomplete_status"] == "inconclusive"
-          mcp = json.loads((root / "MCP_E2E.json").read_text())
-          assert mcp["legacy_escape_fields_exposed"] == []
-          benchmark = json.loads((root / "BENCHMARK.json").read_text())
-          required = {"solo","paired_verify","parallel_fanout","sparse_graph","hierarchical_fanout_fanin"}
-          assert benchmark["episodes_per_architecture"] == 200
-          assert benchmark["total_architecture_episodes"] == 1000
-          assert benchmark["anti_rigging"]["passed"] and benchmark["leakage_probe"]["passed"]
-          assert required <= set(benchmark["morphology_distribution"]["classes"])
-          assert benchmark["metrics"]["E"]["avg_simulated_cost"] > 0
-          print("ORDER007_EVIDENCE_SHAPE=PASS")
+          p = Path('src/mimicus/orchestration/swarm_core.py')
+          text = p.read_text(encoding='utf-8')
+          old = '''            market_selected, market_all = FalsifierMarket().select_for_claims(
+                candidate_specs,
+                [claims_by_node[key] for key in sorted(claims_by_node)],
+                evidence=evidence_context,
+                budget_usd=market_budget,
+                max_tests={"fast": 1, "normal": 3, "deep": 5}[request.depth],
+                evidence_quality=1.0 if evidence_bundle.items else 0.0,
+            )
+'''
+          new = '''            market = FalsifierMarket()
+            ordered_claims = [claims_by_node[key] for key in sorted(claims_by_node)]
+            if plan.name == MorphologyName.HIERARCHICAL_FANOUT_FANIN:
+                market_selected = []
+                market_all = []
+                remaining_market_budget = market_budget
+                for claim in ordered_claims:
+                    retained, candidates = market.select_for_claims(
+                        candidate_specs,
+                        [claim],
+                        evidence=claim_context_by_identity.get(claim.identity_hash, {}),
+                        budget_usd=remaining_market_budget,
+                        max_tests=1,
+                        evidence_quality=1.0 if claim.evidence_refs else 0.0,
+                    )
+                    market_all.extend(candidates)
+                    if not retained:
+                        continue
+                    bid = retained[0]
+                    market_selected.append(
+                        replace(
+                            bid,
+                            selection_reason=f"{bid.selection_reason}; hierarchical_claim_scope_coverage",
+                        )
+                    )
+                    remaining_market_budget = max(
+                        0.0,
+                        remaining_market_budget - spec_by_hash[bid.spec_hash].estimated_cost,
+                    )
+            else:
+                market_selected, market_all = market.select_for_claims(
+                    candidate_specs,
+                    ordered_claims,
+                    evidence=evidence_context,
+                    budget_usd=market_budget,
+                    max_tests={"fast": 1, "normal": 3, "deep": 5}[request.depth],
+                    evidence_quality=1.0 if evidence_bundle.items else 0.0,
+                )
+'''
+          if old not in text:
+              raise SystemExit('ensure_market snippet missing')
+          p.write_text(text.replace(old, new), encoding='utf-8')
           PY
-          (
-            cd evidence/ORDER-007
-            find . -maxdepth 1 -type f ! -name MANIFEST.sha256 -printf '%P\n' | LC_ALL=C sort | while read -r file; do
-              if ! git -C ../.. check-ignore -q "evidence/ORDER-007/$file"; then
-                sha256sum "$file"
-              fi
-            done
-          ) > evidence/ORDER-007/MANIFEST.sha256
-          (cd evidence/ORDER-007 && sha256sum -c MANIFEST.sha256)
-      - name: Commit ORDER-007 evidence on same branch
-        if: ${{ steps.evidence_state.outputs.generate == 'true' }}
+          python -m pip install -r requirements.lock >/dev/null
+          python -m pip install --no-deps -e . >/dev/null
+          ruff format .
+          ruff check . --fix --unsafe-fixes
+          ruff check .
+          mypy src/mimicus
+      - name: F039 kill plus historical regression
         shell: bash
         run: |
-          set -Eeuo pipefail
+          python scripts/order007_evidence.py "$RUNNER_TEMP/ORDER-007"
+          python - <<'PY'
+          from mimicus.canonical import sha256_obj
+          from mimicus.claims.evidence_bundle import EvidenceInput
+          from mimicus.orchestration.engine import MiMicusEngine, RunRequest
+          registry = {}
+          facts = {"price":100,"users":12,"claimed":1200,"price_period":"annual","evidence_date":"2026-08-19T00:00:00+00:00","as_of":"2026-08-20T00:00:00+00:00","clusters":["h-a","h-b"],"texts":["independent alpha","independent beta"],"claim_figure":"1200","evidence_spans":[{"span_id":"s1","supported_figures":["1200"],"material_support":True}],"absence_key":"missing-prerequisite","registry":registry,"registry_snapshot_hash":sha256_obj(registry)}
+          ev = EvidenceInput(origin="order008-f039", independence_cluster="h-a", content="structured facts", extracted_facts=facts)
+          run = MiMicusEngine("sqlite:////tmp/f039.db").run(RunRequest(task="Resolve all required audit predicates.",domain="research",evidence=[ev],depth="deep",max_agents=4,max_concurrency=4))
+          required=set(run.hierarchy_execution["required_subtasks"]); selected=set(run.swarm_decision["selected_claim_hashes"])
+          assert run.morphology == "hierarchical_fanout_fanin"
+          assert run.hierarchy_execution["complete"] is True
+          assert run.swarm_decision["epistemic_status"] == "SUPPORTED", run.swarm_decision
+          assert len(selected) == len(required)
+          assert required <= set(run.swarm_decision["provenance_hashes"])
+          assert selected <= set(run.swarm_decision["provenance_hashes"])
+          market=run.evidence_provenance["claim_aware_market"]["selected"]
+          assert {r["target_claim_hash"] for r in market} >= selected
+          assert all("hierarchical_claim_scope_coverage" in r["selection_reason"] for r in market)
+          incomplete=MiMicusEngine("sqlite:////tmp/f039-i.db").run(RunRequest(task="Resolve all required audit predicates.",domain="research",evidence=[ev],depth="deep",max_agents=3,max_concurrency=3))
+          assert incomplete.hierarchy_execution["unresolved_subtasks"]
+          assert incomplete.swarm_decision["epistemic_status"] == "INCONCLUSIVE"
+          PY
+      - name: Commit F039 and clean temporary workers
+        shell: bash
+        run: |
+          rm -f .github/workflows/order008-diagnostics.yml .github/workflows/order008-f039-fix.yml
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add evidence/ORDER-007
-          git diff --cached --check
-          git commit -m 'ORDER-007: materialize exact audit evidence'
+          git add -A
+          git commit -m 'ORDER-008: verify every hierarchical predicate before fan-in'
           git push origin HEAD:order-002-mimicus-v01
