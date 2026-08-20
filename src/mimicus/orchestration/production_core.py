@@ -61,11 +61,7 @@ class ProductionProviderBoundary(Provider):
         exact_request, projection_to_parent, projections = self._project_request(request)
         response = await self.delegate.generate_request_async(exact_request)
         provider_claim = response.claim
-        allowed_exact_refs = {
-            str(row.get("evidence_hash"))
-            for row in exact_request.evidence
-            if isinstance(row, dict) and isinstance(row.get("evidence_hash"), str)
-        }
+        allowed_exact_refs = {str(row.get("evidence_hash")) for row in exact_request.evidence if isinstance(row, dict) and isinstance(row.get("evidence_hash"), str)}
         provider_claimed_refs = list(dict.fromkeys(str(ref) for ref in provider_claim.evidence_refs))
         validated_exact_refs = [ref for ref in provider_claimed_refs if ref in allowed_exact_refs]
         rejected_exact_refs = [ref for ref in provider_claimed_refs if ref not in allowed_exact_refs]
@@ -188,9 +184,15 @@ def _restore_projection_claims(result: dict[str, Any], boundary: ProductionProvi
         usage["evidence_hashes_supplied"] = exact_hashes
         usage["projection_hashes_supplied"] = projection_hashes
         usage["parent_evidence_hashes_supplied"] = [projection_to_parent.get(value, value) for value in exact_hashes]
-        usage["provider_claimed_evidence_refs"] = list(record["response"].get("provider_claimed_evidence_refs", []))
-        usage["validated_evidence_refs"] = list(record["response"].get("validated_evidence_refs", []))
-        usage["rejected_evidence_refs"] = list(record["response"].get("rejected_evidence_refs", []))
+        provider_claimed = list(record["response"].get("provider_claimed_evidence_refs", []))
+        validated_refs = list(record["response"].get("validated_evidence_refs", []))
+        rejected_refs = list(record["response"].get("rejected_evidence_refs", []))
+        usage["evidence_refs_claimed"] = provider_claimed
+        usage["evidence_refs_validated"] = validated_refs
+        usage["evidence_refs_rejected"] = rejected_refs
+        usage["provider_claimed_evidence_refs"] = provider_claimed
+        usage["validated_evidence_refs"] = validated_refs
+        usage["rejected_evidence_refs"] = rejected_refs
 
     for claim_row in result.get("final_claims", []):
         trace_id = claim_row.get("provider_trace_id")
