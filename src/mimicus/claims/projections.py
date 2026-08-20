@@ -130,9 +130,7 @@ def derive_projection(parent: dict[str, Any], declared_scope: tuple[str, ...] | 
         projection_hash=projection_hash,
         projection_snapshot_hash=snapshot_hash,
         parent_evidence_hash=parent_hash,
-        parent_canonical_evidence_hash=(
-            str(parent["canonical_evidence_hash"]) if parent.get("canonical_evidence_hash") is not None else None
-        ),
+        parent_canonical_evidence_hash=(str(parent["canonical_evidence_hash"]) if parent.get("canonical_evidence_hash") is not None else None),
         declared_scope=scope,
         **projected_material,
     )

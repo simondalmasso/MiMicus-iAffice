@@ -172,11 +172,7 @@ class ScriptedProvider(Provider):
             claim_type_value = "other"
         claim_type: Literal["numeric", "factual", "causal", "temporal", "comparative", "other"] = claim_type_value  # type: ignore[assignment]
         assertion = self._typed_assertion(claim_type, facts, fixture, request.phenotype)
-        evidence_refs = [
-            str(row["evidence_hash"])
-            for row in request.evidence
-            if isinstance(row, dict) and isinstance(row.get("evidence_hash"), str)
-        ]
+        evidence_refs = [str(row["evidence_hash"]) for row in request.evidence if isinstance(row, dict) and isinstance(row.get("evidence_hash"), str)]
         claim = Claim(
             statement=statement,
             domain=request.domain,

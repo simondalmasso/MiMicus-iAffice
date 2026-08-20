@@ -215,11 +215,7 @@ class SwarmStateStore:
 
     def persist_receipt(self, receipt: VerificationReceipt) -> bool:
         with self.engine.begin() as connection:
-            existing = connection.execute(
-                select(VerificationReceiptRow.receipt_hash).where(
-                    VerificationReceiptRow.origin_key_hash == receipt.origin_key_hash
-                )
-            ).scalar_one_or_none()
+            existing = connection.execute(select(VerificationReceiptRow.receipt_hash).where(VerificationReceiptRow.origin_key_hash == receipt.origin_key_hash)).scalar_one_or_none()
             if existing is not None:
                 return False
             connection.execute(
@@ -247,17 +243,11 @@ class SwarmStateStore:
 
     def deactivate_receipt(self, receipt_hash: str, superseded_by_hash: str) -> bool:
         with self.engine.begin() as connection:
-            current = connection.execute(
-                select(VerificationReceiptRow.learning_active).where(
-                    VerificationReceiptRow.receipt_hash == receipt_hash
-                )
-            ).scalar_one_or_none()
+            current = connection.execute(select(VerificationReceiptRow.learning_active).where(VerificationReceiptRow.receipt_hash == receipt_hash)).scalar_one_or_none()
             if current is None or not bool(current):
                 return False
             connection.execute(
-                update(VerificationReceiptRow)
-                .where(VerificationReceiptRow.receipt_hash == receipt_hash)
-                .values(learning_active=0, superseded_by_hash=superseded_by_hash)
+                update(VerificationReceiptRow).where(VerificationReceiptRow.receipt_hash == receipt_hash).values(learning_active=0, superseded_by_hash=superseded_by_hash)
             )
         return True
 
@@ -287,14 +277,7 @@ class SwarmStateStore:
 
     def receipt_exists(self, receipt_hash: str) -> bool:
         with self.engine.connect() as connection:
-            return (
-                connection.execute(
-                    select(VerificationReceiptRow.receipt_hash).where(
-                        VerificationReceiptRow.receipt_hash == receipt_hash
-                    )
-                ).scalar_one_or_none()
-                is not None
-            )
+            return connection.execute(select(VerificationReceiptRow.receipt_hash).where(VerificationReceiptRow.receipt_hash == receipt_hash)).scalar_one_or_none() is not None
 
     def record_attribution(
         self,
@@ -487,9 +470,7 @@ class SwarmStateStore:
                 raw_groups[key]["cost"] += float(row["cost_contribution"])
                 raw_groups[key]["decisive"] += int(row["decisive_test_contribution"])
 
-            removal_groups: dict[tuple[str, str, str], dict[str, Any]] = defaultdict(
-                lambda: {"runs": set(), "marginal": 0.0}
-            )
+            removal_groups: dict[tuple[str, str, str], dict[str, Any]] = defaultdict(lambda: {"runs": set(), "marginal": 0.0})
             for row in removals:
                 key = (
                     str(row["fingerprint"]),
@@ -528,9 +509,7 @@ class SwarmStateStore:
                 )
                 fp = str(row["fingerprint"])
                 per_episode[key][fp] = per_episode[key].get(fp, True) and bool(row["outcome"])
-            pair_acc: dict[tuple[str, str, str, str], dict[str, int]] = defaultdict(
-                lambda: {"episodes": 0, "cofailures": 0, "independent": 0}
-            )
+            pair_acc: dict[tuple[str, str, str, str], dict[str, int]] = defaultdict(lambda: {"episodes": 0, "cofailures": 0, "independent": 0})
             pair_updates = 0
             for (run_id, domain, capability), outcomes in sorted(per_episode.items()):
                 fps = sorted(outcomes)
@@ -540,12 +519,8 @@ class SwarmStateStore:
                         left_outcome, right_outcome = outcomes[a], outcomes[b]
                         pair_key = (a, b, domain, capability)
                         pair_acc[pair_key]["episodes"] += 1
-                        pair_acc[pair_key]["cofailures"] += int(
-                            not left_outcome and not right_outcome
-                        )
-                        pair_acc[pair_key]["independent"] += int(
-                            left_outcome != right_outcome
-                        )
+                        pair_acc[pair_key]["cofailures"] += int(not left_outcome and not right_outcome)
+                        pair_acc[pair_key]["independent"] += int(left_outcome != right_outcome)
                         episode_hash = sha256_obj(
                             {
                                 "run_id": run_id,
@@ -615,15 +590,9 @@ class SwarmStateStore:
                     continue
                 episodes = int(pair_row["verified_episodes"])
                 confidence = episodes / (episodes + 5.0)
-                penalty = (
-                    int(pair_row["cofailures"]) / max(1, episodes)
-                ) * confidence
-                pair[agent_a][agent_b] = max(
-                    pair[agent_a].get(agent_b, 0.0), penalty
-                )
-                pair[agent_b][agent_a] = max(
-                    pair[agent_b].get(agent_a, 0.0), penalty
-                )
+                penalty = (int(pair_row["cofailures"]) / max(1, episodes)) * confidence
+                pair[agent_a][agent_b] = max(pair[agent_a].get(agent_b, 0.0), penalty)
+                pair[agent_b][agent_a] = max(pair[agent_b].get(agent_a, 0.0), penalty)
             marginal_rows = (
                 connection.execute(
                     select(
@@ -648,8 +617,7 @@ class SwarmStateStore:
                     -1.0,
                     min(
                         1.0,
-                        float(marginal_row["marginal_sum"])
-                        / max(1.0, float(marginal_row["verified_episodes"])),
+                        float(marginal_row["marginal_sum"]) / max(1.0, float(marginal_row["verified_episodes"])),
                     ),
                 )
         return pair, marginal
@@ -668,16 +636,7 @@ class SwarmStateStore:
                 .mappings()
                 .all()
             )
-        return tuple(
-            sorted(
-                {
-                    str(row["capability"])
-                    for row in rows
-                    if int(row["verified_episodes"]) >= 3
-                    and int(row["failures"]) > int(row["successes"])
-                }
-            )
-        )
+        return tuple(sorted({str(row["capability"]) for row in rows if int(row["verified_episodes"]) >= 3 and int(row["failures"]) > int(row["successes"])}))
 
     def record_germinal_outcome(
         self,
@@ -686,11 +645,7 @@ class SwarmStateStore:
         payload: dict[str, Any],
     ) -> None:
         with self.engine.begin() as connection:
-            existing = connection.execute(
-                select(ReceiptGerminalOutcomeRow.receipt_hash).where(
-                    ReceiptGerminalOutcomeRow.receipt_hash == receipt_hash
-                )
-            ).scalar_one_or_none()
+            existing = connection.execute(select(ReceiptGerminalOutcomeRow.receipt_hash).where(ReceiptGerminalOutcomeRow.receipt_hash == receipt_hash)).scalar_one_or_none()
             if existing is None:
                 connection.execute(
                     insert(ReceiptGerminalOutcomeRow).values(
@@ -766,8 +721,7 @@ class SwarmStateStore:
                     "capability": row["capability"],
                     "verified_episodes": row["verified_episodes"],
                     "cofailures": row["cofailures"],
-                    "confidence": int(row["verified_episodes"])
-                    / (int(row["verified_episodes"]) + 5.0),
+                    "confidence": int(row["verified_episodes"]) / (int(row["verified_episodes"]) + 5.0),
                 }
                 for row in pairs
             ],

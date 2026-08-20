@@ -95,9 +95,7 @@ def synthesize_production(
                 "dependency_group": subtask_meta.get(subtask_hash, {}).get("dependency_group"),
                 "claim_hash": best.identity_hash,
                 "status": status,
-                "decisive_execution_hashes": sorted(
-                    row.execution_snapshot_hash for row in linked if row.verdict in {Verdict.PASS, Verdict.FAIL}
-                ),
+                "decisive_execution_hashes": sorted(row.execution_snapshot_hash for row in linked if row.verdict in {Verdict.PASS, Verdict.FAIL}),
             }
         )
 
@@ -113,7 +111,16 @@ def synthesize_production(
     ordered_selected = sorted(
         selected,
         key=lambda claim: (
-            str(next((meta.get("dependency_group") for key, meta in subtask_meta.items() if key in by_subtask and any(row[1].identity_hash == claim.identity_hash for row in by_subtask[key])), "")),
+            str(
+                next(
+                    (
+                        meta.get("dependency_group")
+                        for key, meta in subtask_meta.items()
+                        if key in by_subtask and any(row[1].identity_hash == claim.identity_hash for row in by_subtask[key])
+                    ),
+                    "",
+                )
+            ),
             claim.identity_hash,
         ),
     )
@@ -122,14 +129,7 @@ def synthesize_production(
     if len(composite) > 8000:
         composite = composite[:7997] + "..."
     decisive = tuple(
-        sorted(
-            {
-                row.execution_snapshot_hash
-                for claim in selected
-                for row in execution_by_claim.get(claim.identity_hash, [])
-                if row.verdict in {Verdict.PASS, Verdict.FAIL}
-            }
-        )
+        sorted({row.execution_snapshot_hash for claim in selected for row in execution_by_claim.get(claim.identity_hash, []) if row.verdict in {Verdict.PASS, Verdict.FAIL}})
     )
     provenance = tuple(
         sorted(
@@ -148,10 +148,7 @@ def synthesize_production(
         disagreements.append({"kind": "required_subtasks_falsified", "subtask_hashes": sorted(falsified)})
     confidence_components = [claim.probability for claim in selected]
     confidence = min(confidence_components) if confidence_components else 0.0
-    if epistemic == "SUPPORTED":
-        confidence = min(0.95, max(0.5, confidence))
-    else:
-        confidence = min(0.60, confidence)
+    confidence = min(0.95, max(0.5, confidence)) if epistemic == "SUPPORTED" else min(0.6, confidence)
     if bool(budget.get("fail_closed")):
         stop = "budget fail-closed"
     elif falsified:

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from dataclasses import asdict
 from typing import Any, cast
 
@@ -52,21 +51,11 @@ def _provider_cost_for(run: dict[str, Any], fingerprint: str) -> float:
 def _bound_proof_hashes(run: dict[str, Any]) -> tuple[set[str], set[str]]:
     """Only exact provider inputs and authoritative execution snapshots bind truth."""
     provenance = run.get("evidence_provenance", {})
-    evidence_hashes = {
-        str(value)
-        for value in provenance.get("provider_input_evidence_hashes", [])
-        if isinstance(value, str) and len(value) == 64
-    }
+    evidence_hashes = {str(value) for value in provenance.get("provider_input_evidence_hashes", []) if isinstance(value, str) and len(value) == 64}
     authoritative = provenance.get("authoritative_falsifier_snapshot_hashes", [])
-    snapshot_hashes = {
-        str(value)
-        for value in authoritative
-        if isinstance(value, str) and len(value) == 64
-    }
+    snapshot_hashes = {str(value) for value in authoritative if isinstance(value, str) and len(value) == 64}
     snapshot_hashes.update(
-        str(row.get("execution_snapshot_hash"))
-        for row in run.get("falsifiers", [])
-        if isinstance(row, dict) and isinstance(row.get("execution_snapshot_hash"), str)
+        str(row.get("execution_snapshot_hash")) for row in run.get("falsifiers", []) if isinstance(row, dict) and isinstance(row.get("execution_snapshot_hash"), str)
     )
     return evidence_hashes, snapshot_hashes
 
@@ -87,11 +76,7 @@ def _find_spec(host: Any, domain: str, spec_hash: str) -> FalsifierSpec | None:
 
 
 def _exact_execution_context(host: Any, run_id: str, execution: dict[str, Any], claim: Claim) -> tuple[dict[str, Any], tuple[str, ...]]:
-    exact_hashes = tuple(
-        str(value)
-        for value in execution.get("evidence_projection_hashes", [])
-        if isinstance(value, str) and len(value) == 64
-    )
+    exact_hashes = tuple(str(value) for value in execution.get("evidence_projection_hashes", []) if isinstance(value, str) and len(value) == 64)
     if not exact_hashes:
         exact_hashes = tuple(ref for ref in claim.evidence_refs if len(ref) == 64)
     wanted = set(exact_hashes)
@@ -120,16 +105,11 @@ def _exact_execution_context(host: Any, run_id: str, execution: dict[str, Any], 
 def _process_verified_evasion(host: Any, receipt: VerificationReceipt, run: dict[str, Any], *, learn: bool) -> dict[str, Any] | None:
     if not learn:
         return None
-    relevant = [
-        row
-        for row in run.get("falsifiers", [])
-        if receipt.claim_hash in row.get("target_claim_hashes", [])
-    ]
+    relevant = [row for row in run.get("falsifiers", []) if receipt.claim_hash in row.get("target_claim_hashes", [])]
     contradictions = [
         row
         for row in relevant
-        if (receipt.verified_status == "SUPPORTED" and row.get("verdict") == "FAIL")
-        or (receipt.verified_status == "FALSIFIED" and row.get("verdict") == "PASS")
+        if (receipt.verified_status == "SUPPORTED" and row.get("verdict") == "FAIL") or (receipt.verified_status == "FALSIFIED" and row.get("verdict") == "PASS")
     ]
     if not contradictions:
         return None
@@ -308,13 +288,7 @@ def _record_verified_decision_removals(
     baseline_hash, baseline_decision = decision_hash_without_fingerprint(run, None)
     baseline_utility = _decision_utility(baseline_decision, expected_status)
     selected_claims = [row for row in run.get("final_claims", []) if str(row.get("claim_hash")) in set(selected)]
-    fingerprints = sorted(
-        {
-            str(row.get("contributor_fingerprint"))
-            for row in selected_claims
-            if row.get("contributor_fingerprint")
-        }
-    )
+    fingerprints = sorted({str(row.get("contributor_fingerprint")) for row in selected_claims if row.get("contributor_fingerprint")})
     recorded: list[dict[str, Any]] = []
     verified_scope = sorted(scope.values())
     with host.repository.engine.begin() as connection:
@@ -322,19 +296,8 @@ def _record_verified_decision_removals(
             without_hash, without_decision = decision_hash_without_fingerprint(run, fingerprint)
             without_utility = _decision_utility(without_decision, expected_status)
             delta = max(-1.0, min(1.0, baseline_utility - without_utility))
-            contributor_claims = [
-                row
-                for row in selected_claims
-                if str(row.get("contributor_fingerprint")) == fingerprint
-            ]
-            capabilities = sorted(
-                {
-                    str(capability)
-                    for row in contributor_claims
-                    for capability in row.get("contributor_capabilities", [])
-                    if capability
-                }
-            )
+            contributor_claims = [row for row in selected_claims if str(row.get("contributor_fingerprint")) == fingerprint]
+            capabilities = sorted({str(capability) for row in contributor_claims for capability in row.get("contributor_capabilities", []) if capability})
             for capability in capabilities:
                 existing = connection.execute(
                     select(RemovalAttributionRow.id).where(
@@ -566,12 +529,7 @@ def submit_verification(host: Any, submission: VerificationSubmission) -> dict[s
     attributions: list[dict[str, Any]] = []
     memory_changes: list[dict[str, Any]] = []
     if learn and fingerprint and capabilities:
-        decisive = int(
-            any(
-                receipt.claim_hash in row.get("target_claim_hashes", [])
-                for row in run.get("falsifiers", [])
-            )
-        )
+        decisive = int(any(receipt.claim_hash in row.get("target_claim_hashes", []) for row in run.get("falsifiers", [])))
         cost = _provider_cost_for(run, fingerprint)
         for capability in capabilities:
             family = f"{capability}_verified_task"
@@ -597,11 +555,7 @@ def submit_verification(host: Any, submission: VerificationSubmission) -> dict[s
                 )
         memory_changes = _write_verified_memory(host, receipt, claim)
 
-    removals = (
-        _record_verified_decision_removals(host, store, receipt, run)
-        if learn
-        else []
-    )
+    removals = _record_verified_decision_removals(host, store, receipt, run) if learn else []
     learning_rebuild = store.rebuild_learning()
     germinal = _process_verified_evasion(host, receipt, run, learn=learn)
     return {

@@ -222,10 +222,7 @@ def execute_claim_bound(
     No verdict is sprayed across unrelated claims.
     """
     context, incompatibility = _claim_context(spec, claim, evidence_context)
-    if incompatibility is None:
-        raw = execute_primitive(spec, context)
-    else:
-        raw = _result(spec, Verdict.INCONCLUSIVE, {}, incompatibility)
+    raw = execute_primitive(spec, context) if incompatibility is None else _result(spec, Verdict.INCONCLUSIVE, {}, incompatibility)
     assertion_hash = claim.assertion_hash
     equivalence_material = {
         "primitive": spec.primitive,

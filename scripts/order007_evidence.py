@@ -73,9 +73,7 @@ class RecordingProvider(ScriptedProvider):
             (
                 row.get("extracted_facts", {}).get("claimed")
                 for row in request.evidence
-                if isinstance(row, dict)
-                and isinstance(row.get("extracted_facts"), dict)
-                and row.get("extracted_facts", {}).get("claimed") is not None
+                if isinstance(row, dict) and isinstance(row.get("extracted_facts"), dict) and row.get("extracted_facts", {}).get("claimed") is not None
             ),
             None,
         )
@@ -84,11 +82,7 @@ class RecordingProvider(ScriptedProvider):
             domain=request.domain,
             probability=probabilities.get(request.phenotype, 0.6),
             claim_type="numeric",
-            assertion=(
-                NumericAssertion(asserted_value=float(asserted_value))
-                if isinstance(asserted_value, (int, float))
-                else None
-            ),
+            assertion=(NumericAssertion(asserted_value=float(asserted_value)) if isinstance(asserted_value, (int, float)) else None),
             evidence_refs=evidence_refs,
         )
         return replace(response, claim=claim)

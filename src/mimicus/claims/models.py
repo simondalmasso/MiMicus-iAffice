@@ -92,12 +92,7 @@ class OpaqueAssertion(BaseModel):
 
 
 ClaimAssertion = Annotated[
-    NumericAssertion
-    | TemporalAssertion
-    | SourceIndependenceAssertion
-    | EntailmentAssertion
-    | CounterexampleAssertion
-    | OpaqueAssertion,
+    NumericAssertion | TemporalAssertion | SourceIndependenceAssertion | EntailmentAssertion | CounterexampleAssertion | OpaqueAssertion,
     Field(discriminator="kind"),
 ]
 
@@ -109,9 +104,7 @@ class Claim(BaseModel):
     statement: str
     domain: str
     probability: float = Field(ge=0.0, le=1.0)
-    claim_type: Literal[
-        "numeric", "factual", "causal", "temporal", "comparative", "other"
-    ] = "other"
+    claim_type: Literal["numeric", "factual", "causal", "temporal", "comparative", "other"] = "other"
     assertion: ClaimAssertion | None = None
     evidence_refs: list[str] = Field(default_factory=list)
     units: str | None = None
@@ -132,9 +125,7 @@ class Claim(BaseModel):
             "statement": self.statement,
             "domain": self.domain,
             "claim_type": self.claim_type,
-            "assertion": (
-                None if self.assertion is None else self.assertion.model_dump(mode="json")
-            ),
+            "assertion": (None if self.assertion is None else self.assertion.model_dump(mode="json")),
             "evidence_refs": tuple(sorted(set(self.evidence_refs))),
             "units": self.units,
             "as_of": self.as_of,

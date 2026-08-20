@@ -20,26 +20,33 @@ def _now() -> str:
 
 def active_receipts_for_run(engine: Engine, run_id: str) -> list[dict[str, Any]]:
     with engine.connect() as connection:
-        rows = connection.execute(
-            select(
-                VerificationReceiptRow.receipt_hash,
-                VerificationReceiptRow.claim_hash,
-                VerificationReceiptRow.payload_json,
-                VerificationReceiptRow.learning_active,
-            ).where(
-                VerificationReceiptRow.run_id == run_id,
-                VerificationReceiptRow.accepted == 1,
-                VerificationReceiptRow.learning_active == 1,
+        rows = (
+            connection.execute(
+                select(
+                    VerificationReceiptRow.receipt_hash,
+                    VerificationReceiptRow.claim_hash,
+                    VerificationReceiptRow.payload_json,
+                    VerificationReceiptRow.learning_active,
+                ).where(
+                    VerificationReceiptRow.run_id == run_id,
+                    VerificationReceiptRow.accepted == 1,
+                    VerificationReceiptRow.learning_active == 1,
+                )
             )
-        ).mappings().all()
+            .mappings()
+            .all()
+        )
     out: list[dict[str, Any]] = []
     for row in rows:
         payload = json.loads(str(row["payload_json"]))
-        out.append(payload | {
-            "receipt_hash": str(row["receipt_hash"]),
-            "claim_hash": str(row["claim_hash"]),
-            "learning_active": bool(row["learning_active"]),
-        })
+        out.append(
+            payload
+            | {
+                "receipt_hash": str(row["receipt_hash"]),
+                "claim_hash": str(row["claim_hash"]),
+                "learning_active": bool(row["learning_active"]),
+            }
+        )
     return out
 
 
@@ -73,15 +80,19 @@ def _memory_depends_on_receipt(payload_json: str, receipt_hash: str) -> bool:
 def revoke_receipt_derivatives(engine: Engine, receipt_hash: str, superseded_by_hash: str) -> dict[str, int]:
     counts = {"removals": 0, "memory": 0, "evasions": 0, "mutations": 0, "germinal": 0}
     with engine.begin() as connection:
-        removal_rows = connection.execute(
-            select(
-                RemovalAttributionRow.id,
-                RemovalAttributionRow.verified_scope_json,
-                RemovalAttributionRow.marginal_delta,
-                RemovalAttributionRow.original_marginal_delta,
-                RemovalAttributionRow.active,
+        removal_rows = (
+            connection.execute(
+                select(
+                    RemovalAttributionRow.id,
+                    RemovalAttributionRow.verified_scope_json,
+                    RemovalAttributionRow.marginal_delta,
+                    RemovalAttributionRow.original_marginal_delta,
+                    RemovalAttributionRow.active,
+                )
             )
-        ).mappings().all()
+            .mappings()
+            .all()
+        )
         for row in removal_rows:
             scope_raw = row["verified_scope_json"]
             try:
@@ -94,16 +105,20 @@ def revoke_receipt_derivatives(engine: Engine, receipt_hash: str, superseded_by_
             if original is None:
                 original = float(row["marginal_delta"])
             connection.execute(
-                update(RemovalAttributionRow).where(RemovalAttributionRow.id == row["id"]).values(
+                update(RemovalAttributionRow)
+                .where(RemovalAttributionRow.id == row["id"])
+                .values(
                     active=0,
                     original_marginal_delta=float(original),
                     marginal_delta=0.0,
-                    provenance_hash=sha256_obj({
-                        "state": "revoked_authority",
-                        "receipt_hash": receipt_hash,
-                        "superseded_by_hash": superseded_by_hash,
-                        "scope": sorted(scope),
-                    }),
+                    provenance_hash=sha256_obj(
+                        {
+                            "state": "revoked_authority",
+                            "receipt_hash": receipt_hash,
+                            "superseded_by_hash": superseded_by_hash,
+                            "scope": sorted(scope),
+                        }
+                    ),
                 )
             )
             counts["removals"] += 1
@@ -117,7 +132,9 @@ def revoke_receipt_derivatives(engine: Engine, receipt_hash: str, superseded_by_
                 continue
             rejected = item.model_copy(update={"status": MemoryStatus.REJECTED, "authority": 0.0})
             connection.execute(
-                update(MemoryItemRow).where(MemoryItemRow.memory_id == row["memory_id"]).values(
+                update(MemoryItemRow)
+                .where(MemoryItemRow.memory_id == row["memory_id"])
+                .values(
                     status=MemoryStatus.REJECTED.value,
                     authority=0.0,
                     payload_json=canonical_json(rejected.model_dump(mode="json")),
@@ -126,28 +143,24 @@ def revoke_receipt_derivatives(engine: Engine, receipt_hash: str, superseded_by_
             )
             counts["memory"] += 1
 
-        evasion_hashes = list(connection.execute(
-            select(EvasionEventRow.evasion_hash).where(
-                EvasionEventRow.ground_truth_hash == receipt_hash,
-                EvasionEventRow.confirmed.is_(True),
-            )
-        ).scalars())
+        evasion_hashes = list(
+            connection.execute(
+                select(EvasionEventRow.evasion_hash).where(
+                    EvasionEventRow.ground_truth_hash == receipt_hash,
+                    EvasionEventRow.confirmed.is_(True),
+                )
+            ).scalars()
+        )
         if evasion_hashes:
             connection.execute(update(EvasionEventRow).where(EvasionEventRow.evasion_hash.in_(evasion_hashes)).values(confirmed=False))
             counts["evasions"] = len(evasion_hashes)
-            mutation_hashes = list(connection.execute(
-                select(MutationCandidateRow.candidate_hash).where(MutationCandidateRow.evasion_hash.in_(evasion_hashes))
-            ).scalars())
+            mutation_hashes = list(connection.execute(select(MutationCandidateRow.candidate_hash).where(MutationCandidateRow.evasion_hash.in_(evasion_hashes))).scalars())
             if mutation_hashes:
                 connection.execute(update(MutationCandidateRow).where(MutationCandidateRow.candidate_hash.in_(mutation_hashes)).values(status="REVOKED_AUTHORITY"))
                 counts["mutations"] = len(mutation_hashes)
 
-        germinal = connection.execute(
-            select(ReceiptGerminalOutcomeRow.receipt_hash).where(ReceiptGerminalOutcomeRow.receipt_hash == receipt_hash)
-        ).scalar_one_or_none()
+        germinal = connection.execute(select(ReceiptGerminalOutcomeRow.receipt_hash).where(ReceiptGerminalOutcomeRow.receipt_hash == receipt_hash)).scalar_one_or_none()
         if germinal is not None:
-            connection.execute(
-                update(ReceiptGerminalOutcomeRow).where(ReceiptGerminalOutcomeRow.receipt_hash == receipt_hash).values(status="REVOKED_AUTHORITY")
-            )
+            connection.execute(update(ReceiptGerminalOutcomeRow).where(ReceiptGerminalOutcomeRow.receipt_hash == receipt_hash).values(status="REVOKED_AUTHORITY"))
             counts["germinal"] = 1
     return counts

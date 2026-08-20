@@ -161,13 +161,22 @@ def _spec_index(host: Any, domain: str) -> dict[str, FalsifierSpec]:
 
 
 def _restore_projection_claims(result: dict[str, Any], boundary: ProductionProviderBoundary) -> tuple[dict[str, str], dict[str, list[EvidenceProjection]]]:
-    by_trace = {
-        str(row["response"]["trace_id"]): row
-        for row in boundary.generate_records
-        if row["response"].get("trace_id") is not None
-    }
+    by_trace = {str(row["response"]["trace_id"]): row for row in boundary.generate_records if row["response"].get("trace_id") is not None}
     old_to_new: dict[str, str] = {}
     projections_by_claim: dict[str, list[EvidenceProjection]] = {}
+    for usage_row in result.get("evidence_provenance", {}).get("provider_usages", []):
+        trace_id = usage_row.get("trace_id")
+        record = by_trace.get(str(trace_id)) if trace_id is not None else None
+        if record is None:
+            continue
+        exact_hashes = [str(value) for value in record["request"].get("evidence_hashes", [])]
+        projection_hashes = [str(value) for value in record.get("projection_hashes", [])]
+        projection_to_parent = {str(key): str(value) for key, value in record.get("projection_to_parent", {}).items()}
+        usage = usage_row.setdefault("usage", {})
+        usage["evidence_hashes_supplied"] = exact_hashes
+        usage["projection_hashes_supplied"] = projection_hashes
+        usage["parent_evidence_hashes_supplied"] = [projection_to_parent.get(value, value) for value in exact_hashes]
+
     for claim_row in result.get("final_claims", []):
         trace_id = claim_row.get("provider_trace_id")
         record = by_trace.get(str(trace_id)) if trace_id is not None else None
@@ -192,11 +201,7 @@ def _restore_projection_claims(result: dict[str, Any], boundary: ProductionProvi
                 "provider_projection_hashes": list(record["projection_hashes"]),
             }
         )
-        projections_by_claim[exact_current.identity_hash] = [
-            boundary.projections[value]
-            for value in record["projection_hashes"]
-            if value in boundary.projections
-        ]
+        projections_by_claim[exact_current.identity_hash] = [boundary.projections[value] for value in record["projection_hashes"] if value in boundary.projections]
     market = result.get("evidence_provenance", {}).get("claim_aware_market", {})
     for key in ("selected", "candidates"):
         for bid in market.get(key, []):
@@ -229,7 +234,6 @@ def _reexecute_claim_bound(
         if not projections:
             # Non-projected provider inputs remain exact canonical evidence.
             evidence_rows = host.repository.get_evidence(str(result["run_id"]))
-            context_rows: list[EvidenceProjection] = []
             merged: dict[str, Any] = {}
             for row in evidence_rows:
                 facts = row.get("extracted_facts", {})
@@ -332,10 +336,7 @@ def _apply_decision(result: dict[str, Any], decision: Any, executions: list[Fals
     result["confidence"] = decision.confidence
     result["disagreements"] = list(decision.unresolved_disagreements)
     result["falsifiers"] = [row.model_dump(mode="json") for row in executions]
-    if decision.epistemic_status == "SUPPORTED":
-        result["status"] = "answered"
-        result["answer"] = decision.candidate_answer
-    elif decision.epistemic_status == "FALSIFIED":
+    if decision.epistemic_status == "SUPPORTED" or decision.epistemic_status == "FALSIFIED":
         result["status"] = "answered"
         result["answer"] = decision.candidate_answer
     else:
@@ -435,11 +436,7 @@ def _persist_postprocessed(
 ) -> None:
     run_id = str(result["run_id"])
     with host.repository.engine.begin() as connection:
-        connection.execute(
-            update(RunRow)
-            .where(RunRow.run_id == run_id)
-            .values(status=str(result["status"]), result_json=canonical_json(result))
-        )
+        connection.execute(update(RunRow).where(RunRow.run_id == run_id).values(status=str(result["status"]), result_json=canonical_json(result)))
         connection.execute(delete(ClaimRow).where(ClaimRow.run_id == run_id))
         for row in result.get("final_claims", []):
             connection.execute(
@@ -528,6 +525,7 @@ async def execute_production_core(host: Any, request: Any) -> dict[str, Any]:
 
     executions = _reexecute_claim_bound(host, result, projections_by_claim)
     communications, round_progress = await _extend_bounded_communication(boundary, result, executions, request)
+    executions = _reexecute_claim_bound(host, result, projections_by_claim)
     result["persistent_state"]["communications"] = communications
     result["challenge_edge_count"] = len(communications)
     result["provider_call_count"] = int(result.get("provider_call_count", 0)) + len(round_progress)
@@ -547,6 +545,20 @@ async def execute_production_core(host: Any, request: Any) -> dict[str, Any]:
         hierarchy_execution=dict(result.get("hierarchy_execution", {})),
     )
     _apply_decision(result, decision, executions)
+    spec_rows = _spec_index(
+        host,
+        str((result.get("final_claims") or [{}])[0].get("domain") or request.domain or "general"),
+    )
+    persistent_reuse = set(result.get("persistent_falsifiers_reused", []))
+    result["falsifiers"] = [
+        row.model_dump(mode="json")
+        | {
+            "id": spec_rows[row.spec_hash].id if row.spec_hash in spec_rows else None,
+            "primitive": spec_rows[row.spec_hash].primitive if row.spec_hash in spec_rows else None,
+            "persistent_reuse": row.spec_hash in persistent_reuse,
+        }
+        for row in executions
+    ]
 
     parent_hashes = list(result.get("evidence_provenance", {}).get("provider_input_evidence_hashes", []))
     projection_hashes = sorted(boundary.projections)
@@ -554,9 +566,7 @@ async def execute_production_core(host: Any, request: Any) -> dict[str, Any]:
     if projection_hashes:
         result["evidence_provenance"]["provider_input_evidence_hashes"] = projection_hashes
     result["evidence_provenance"]["evidence_projection_hashes"] = projection_hashes
-    result["evidence_provenance"]["projection_parent_map"] = {
-        key: value.parent_evidence_hash for key, value in sorted(boundary.projections.items())
-    }
+    result["evidence_provenance"]["projection_parent_map"] = {key: value.parent_evidence_hash for key, value in sorted(boundary.projections.items())}
     result["evidence_provenance"]["authoritative_falsifier_snapshot_hashes"] = [row.execution_snapshot_hash for row in executions]
 
     progress_rows = [
@@ -573,8 +583,7 @@ async def execute_production_core(host: Any, request: Any) -> dict[str, Any]:
         },
     ]
     result["progress"] = progress_rows
-    specs = _spec_index(host, str((result.get("final_claims") or [{}])[0].get("domain") or request.domain or "general"))
-    semantic = _semantic_record(result, request, boundary, executions, specs)
+    semantic = _semantic_record(result, request, boundary, executions, spec_rows)
     result["semantic_replay"] = semantic
     result["replay_verified"] = True  # ledger integrity; semantic replay is reported separately.
     _persist_postprocessed(host, result, boundary, executions, communications, progress_rows)

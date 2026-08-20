@@ -16,6 +16,7 @@ from mimicus.coalition.selector import AgentCandidate
 from mimicus.coalition.threat_profile import ThreatProfile, profile_task
 from mimicus.events.ledger import EventLedger
 from mimicus.falsifiers.market import ClaimFalsifierBid, FalsifierMarket
+from mimicus.falsifiers.primitives import execute_claim_bound
 from mimicus.falsifiers.spec import FalsifierExecution, FalsifierSpec
 from mimicus.orchestration.budget import BudgetLedger
 from mimicus.orchestration.communication import ChallengeRequest, CommunicationCandidate
@@ -511,6 +512,7 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
     claims_by_node: dict[str, Claim] = {}
     claim_owner_by_node: dict[str, str] = {}
     claim_trace_ids: dict[str, str | None] = {}
+    claim_context_by_identity: dict[str, dict[str, Any]] = {}
     provider_usages: list[dict[str, Any]] = []
     executions: list[FalsifierExecution] = []
     communications: list[dict[str, Any]] = []
@@ -555,6 +557,25 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
             payload["content"] = ""
             scoped.append(payload)
         return tuple(scoped)
+
+    def scoped_context(payload: tuple[dict[str, Any], ...]) -> dict[str, Any]:
+        merged: dict[str, Any] = {}
+        conflicts: set[str] = set()
+        for row in payload:
+            facts = row.get("extracted_facts", {})
+            if not isinstance(facts, dict):
+                continue
+            for key, value in facts.items():
+                if key in conflicts:
+                    continue
+                if key in merged and sha256_obj(merged[key]) != sha256_obj(value):
+                    merged.pop(key, None)
+                    conflicts.add(key)
+                else:
+                    merged[key] = value
+        if conflicts:
+            merged["evidence_conflicts"] = sorted(conflicts)
+        return merged
 
     async def ensure_market() -> list[ClaimFalsifierBid]:
         nonlocal market_selected, market_all
@@ -622,6 +643,7 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
             rejected_refs = [ref for ref in claimed_refs if ref not in allowed_refs]
             claim = response.claim.model_copy(update={"evidence_refs": validated_refs})
             claims_by_node[node.node_id] = claim
+            claim_context_by_identity[claim.identity_hash] = scoped_context(runtime_payload)
             claim_owner_by_node[node.node_id] = member.fingerprint
             claim_trace_ids[node.node_id] = response.trace_id
             if subtask is not None:
@@ -675,17 +697,41 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
             selected_market_specs.add(spec.hash)
             if not host.services.sandbox.permits(spec.primitive):
                 raise RuntimeError(f"sandbox rejected primitive {spec.primitive}")
-            reservation = await budget.reserve("falsifier", spec.estimated_cost, known_zero_cost=spec.estimated_cost == 0.0)
-            if reservation is None:
+            claim_by_identity = {claim.identity_hash: claim for claim in claims_by_node.values()}
+            node_executions: list[dict[str, Any]] = []
+            for bid in sorted(relevant, key=lambda row: (row.target_claim_hash, row.selection_reason)):
+                claim = claim_by_identity.get(bid.target_claim_hash)
+                if claim is None:
+                    continue
+                reservation = await budget.reserve(
+                    "falsifier",
+                    spec.estimated_cost,
+                    known_zero_cost=spec.estimated_cost == 0.0,
+                )
+                if reservation is None:
+                    continue
+                execution = execute_claim_bound(
+                    spec,
+                    claim,
+                    claim_context_by_identity.get(claim.identity_hash, {}),
+                    evidence_projection_hashes=tuple(claim.evidence_refs),
+                    selection_reason=bid.selection_reason,
+                )
+                await budget.reconcile(reservation, execution.cost)
+                executions.append(execution)
+                node_executions.append(execution.model_dump(mode="json"))
+                ledger.append(
+                    "falsifier_selected",
+                    {
+                        "spec_hash": spec.hash,
+                        "target_claim_hashes": list(execution.target_claim_hashes),
+                        "why": bid.selection_reason,
+                    },
+                )
+                ledger.append("falsifier_executed", execution.model_dump(mode="json"))
+            if not node_executions:
                 return {"budget_exhausted": True}
-            raw = host.services.falsifiers.run(spec, evidence_context)
-            reason = "; ".join(sorted({bid.selection_reason for bid in relevant}))
-            execution = raw.model_copy(update={"target_claim_hashes": tuple(sorted({bid.target_claim_hash for bid in relevant})), "selection_reason": reason})
-            await budget.reconcile(reservation, execution.cost)
-            executions.append(execution)
-            ledger.append("falsifier_selected", {"spec_hash": spec.hash, "target_claim_hashes": list(execution.target_claim_hashes), "why": reason})
-            ledger.append("falsifier_executed", execution.model_dump(mode="json"))
-            return execution.model_dump(mode="json")
+            return {"executions": node_executions}
         if node.kind == NodeKind.CHALLENGE:
             owner_to_node = {owner: node_id for node_id, owner in claim_owner_by_node.items()}
             if len(owner_to_node) < 2:
