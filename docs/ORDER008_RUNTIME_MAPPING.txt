@@ -1,0 +1,53 @@
+ALIAS O4U=tests/unit/test_order004_correctness.py
+ALIAS O4R=tests/integration/test_order004_runtime.py
+ALIAS O5U=tests/unit/test_order005_correctness.py
+ALIAS O5R=tests/integration/test_order005_runtime.py
+ALIAS O6U=tests/unit/test_order006_core.py
+ALIAS O6R=tests/integration/test_order006_runtime.py
+ALIAS O7U=tests/unit/test_order007_correctness.py
+ALIAS O8R=tests/integration/test_order008_runtime.py
+ALIAS PLUGINS=tests/unit/test_plugins.py
+ALIAS CLI_BENCH=tests/integration/test_cli_benchmark.py
+ALIAS O7E=scripts/order007_evidence.py
+ALIAS BENCH=exact-head benchmark-evidence job (200/architecture, common grader, anti-rigging, leakage)
+ALIAS FULL=exact-head full unit/integration coverage gate
+MAPPING_BEGIN
+F001|production_runtime|O6R + O8R::F043
+F002|production_runtime|O6R::germinal_restart + O8R::F043
+F003|production_runtime|O6R::microaudition_bankruptcy
+F004|production_runtime|O6R::all_five_morphologies + O8R::F043
+F005|production_runtime|O6R::all_five_morphologies
+F006|production_runtime|PLUGINS + O5R/O6R engine construction
+F007|exact_head_system_gate|BENCH
+F008|production_runtime|O6R::germinal_restart
+F009|production_runtime_superseding_fixture|O6R::microaudition_bankruptcy
+F010|production_contract|O5U::identity_manifest + adapter_version
+F011|provider_contract_mock|O4R::openai_verified_memory_structured_input
+F012|production_runtime|O5R::unknown_cost_preflight + known_cost_preflight
+F013|production_runtime|O5R::provider_refs_restart
+F014|production_runtime|O7U::claim_market_novelty
+F015|production_runtime|O6R::all_five_morphologies
+F016|production_contract|O4U structured-cancellation regressions + FULL
+F017|exact_head_system_gate|BENCH + CLI_BENCH
+F018|production_runtime|O5R::words_only_no_synthetic_evidence
+F019|production_contract|O5U::identity_manifest
+F020|production_runtime|O5R::provider_refs_restart + openai_evidence_binding
+F021|production_runtime|O6U + O6R::microaudition_bankruptcy
+F022|production_contract|O5U::tool_capability_truth + O5R preflight
+F023|production_runtime|O6R::microaudition_bankruptcy
+F024|production_runtime|O6R::germinal_restart + O7E verifier authority
+F025|production_runtime|O6R::germinal_restart
+F026|production_runtime|O6R::claim_aware_market_hierarchy
+F027|production_runtime|O6U::synthesis + O8 F039 kills
+F028|production_runtime|O6R::claim_aware_market_hierarchy
+F029|production_runtime|O6R::cofailure_marginal_restart
+F030|production_runtime|O6R::all_five_morphologies + BENCH
+F031|production_runtime|O6U::structural_threat_profile_wording_invariant
+F032|production_runtime|O7E::VERIFIER_AUTHORITY_BINDING + MCP
+F033|production_contract|O7U::claim_identity_revision + O7E
+F034|production_runtime|O7U::claim_market_novelty + O7E
+F035|production_runtime|O7E::HIERARCHY_COMPLETE_EXECUTION + O6R hierarchy
+F036|production_runtime|O7E::REMOVAL_ATTRIBUTION + O8R::F042
+F037|production_runtime|O7U::runtime_core_lock + O7E::RUNTIME_CORE_LOCK
+MAPPING_END
+COMPATIBILITY_ONLY=tests/integration/test_order003_runtime.py and fixture-oriented ORDER-004 regressions remain in the full suite but are not counted as production proof above.
