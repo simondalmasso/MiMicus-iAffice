@@ -1,0 +1,104 @@
+name: ORDER-008 replay LOO one-shot
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-probe:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: order-002-mimicus-v01
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Patch persisted replay inputs and LOO parser
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace(path: str, old: str, new: str) -> None:
+              p = Path(path)
+              text = p.read_text(encoding='utf-8')
+              if old not in text:
+                  raise SystemExit(f'expected snippet missing: {path}: {old[:120]!r}')
+              p.write_text(text.replace(old, new), encoding='utf-8')
+
+          replace(
+              'src/mimicus/orchestration/production_synthesis.py',
+              '''        claims.append((fp, claim, float(row.get("contributor_authority", row.get("probability", 0.5))), row.get("subtask_hash")))\n    executions = [FalsifierExecution.model_validate(row) for row in run.get("falsifiers", [])]\n''',
+              '''        raw_authority = row.get("contributor_authority")\n        authority = float(raw_authority) if isinstance(raw_authority, (int, float)) else float(row.get("probability", 0.5))\n        claims.append((fp, claim, authority, row.get("subtask_hash")))\n    executions = [\n        FalsifierExecution.model_validate(\n            {key: row[key] for key in FalsifierExecution.model_fields if key in row}\n        )\n        for row in run.get("falsifiers", [])\n        if isinstance(row, dict)\n    ]\n''',
+          )
+
+          replace(
+              'src/mimicus/orchestration/production_core.py',
+              '''def _semantic_record(\n    result: dict[str, Any],\n    request: Any,\n    boundary: ProductionProviderBoundary,\n    executions: list[FalsifierExecution],\n    specs: dict[str, FalsifierSpec],\n) -> dict[str, Any]:\n''',
+              '''def _semantic_record(\n    result: dict[str, Any],\n    request: Any,\n    boundary: ProductionProviderBoundary,\n    executions: list[FalsifierExecution],\n    specs: dict[str, FalsifierSpec],\n    canonical_evidence_context: dict[str, Any],\n) -> dict[str, Any]:\n''',
+          )
+          replace(
+              'src/mimicus/orchestration/production_core.py',
+              '''        projections = [boundary.projections[value] for value in execution.evidence_projection_hashes if value in boundary.projections]\n        replay_executions.append(\n            {\n                "spec": specs[execution.spec_hash].model_dump(mode="json"),\n                "claim": claim.model_dump(mode="json"),\n                "evidence_context": _merge_projection_context(projections),\n''',
+              '''        projections = [boundary.projections[value] for value in execution.evidence_projection_hashes if value in boundary.projections]\n        replay_context = (\n            _merge_projection_context(projections)\n            if projections\n            else dict(canonical_evidence_context)\n        )\n        replay_executions.append(\n            {\n                "spec": specs[execution.spec_hash].model_dump(mode="json"),\n                "claim": claim.model_dump(mode="json"),\n                "evidence_context": replay_context,\n''',
+          )
+          replace(
+              'src/mimicus/orchestration/production_core.py',
+              '''    result["progress"] = progress_rows\n    semantic = _semantic_record(result, request, boundary, executions, spec_rows)\n''',
+              '''    result["progress"] = progress_rows\n    canonical_evidence_context: dict[str, Any] = {}\n    evidence_conflicts: set[str] = set()\n    for evidence_row in host.repository.get_evidence(str(result["run_id"])):\n        facts = evidence_row.get("extracted_facts", {})\n        if not isinstance(facts, dict):\n            continue\n        for key, value in facts.items():\n            if key in evidence_conflicts:\n                continue\n            if key in canonical_evidence_context and sha256_obj(canonical_evidence_context[key]) != sha256_obj(value):\n                canonical_evidence_context.pop(key, None)\n                evidence_conflicts.add(key)\n            else:\n                canonical_evidence_context[key] = value\n    if evidence_conflicts:\n        canonical_evidence_context["evidence_conflicts"] = sorted(evidence_conflicts)\n    semantic = _semantic_record(\n        result,\n        request,\n        boundary,\n        executions,\n        spec_rows,\n        canonical_evidence_context,\n    )\n''',
+          )
+          PY
+          python -m pip install -r requirements.lock >/dev/null
+          python -m pip install --no-deps -e . >/dev/null
+          ruff format .
+          ruff check . --fix --unsafe-fixes
+          ruff check .
+          mypy src/mimicus
+      - name: Probe historical verification and semantic replay
+        shell: bash
+        run: |
+          python scripts/order007_evidence.py "$RUNNER_TEMP/ORDER-007"
+          python - <<'PY'
+          from mimicus.claims.evidence_bundle import EvidenceInput
+          from mimicus.claims.models import Claim, NumericAssertion
+          from mimicus.orchestration.engine import MiMicusEngine, RunRequest
+          from mimicus.providers.base import ProviderRequest, ProviderResponse
+          from mimicus.providers.scripted import ScriptedProvider
+
+          class DivergentProvider(ScriptedProvider):
+              async def generate_request_async(self, request: ProviderRequest) -> ProviderResponse:
+                  self.generate_calls += 1
+                  asserted = 1200.0 if request.phenotype == "numeric-1" else 1300.0
+                  refs = [str(row["evidence_hash"]) for row in request.evidence if isinstance(row, dict) and isinstance(row.get("evidence_hash"), str)]
+                  return ProviderResponse(
+                      claim=Claim(statement=f"Annual total is {asserted:.0f}", domain=request.domain, probability=0.8, claim_type="numeric", assertion=NumericAssertion(asserted_value=asserted), evidence_refs=refs),
+                      cost=0.0,
+                      latency_ms=0.0,
+                      trace_id=f"diag-{self.generate_calls}-{request.phenotype}",
+                      usage={"simulated": True, "calls": 1, "monetary_cost_status": "KNOWN", "monetary_cost_usd": 0.0},
+                  )
+
+          engine = MiMicusEngine("sqlite:////tmp/order008-replay-fix.db", provider=DivergentProvider())
+          ev = EvidenceInput(origin="probe", independence_cluster="a", content="numeric", extracted_facts={"price": 100, "users": 12, "claimed": 1200, "price_period": "annual", "clusters": ["a", "b"], "texts": ["alpha independent", "beta independent"]})
+          run = engine.run(RunRequest(task="Audit annual total using independent evidence.", domain="finance", source_mode="runtime", evidence=[ev], depth="deep", max_agents=4, max_concurrency=4))
+          numeric = [row for row in run.falsifiers if row.get("primitive") == "numeric_invariant"]
+          assert {row.get("verdict") for row in numeric} >= {"PASS", "FAIL"}
+          replay = engine.get_run(run.run_id)["replay_state"]
+          assert replay["integrity_verified"] is True
+          assert replay["semantic_reexecution_verified"] is True, replay
+          PY
+      - name: Commit patch and remove worker
+        shell: bash
+        run: |
+          rm .github/workflows/order008-replay-loo-fix.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'ORDER-008: persist exact replay context and normalize LOO execution rows'
+          git push origin HEAD:order-002-mimicus-v01
