@@ -166,11 +166,7 @@ def revoke_receipt_derivatives(engine: Engine, receipt_hash: str, superseded_by_
                     ).scalars()
                 )
                 if promoted:
-                    connection.execute(
-                        update(FalsifierVersionRow)
-                        .where(FalsifierVersionRow.id.in_(promoted))
-                        .values(lifecycle_state="REVOKED_AUTHORITY")
-                    )
+                    connection.execute(update(FalsifierVersionRow).where(FalsifierVersionRow.id.in_(promoted)).values(lifecycle_state="REVOKED_AUTHORITY"))
                     counts["promotions"] = len(promoted)
                 counts["mutations"] = len(mutation_hashes)
 
