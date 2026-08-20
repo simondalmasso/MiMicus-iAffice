@@ -251,7 +251,8 @@ def _claim_rows_for_synthesis(result: dict[str, Any]) -> list[tuple[str, Claim, 
     rows: list[tuple[str, Claim, float, str | None]] = []
     for row in result.get("final_claims", []):
         claim = _claim_from_row(row)
-        authority = float(row.get("contributor_authority", 0.5))
+        raw_authority = row.get("contributor_authority")
+        authority = float(raw_authority) if isinstance(raw_authority, (int, float)) else 0.5
         rows.append((str(row.get("contributor_fingerprint", "")), claim, authority, row.get("subtask_hash")))
     return rows
 
@@ -364,7 +365,8 @@ def _semantic_record(
         for row in result.get("final_claims", [])
     ]
     replay_executions: list[dict[str, Any]] = []
-    claims = {Claim.model_validate(row).identity_hash: Claim.model_validate(row) for row in claim_rows}
+    parsed_claims = [_claim_from_row(row) for row in claim_rows]
+    claims = {claim.identity_hash: claim for claim in parsed_claims}
     projection_rows = {key: value.persisted_row() for key, value in boundary.projections.items()}
     for execution in executions:
         target = execution.target_claim_hashes[0] if execution.target_claim_hashes else None

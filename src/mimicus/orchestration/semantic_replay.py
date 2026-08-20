@@ -126,7 +126,7 @@ def semantic_replay(repository: Any, run_id: str) -> dict[str, Any]:
             (
                 str(row.get("contributor_fingerprint", "")),
                 claim,
-                float(row.get("contributor_authority", 0.5)),
+                float(row["contributor_authority"]) if isinstance(row.get("contributor_authority"), (int, float)) else 0.5,
                 row.get("subtask_hash"),
             )
         )

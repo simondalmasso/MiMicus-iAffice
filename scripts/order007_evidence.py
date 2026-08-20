@@ -11,7 +11,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from mimicus.claims.evidence_bundle import EvidenceInput
-from mimicus.claims.models import Claim
+from mimicus.claims.models import Claim, NumericAssertion
 from mimicus.falsifiers.market import FalsifierMarket
 from mimicus.falsifiers.spec import FalsifierSpec
 from mimicus.orchestration.engine import MiMicusEngine, RunRequest
@@ -69,11 +69,26 @@ class RecordingProvider(ScriptedProvider):
             "synth-1": 0.74,
         }
         statement = "same verified proposition" if self.same_statement else f"{request.phenotype}:{request.task}"
+        asserted_value = next(
+            (
+                row.get("extracted_facts", {}).get("claimed")
+                for row in request.evidence
+                if isinstance(row, dict)
+                and isinstance(row.get("extracted_facts"), dict)
+                and row.get("extracted_facts", {}).get("claimed") is not None
+            ),
+            None,
+        )
         claim = Claim(
             statement=statement,
             domain=request.domain,
             probability=probabilities.get(request.phenotype, 0.6),
             claim_type="numeric",
+            assertion=(
+                NumericAssertion(asserted_value=float(asserted_value))
+                if isinstance(asserted_value, (int, float))
+                else None
+            ),
             evidence_refs=evidence_refs,
         )
         return replace(response, claim=claim)
@@ -116,6 +131,7 @@ def verifier_authority_binding(root: Path) -> dict[str, Any]:
             evidence=_evidence(_numeric()),
             max_agents=2,
             depth="deep",
+            learn=True,
         )
     )
     assert run.final_claims and run.falsifiers
