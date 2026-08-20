@@ -290,7 +290,7 @@ def _record_verified_decision_removals(
     selected_claims = [row for row in run.get("final_claims", []) if str(row.get("claim_hash")) in set(selected)]
     fingerprints = sorted({str(row.get("contributor_fingerprint")) for row in selected_claims if row.get("contributor_fingerprint")})
     recorded: list[dict[str, Any]] = []
-    verified_scope = sorted(scope.values())
+    verified_scope = sorted(scope)
     with host.repository.engine.begin() as connection:
         for fingerprint in fingerprints:
             without_hash, without_decision = decision_hash_without_fingerprint(run, fingerprint)
