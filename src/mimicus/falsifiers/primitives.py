@@ -233,6 +233,7 @@ def execute_claim_bound(
     equivalence_hash = sha256_obj(equivalence_material)
     bound_evidence: dict[str, object] = {
         "primitive_evidence": raw.evidence,
+        "tested_evidence_context": dict(context),
         "target_claim_identity_hash": claim.identity_hash,
         "target_claim_revision_hash": claim.revision_hash,
         "tested_assertion_hash": assertion_hash,

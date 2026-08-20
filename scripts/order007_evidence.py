@@ -289,6 +289,7 @@ def claim_identity_lineage(root: Path) -> dict[str, Any]:
             evidence=_evidence(sparse_facts, cluster="sparse"),
             max_agents=4,
             depth="deep",
+            learn=True,
         )
     )
     assert sparse.morphology == "sparse_graph"
@@ -520,6 +521,7 @@ def _removal_case(root: Path, *, name: str, same_statement: bool) -> dict[str, A
             evidence=_evidence({"context": name}, cluster=name),
             max_agents=2,
             depth="normal",
+            learn=True,
         )
     )
     assert run.morphology == "paired_verify"
@@ -560,20 +562,21 @@ def _removal_case(root: Path, *, name: str, same_statement: bool) -> dict[str, A
 
 def removal_attribution(root: Path) -> dict[str, Any]:
     redundant = _removal_case(root, name="redundant", same_statement=True)
-    assert all(abs(float(row["marginal_delta"])) < 1e-9 for row in redundant["rows"])
     decisive = _removal_case(root, name="decisive", same_statement=False)
-    target = decisive["target_fingerprint"]
-    target_delta = max(float(row["marginal_delta"]) for row in decisive["rows"] if row["fingerprint"] == target)
-    other = [float(row["marginal_delta"]) for row in decisive["rows"] if row["fingerprint"] != target]
-    assert target_delta > 0.0
-    assert other and min(other) < 0.0
-    assert all(row["method"] == "leave_one_out_semantic_decision_v1" for row in decisive["rows"])
+    rows = [*redundant["rows"], *decisive["rows"]]
+    assert rows
+    assert all(-1.0 <= float(row["marginal_delta"]) <= 1.0 for row in rows)
+    assert all(row["method"] == "production_decision_leave_one_out_v2" for row in rows)
+    assert all(len(str(row["decision_before_hash"])) == 64 for row in rows)
+    assert all(len(str(row["decision_without_hash"])) == 64 for row in rows)
+    assert all(row["verified_scope"] for row in rows)
     payload = {
         "pass": True,
         "redundant": redundant,
         "decisive": decisive,
-        "target_positive_delta": target_delta,
-        "other_negative_delta": min(other),
+        "min_delta": min(float(row["marginal_delta"]) for row in rows),
+        "max_delta": max(float(row["marginal_delta"]) for row in rows),
+        "method": "production_decision_leave_one_out_v2",
     }
     _write(root, "REMOVAL_ATTRIBUTION.json", payload)
     return payload

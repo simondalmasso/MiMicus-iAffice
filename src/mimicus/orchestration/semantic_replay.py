@@ -106,15 +106,22 @@ def semantic_replay(repository: Any, run_id: str) -> dict[str, Any]:
         try:
             spec = FalsifierSpec.model_validate(row["spec"])
             claim = Claim.model_validate(row["claim"])
+            exact_context = dict(row.get("evidence_context", {}))
+            context_hash_ok = sha256_obj(exact_context) == row.get("evidence_context_hash")
             execution = execute_claim_bound(
                 spec,
                 claim,
-                dict(row.get("evidence_context", {})),
+                exact_context,
                 evidence_projection_hashes=tuple(row.get("evidence_projection_hashes", [])),
                 selection_reason=row.get("selection_reason"),
             )
             replayed_executions.append(execution)
-            execution_ok = execution_ok and execution.execution_snapshot_hash == row.get("expected_snapshot_hash") and execution.verdict.value == row.get("expected_verdict")
+            execution_ok = (
+                execution_ok
+                and context_hash_ok
+                and execution.execution_snapshot_hash == row.get("expected_snapshot_hash")
+                and execution.verdict.value == row.get("expected_verdict")
+            )
         except Exception:
             execution_ok = False
 

@@ -374,12 +374,15 @@ def _semantic_record(
         claim = claims.get(str(target))
         if claim is None or execution.spec_hash not in specs:
             continue
-        projections = [boundary.projections[value] for value in execution.evidence_projection_hashes if value in boundary.projections]
+        tested_context = execution.evidence.get("tested_evidence_context")
+        if not isinstance(tested_context, dict):
+            raise RuntimeError("claim-bound execution is missing exact persisted evidence context")
         replay_executions.append(
             {
                 "spec": specs[execution.spec_hash].model_dump(mode="json"),
                 "claim": claim.model_dump(mode="json"),
-                "evidence_context": _merge_projection_context(projections),
+                "evidence_context": dict(tested_context),
+                "evidence_context_hash": sha256_obj(tested_context),
                 "evidence_projection_hashes": list(execution.evidence_projection_hashes),
                 "selection_reason": execution.selection_reason,
                 "expected_snapshot_hash": execution.execution_snapshot_hash,

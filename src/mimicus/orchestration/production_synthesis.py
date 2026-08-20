@@ -190,9 +190,7 @@ def decision_hash_without_fingerprint(
         authority = float(raw_authority) if isinstance(raw_authority, (int, float)) else float(row.get("probability", 0.5))
         claims.append((fp, claim, authority, row.get("subtask_hash")))
     executions = [
-        FalsifierExecution.model_validate({key: row[key] for key in FalsifierExecution.model_fields if key in row})
-        for row in run.get("falsifiers", [])
-        if isinstance(row, dict)
+        FalsifierExecution.model_validate({key: row[key] for key in FalsifierExecution.model_fields if key in row}) for row in run.get("falsifiers", []) if isinstance(row, dict)
     ]
     allowed = {claim.identity_hash for _, claim, _, _ in claims}
     executions = [row for row in executions if any(target in allowed for target in row.target_claim_hashes)]
