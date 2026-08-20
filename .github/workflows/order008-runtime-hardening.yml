@@ -1,8 +1,8 @@
 name: ORDER-008 runtime hardening one-shot
 
 on:
-  push:
-    branches: [order-002-mimicus-v01]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: write
@@ -56,30 +56,27 @@ jobs:
           new = '''            claim_by_identity = {claim.identity_hash: claim for claim in claims_by_node.values()}\n            node_executions: list[dict[str, Any]] = []\n            for bid in sorted(relevant, key=lambda row: (row.target_claim_hash, row.selection_reason)):\n                claim = claim_by_identity.get(bid.target_claim_hash)\n                if claim is None:\n                    continue\n                reservation = await budget.reserve(\n                    "falsifier",\n                    spec.estimated_cost,\n                    known_zero_cost=spec.estimated_cost == 0.0,\n                )\n                if reservation is None:\n                    continue\n                execution = execute_claim_bound(\n                    spec,\n                    claim,\n                    claim_context_by_identity.get(claim.identity_hash, {}),\n                    evidence_projection_hashes=tuple(claim.evidence_refs),\n                    selection_reason=bid.selection_reason,\n                )\n                await budget.reconcile(reservation, execution.cost)\n                executions.append(execution)\n                node_executions.append(execution.model_dump(mode="json"))\n                ledger.append(\n                    "falsifier_selected",\n                    {\n                        "spec_hash": spec.hash,\n                        "target_claim_hashes": list(execution.target_claim_hashes),\n                        "why": bid.selection_reason,\n                    },\n                )\n                ledger.append("falsifier_executed", execution.model_dump(mode="json"))\n            if not node_executions:\n                return {"budget_exhausted": True}\n            return {"executions": node_executions}\n'''
           replace('src/mimicus/orchestration/swarm_core.py', old, new)
 
-          # Exact provider audit: per-call usage records must identify what the provider actually received.
-          needle = '''    for claim_row in result.get("final_claims", []):\n'''
-          injection = '''    for usage_row in result.get("evidence_provenance", {}).get("provider_usages", []):\n        trace_id = usage_row.get("trace_id")\n        record = by_trace.get(str(trace_id)) if trace_id is not None else None\n        if record is None:\n            continue\n        exact_hashes = [str(value) for value in record["request"].get("evidence_hashes", [])]\n        projection_hashes = [str(value) for value in record.get("projection_hashes", [])]\n        projection_to_parent = {str(key): str(value) for key, value in record.get("projection_to_parent", {}).items()}\n        usage = usage_row.setdefault("usage", {})\n        usage["evidence_hashes_supplied"] = exact_hashes\n        usage["projection_hashes_supplied"] = projection_hashes\n        usage["parent_evidence_hashes_supplied"] = [projection_to_parent.get(value, value) for value in exact_hashes]\n\n    for claim_row in result.get("final_claims", []):\n'''
-          replace('src/mimicus/orchestration/production_core.py', needle, injection)
-
-          # Recompute authoritative executions after all bounded challenge revisions.
+          replace(
+              'src/mimicus/orchestration/production_core.py',
+              '    for claim_row in result.get("final_claims", []):\n',
+              '''    for usage_row in result.get("evidence_provenance", {}).get("provider_usages", []):\n        trace_id = usage_row.get("trace_id")\n        record = by_trace.get(str(trace_id)) if trace_id is not None else None\n        if record is None:\n            continue\n        exact_hashes = [str(value) for value in record["request"].get("evidence_hashes", [])]\n        projection_hashes = [str(value) for value in record.get("projection_hashes", [])]\n        projection_to_parent = {str(key): str(value) for key, value in record.get("projection_to_parent", {}).items()}\n        usage = usage_row.setdefault("usage", {})\n        usage["evidence_hashes_supplied"] = exact_hashes\n        usage["projection_hashes_supplied"] = projection_hashes\n        usage["parent_evidence_hashes_supplied"] = [projection_to_parent.get(value, value) for value in exact_hashes]\n\n    for claim_row in result.get("final_claims", []):\n''',
+          )
           replace(
               'src/mimicus/orchestration/production_core.py',
               '''    executions = _reexecute_claim_bound(host, result, projections_by_claim)\n    communications, round_progress = await _extend_bounded_communication(boundary, result, executions, request)\n    result["persistent_state"]["communications"] = communications\n''',
-              '''    executions = _reexecute_claim_bound(host, result, projections_by_claim)\n    communications, round_progress = await _extend_bounded_communication(boundary, result, executions, request)\n    # Challenge rounds may change claim revision hashes. Authoritative falsifier\n    # snapshots must bind the final revision that synthesis and replay consume.\n    executions = _reexecute_claim_bound(host, result, projections_by_claim)\n    result["persistent_state"]["communications"] = communications\n''',
+              '''    executions = _reexecute_claim_bound(host, result, projections_by_claim)\n    communications, round_progress = await _extend_bounded_communication(boundary, result, executions, request)\n    executions = _reexecute_claim_bound(host, result, projections_by_claim)\n    result["persistent_state"]["communications"] = communications\n''',
           )
           replace(
               'src/mimicus/orchestration/production_core.py',
               '''    _apply_decision(result, decision, executions)\n\n    parent_hashes = list(result.get("evidence_provenance", {}).get("provider_input_evidence_hashes", []))\n''',
               '''    _apply_decision(result, decision, executions)\n    spec_rows = _spec_index(\n        host,\n        str((result.get("final_claims") or [{}])[0].get("domain") or request.domain or "general"),\n    )\n    persistent_reuse = set(result.get("persistent_falsifiers_reused", []))\n    result["falsifiers"] = [\n        row.model_dump(mode="json")\n        | {\n            "id": spec_rows[row.spec_hash].id if row.spec_hash in spec_rows else None,\n            "primitive": spec_rows[row.spec_hash].primitive if row.spec_hash in spec_rows else None,\n            "persistent_reuse": row.spec_hash in persistent_reuse,\n        }\n        for row in executions\n    ]\n\n    parent_hashes = list(result.get("evidence_provenance", {}).get("provider_input_evidence_hashes", []))\n''',
           )
-          # Reuse same spec index for semantic replay later.
           replace(
               'src/mimicus/orchestration/production_core.py',
               '''    specs = _spec_index(host, str((result.get("final_claims") or [{}])[0].get("domain") or request.domain or "general"))\n    semantic = _semantic_record(result, request, boundary, executions, specs)\n''',
               '''    semantic = _semantic_record(result, request, boundary, executions, spec_rows)\n''',
           )
           PY
-
           python -m pip install -r requirements.lock >/dev/null
           ruff format .
           ruff check . --fix
