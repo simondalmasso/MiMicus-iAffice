@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -33,6 +33,12 @@ class EvidenceProjection(BaseModel):
     extraction_method: str
     authority_class: str
     units: str | None = None
+    evidence_kind: Literal["projection"] | None = None
+    evidence_hash: str | None = Field(default=None, min_length=64, max_length=64)
+    canonical_evidence_hash: str | None = Field(default=None, min_length=64, max_length=64)
+    snapshot_hash: str | None = Field(default=None, min_length=64, max_length=64)
+    projection_parent_hash: str | None = Field(default=None, min_length=64, max_length=64)
+    projection_scope: tuple[str, ...] | None = None
 
     @model_validator(mode="after")
     def identity_recomputes(self) -> EvidenceProjection:
@@ -40,6 +46,16 @@ class EvidenceProjection(BaseModel):
             raise ValueError("projection snapshot hash/material mismatch")
         if self.projection_hash != sha256_obj(self.identity_material):
             raise ValueError("projection hash/material mismatch")
+        persisted_bindings = (
+            (self.evidence_hash, self.projection_hash),
+            (self.canonical_evidence_hash, self.projection_hash),
+            (self.snapshot_hash, self.projection_snapshot_hash),
+            (self.projection_parent_hash, self.parent_evidence_hash),
+        )
+        if any(actual is not None and actual != expected for actual, expected in persisted_bindings):
+            raise ValueError("projection persisted identity mismatch")
+        if self.projection_scope is not None and tuple(self.projection_scope) != self.declared_scope:
+            raise ValueError("projection persisted scope mismatch")
         return self
 
     @property
@@ -89,10 +105,13 @@ class EvidenceProjection(BaseModel):
         }
 
     def persisted_row(self) -> dict[str, Any]:
-        return self.provider_payload() | {
+        return self.model_dump(mode="json") | {
             "evidence_kind": "projection",
-            "projection_hash": self.projection_hash,
-            "projection_snapshot_hash": self.projection_snapshot_hash,
+            "evidence_hash": self.projection_hash,
+            "canonical_evidence_hash": self.projection_hash,
+            "snapshot_hash": self.projection_snapshot_hash,
+            "projection_parent_hash": self.parent_evidence_hash,
+            "projection_scope": list(self.declared_scope),
         }
 
 
