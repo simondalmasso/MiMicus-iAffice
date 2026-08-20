@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 jobs:
-  regressions:
+  production-gates:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,24 +16,19 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install -r requirements.lock && python -m pip install --no-deps -e .
-      - run: pytest tests/unit/test_order007_correctness.py
-      - run: python scripts/order007_evidence.py "$RUNNER_TEMP/ORDER-007"
-      - run: python -m mimicus.validation.order003_e2e "$RUNNER_TEMP/ORDER-003"
-      - run: ruff format --check . && ruff check . && mypy src/mimicus
-
-  production-probes:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - run: python -m pip install -r requirements.lock && python -m pip install --no-deps -e .
-      - name: Claim-bound divergence and semantic replay
+      - name: Historical runtime regressions
+        run: |
+          pytest tests/unit/test_order007_correctness.py
+          python scripts/order007_evidence.py "$RUNNER_TEMP/ORDER-007"
+          python -m mimicus.validation.order003_e2e "$RUNNER_TEMP/ORDER-003"
+          ruff format --check .
+          ruff check .
+          mypy src/mimicus
+      - name: F038 claim-bound divergence and exact semantic replay
         shell: bash
         run: |
           python - <<'PY'
-          import json
+          from mimicus.canonical import sha256_obj
           from mimicus.claims.evidence_bundle import EvidenceInput
           from mimicus.claims.models import Claim, NumericAssertion
           from mimicus.orchestration.engine import MiMicusEngine, RunRequest
@@ -45,87 +40,94 @@ jobs:
                   self.generate_calls += 1
                   asserted = 1200.0 if request.phenotype == "numeric-1" else 1300.0
                   refs = [str(row["evidence_hash"]) for row in request.evidence if isinstance(row, dict) and isinstance(row.get("evidence_hash"), str)]
-                  claim = Claim(
-                      statement=f"Annual total is {asserted:.0f}",
-                      domain=request.domain,
-                      probability=0.8,
-                      claim_type="numeric",
-                      assertion=NumericAssertion(asserted_value=asserted),
-                      evidence_refs=refs,
+                  return ProviderResponse(
+                      claim=Claim(statement=f"Annual total is {asserted:.0f}", domain=request.domain, probability=0.8, claim_type="numeric", assertion=NumericAssertion(asserted_value=asserted), evidence_refs=refs),
+                      cost=0.0,
+                      latency_ms=0.0,
+                      trace_id=f"diag-{self.generate_calls}-{request.phenotype}",
+                      usage={"simulated": True, "calls": 1, "monetary_cost_status": "KNOWN", "monetary_cost_usd": 0.0},
                   )
-                  trace_id = f"diag-{self.generate_calls}-{request.phenotype}"
-                  return ProviderResponse(claim=claim, cost=0.0, latency_ms=0.0, trace_id=trace_id, usage={"simulated": True, "calls": 1, "monetary_cost_status": "KNOWN", "monetary_cost_usd": 0.0})
 
-          engine = MiMicusEngine("sqlite:////tmp/order008-divergent.db", provider=DivergentProvider())
-          ev = EvidenceInput(
-              origin="order008-runtime-probe",
-              independence_cluster="probe-a",
-              content="structured numeric evidence",
-              extracted_facts={
-                  "price": 100,
-                  "users": 12,
-                  "claimed": 1200,
-                  "price_period": "annual",
-                  "clusters": ["probe-a", "probe-b"],
-                  "texts": ["independent alpha evidence", "independent beta support"],
-              },
-          )
+          db = "/tmp/order008-divergent.db"
+          engine = MiMicusEngine(f"sqlite:///{db}", provider=DivergentProvider())
+          ev = EvidenceInput(origin="order008-runtime-probe", independence_cluster="probe-a", content="structured numeric evidence", extracted_facts={"price": 100, "users": 12, "claimed": 1200, "price_period": "annual", "clusters": ["probe-a", "probe-b"], "texts": ["independent alpha evidence", "independent beta support"]})
           run = engine.run(RunRequest(task="Audit the annual total using independent evidence.", domain="finance", source_mode="runtime", evidence=[ev], depth="deep", max_agents=4, max_concurrency=4))
           numeric = [row for row in run.falsifiers if row.get("primitive") == "numeric_invariant"]
-          print(json.dumps({
-              "morphology": run.morphology,
-              "claims": [{"hash": row["claim_hash"], "assertion": row.get("assertion")} for row in run.final_claims],
-              "numeric": [{"target": row.get("target_claim_hashes"), "verdict": row.get("verdict"), "snapshot": row.get("execution_snapshot_hash"), "revision": row.get("tested_revision_hash")} for row in numeric],
-              "replay": engine.get_run(run.run_id).get("replay_state"),
-          }, sort_keys=True, indent=2))
-          verdicts = {row.get("verdict") for row in numeric}
-          assert "PASS" in verdicts and "FAIL" in verdicts, verdicts
+          assert {row.get("verdict") for row in numeric} >= {"PASS", "FAIL"}
           assert all(len(row.get("target_claim_hashes", [])) == 1 for row in numeric)
-          replay = engine.get_run(run.run_id)["replay_state"]
-          assert replay["integrity_verified"] is True
+          assert len({row["execution_snapshot_hash"] for row in numeric}) == len(numeric)
+          for row in numeric:
+              exact = row["evidence"].get("tested_evidence_context")
+              assert isinstance(exact, dict)
+              assert sha256_obj(exact) == row["evidence"]["evidence_context_hash"]
+          restarted = MiMicusEngine(f"sqlite:///{db}", provider=DivergentProvider())
+          replay = restarted.get_run(run.run_id)["replay_state"]
           assert replay["semantic_reexecution_verified"] is True, replay
           PY
-
-      - name: Hierarchical projection audit
+      - name: F039 hierarchical complementary composite synthesis
         shell: bash
         run: |
           python - <<'PY'
-          import json
           from mimicus.canonical import sha256_obj
           from mimicus.claims.evidence_bundle import EvidenceInput
+          from mimicus.claims.models import Claim
+          from mimicus.falsifiers.spec import FalsifierExecution
           from mimicus.orchestration.engine import MiMicusEngine, RunRequest
+          from mimicus.orchestration.production_synthesis import synthesize_production
+          from mimicus.types import Verdict
 
-          registry = {"missing-prerequisite": None}
+          registry = {}
+          facts = {
+              "price": 100,
+              "users": 12,
+              "claimed": 1200,
+              "price_period": "annual",
+              "evidence_date": "2026-08-19T00:00:00+00:00",
+              "as_of": "2026-08-20T00:00:00+00:00",
+              "clusters": ["h-a", "h-b"],
+              "texts": ["first independently written source", "second independently written source"],
+              "claim_figure": "1200",
+              "evidence_spans": [{"span_id": "s1", "supported_figures": ["1200"], "material_support": True}],
+              "absence_key": "missing-prerequisite",
+              "registry": registry,
+              "registry_snapshot_hash": sha256_obj(registry),
+          }
           engine = MiMicusEngine("sqlite:////tmp/order008-hierarchy.db")
-          ev = EvidenceInput(
-              origin="order008-hierarchy-probe",
-              independence_cluster="h-a",
-              content="all structured facts for deterministic decomposition",
-              extracted_facts={
-                  "price": 100,
-                  "users": 12,
-                  "claimed": 1200,
-                  "price_period": "annual",
-                  "evidence_date": "2026-08-19T00:00:00+00:00",
-                  "as_of": "2026-08-20T00:00:00+00:00",
-                  "clusters": ["h-a", "h-b"],
-                  "texts": ["first independently written source", "second independently written source"],
-                  "claim_figure": "1200",
-                  "evidence_spans": [{"span_id": "s1", "supported_figures": ["1200"], "material_support": True}],
-                  "absence_key": "missing-prerequisite",
-                  "registry": registry,
-                  "registry_snapshot_hash": sha256_obj(registry),
-              },
-          )
-          run = engine.run(RunRequest(task="Resolve all required audit predicates.", domain="finance", source_mode="runtime", evidence=[ev], depth="deep", max_agents=4, max_concurrency=4))
-          usages = run.evidence_provenance.get("provider_usages", [])
-          print(json.dumps({"morphology": run.morphology, "subtasks": run.subtasks, "decision": run.swarm_decision, "provider_usages": usages, "projections": run.evidence_provenance.get("projection_parent_map", {})}, sort_keys=True, indent=2))
+          ev = EvidenceInput(origin="order008-hierarchy-probe", independence_cluster="h-a", content="all structured facts for deterministic decomposition", extracted_facts=facts)
+          run = engine.run(RunRequest(task="Resolve all required audit predicates.", domain="research", source_mode="runtime", evidence=[ev], depth="deep", max_agents=4, max_concurrency=4))
+          hx = run.hierarchy_execution
           assert run.morphology == "hierarchical_fanout_fanin", run.morphology
-          projection_map = run.evidence_provenance.get("projection_parent_map", {})
-          assert projection_map
-          projected_usages = [row for row in usages if row.get("usage", {}).get("projection_hashes_supplied")]
-          assert projected_usages
-          for row in projected_usages:
-              usage = row["usage"]
-              assert usage["evidence_hashes_supplied"] == usage["projection_hashes_supplied"]
+          assert hx["complete"] is True
+          required = set(hx["required_subtasks"])
+          selected = set(run.swarm_decision["selected_claim_hashes"])
+          assert run.swarm_decision["epistemic_status"] == "SUPPORTED", run.swarm_decision
+          assert len(selected) == len(required)
+          assert required <= set(run.swarm_decision["provenance_hashes"])
+          assert selected <= set(run.swarm_decision["provenance_hashes"])
+          selected_statements = [row["statement"] for row in run.final_claims if row["claim_hash"] in selected]
+          assert all(statement in run.swarm_decision["candidate_answer"] for statement in selected_statements)
+
+          incomplete = MiMicusEngine("sqlite:////tmp/order008-hierarchy-incomplete.db").run(RunRequest(task="Resolve all required audit predicates.", domain="research", source_mode="runtime", evidence=[ev], depth="deep", max_agents=3, max_concurrency=3))
+          assert incomplete.hierarchy_execution["unresolved_subtasks"]
+          assert incomplete.swarm_decision["epistemic_status"] == "INCONCLUSIVE"
+
+          subtask = "s" * 64
+          a = Claim(statement="A", domain="research", probability=0.9)
+          b = Claim(statement="B", domain="research", probability=0.8)
+          executions = [
+              FalsifierExecution(spec_hash="1"*64, verdict=Verdict.PASS, execution_snapshot_hash="2"*64, target_claim_hashes=(a.identity_hash,)),
+              FalsifierExecution(spec_hash="3"*64, verdict=Verdict.PASS, execution_snapshot_hash="4"*64, target_claim_hashes=(b.identity_hash,)),
+          ]
+          conflict = synthesize_production(
+              [("fa", a, 0.9, subtask), ("fb", b, 0.8, subtask)],
+              executions,
+              [],
+              budget={},
+              coverage_complete=True,
+              morphology="hierarchical_fanout_fanin",
+              subtasks=[{"subtask_hash": subtask, "dependency_group": "g"}],
+              hierarchy_execution={"required_subtasks": [subtask], "unresolved_subtasks": []},
+          )
+          assert conflict.epistemic_status == "INCONCLUSIVE"
+          assert any(row.get("kind") == "same_subtask_conflict" for row in conflict.unresolved_disagreements)
           PY
