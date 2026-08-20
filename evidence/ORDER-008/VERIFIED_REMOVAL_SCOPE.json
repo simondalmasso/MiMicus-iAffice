@@ -1,0 +1,11 @@
+{
+  "command": [
+    "python",
+    "-m",
+    "pytest",
+    "tests/integration/test_order008_runtime.py::test_f042_verified_removal_is_selected_claim_scoped_and_revocation_safe",
+    "-vv"
+  ],
+  "pass": true,
+  "returncode": 0
+}

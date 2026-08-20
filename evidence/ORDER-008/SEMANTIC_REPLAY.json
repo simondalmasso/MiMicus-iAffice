@@ -1,0 +1,11 @@
+{
+  "command": [
+    "python",
+    "-m",
+    "pytest",
+    "tests/integration/test_order008_runtime.py::test_f044_semantic_reexecution_tamper_and_nonreplayable_truth",
+    "-vv"
+  ],
+  "pass": true,
+  "returncode": 0
+}

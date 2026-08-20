@@ -1,0 +1,5 @@
+PROBE=production-runtime-F001-F037
+COMMAND=python -m pytest tests/unit/test_order006_core.py tests/integration/test_order006_runtime.py tests/unit/test_order007_correctness.py -vv
+RETURN_CODE=0
+COMMAND=python scripts/order007_evidence.py <ORDER008_OUTPUT>/order007-runtime-regression
+RETURN_CODE=0

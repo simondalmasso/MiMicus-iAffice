@@ -1,0 +1,11 @@
+{
+  "command": [
+    "python",
+    "-m",
+    "pytest",
+    "tests/integration/test_order008_runtime.py::test_f043_runtime_learning_memory_restart_revocation_and_no_progress",
+    "-vv"
+  ],
+  "pass": true,
+  "returncode": 0
+}
