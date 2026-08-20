@@ -41,9 +41,6 @@ class ProductionProviderBoundary(Provider):
         projection_to_parent: dict[str, str] = {}
         rows: list[EvidenceProjection] = []
         for evidence in request.evidence:
-            # ORDER-007 hierarchy scopes clear content after narrowing facts. At
-            # this provider boundary we assign the narrowed material a new
-            # immutable identity instead of forwarding the parent's hash.
             if str(evidence.get("content", "")) == "":
                 facts = evidence.get("extracted_facts", {})
                 scope = tuple(sorted(str(key) for key in facts)) if isinstance(facts, dict) else ()
@@ -66,11 +63,8 @@ class ProductionProviderBoundary(Provider):
         validated_exact_refs = [ref for ref in provider_claimed_refs if ref in allowed_exact_refs]
         rejected_exact_refs = [ref for ref in provider_claimed_refs if ref not in allowed_exact_refs]
         exact_claim = provider_claim.model_copy(update={"evidence_refs": validated_exact_refs})
-        # The legacy scheduler validates against its parent hashes. Preserve that
-        # internal compatibility while recording/restoring exact projection refs
-        # before the production result becomes authoritative.
-        scheduler_refs = [projection_to_parent.get(ref, ref) for ref in exact_claim.evidence_refs]
-        scheduler_claim = exact_claim.model_copy(update={"evidence_refs": list(dict.fromkeys(scheduler_refs))})
+        scheduler_refs = [projection_to_parent.get(ref, ref) for ref in provider_claimed_refs]
+        scheduler_claim = provider_claim.model_copy(update={"evidence_refs": list(dict.fromkeys(scheduler_refs))})
         self.generate_records.append(
             {
                 "request": {
@@ -111,7 +105,6 @@ class ProductionProviderBoundary(Provider):
 
 
 def _active_promoted_specs(repository: Any, domain: str) -> list[FalsifierSpec]:
-    """Production registry view: promotion requires currently active authority."""
     with repository.engine.connect() as connection:
         rows = (
             connection.execute(
@@ -203,12 +196,7 @@ def _restore_projection_claims(result: dict[str, Any], boundary: ProductionProvi
         exact_hashes = {str(value) for value in record["request"].get("evidence_hashes", [])}
         validated_refs = [ref for ref in exact_claim.evidence_refs if ref in exact_hashes]
         current = _claim_from_row(claim_row)
-        exact_current = current.model_copy(
-            update={
-                "assertion": exact_claim.assertion,
-                "evidence_refs": validated_refs,
-            }
-        )
+        exact_current = current.model_copy(update={"assertion": exact_claim.assertion, "evidence_refs": validated_refs})
         old_hash = str(claim_row.get("claim_hash") or current.identity_hash)
         old_to_new[old_hash] = exact_current.identity_hash
         claim_row.update(
@@ -230,11 +218,7 @@ def _restore_projection_claims(result: dict[str, Any], boundary: ProductionProvi
     return old_to_new, projections_by_claim
 
 
-def _reexecute_claim_bound(
-    host: Any,
-    result: dict[str, Any],
-    projections_by_claim: dict[str, list[EvidenceProjection]],
-) -> list[FalsifierExecution]:
+def _reexecute_claim_bound(host: Any, result: dict[str, Any], projections_by_claim: dict[str, list[EvidenceProjection]]) -> list[FalsifierExecution]:
     domain = str(result.get("threat_profile", {}).get("domain") or (result.get("final_claims") or [{}])[0].get("domain") or "general")
     specs = _spec_index(host, domain)
     claims = {str(row["claim_hash"]): _claim_from_row(row) for row in result.get("final_claims", [])}
@@ -251,7 +235,6 @@ def _reexecute_claim_bound(
         projections = projections_by_claim.get(claim_hash, [])
         context = _merge_projection_context(projections)
         if not projections:
-            # Non-projected provider inputs remain exact canonical evidence.
             evidence_rows = host.repository.get_evidence(str(result["run_id"]))
             merged: dict[str, Any] = {}
             for row in evidence_rows:
@@ -280,12 +263,7 @@ def _claim_rows_for_synthesis(result: dict[str, Any]) -> list[tuple[str, Claim, 
     return rows
 
 
-async def _extend_bounded_communication(
-    boundary: ProductionProviderBoundary,
-    result: dict[str, Any],
-    executions: list[FalsifierExecution],
-    request: Any,
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+async def _extend_bounded_communication(boundary: ProductionProviderBoundary, result: dict[str, Any], executions: list[FalsifierExecution], request: Any) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     communications = list(result.get("persistent_state", {}).get("communications", []))
     if not communications:
         return communications, []
@@ -355,7 +333,7 @@ def _apply_decision(result: dict[str, Any], decision: Any, executions: list[Fals
     result["confidence"] = decision.confidence
     result["disagreements"] = list(decision.unresolved_disagreements)
     result["falsifiers"] = [row.model_dump(mode="json") for row in executions]
-    if decision.epistemic_status == "SUPPORTED" or decision.epistemic_status == "FALSIFIED":
+    if decision.epistemic_status in {"SUPPORTED", "FALSIFIED"}:
         result["status"] = "answered"
         result["answer"] = decision.candidate_answer
     else:
@@ -374,13 +352,7 @@ def _apply_decision(result: dict[str, Any], decision: Any, executions: list[Fals
             row["status"] = local_status_by_claim.get(claim_hash, status_map[decision.epistemic_status])
 
 
-def _semantic_record(
-    result: dict[str, Any],
-    request: Any,
-    boundary: ProductionProviderBoundary,
-    executions: list[FalsifierExecution],
-    specs: dict[str, FalsifierSpec],
-) -> dict[str, Any]:
+def _semantic_record(result: dict[str, Any], request: Any, boundary: ProductionProviderBoundary, executions: list[FalsifierExecution], specs: dict[str, FalsifierSpec]) -> dict[str, Any]:
     claim_rows = [
         {key: row[key] for key in Claim.model_fields if key in row}
         | {
@@ -454,27 +426,13 @@ def _semantic_record(
     }
 
 
-def _persist_postprocessed(
-    host: Any,
-    result: dict[str, Any],
-    boundary: ProductionProviderBoundary,
-    executions: list[FalsifierExecution],
-    communications: list[dict[str, Any]],
-    progress_rows: list[dict[str, Any]],
-) -> None:
+def _persist_postprocessed(host: Any, result: dict[str, Any], boundary: ProductionProviderBoundary, executions: list[FalsifierExecution], communications: list[dict[str, Any]], progress_rows: list[dict[str, Any]]) -> None:
     run_id = str(result["run_id"])
     with host.repository.engine.begin() as connection:
         connection.execute(update(RunRow).where(RunRow.run_id == run_id).values(status=str(result["status"]), result_json=canonical_json(result)))
         connection.execute(delete(ClaimRow).where(ClaimRow.run_id == run_id))
         for row in result.get("final_claims", []):
-            connection.execute(
-                insert(ClaimRow).values(
-                    claim_hash=str(row["claim_hash"]),
-                    run_id=run_id,
-                    status=str(row.get("status", "proposed")),
-                    payload_json=canonical_json(row),
-                )
-            )
+            connection.execute(insert(ClaimRow).values(claim_hash=str(row["claim_hash"]), run_id=run_id, status=str(row.get("status", "proposed")), payload_json=canonical_json(row)))
         for projection in boundary.projections.values():
             payload = projection.persisted_row()
             exists = connection.execute(select(EvidenceRow.evidence_hash).where(EvidenceRow.evidence_hash == projection.projection_hash)).scalar_one_or_none()
@@ -519,7 +477,6 @@ def _persist_postprocessed(
 
 
 async def execute_production_core(host: Any, request: Any) -> dict[str, Any]:
-    """Normative source_mode=runtime execution for ORDER-008 and later."""
     original_provider = host.provider
     original_promoted = host.repository.promoted_falsifiers
     boundary = ProductionProviderBoundary(original_provider)
@@ -573,10 +530,7 @@ async def execute_production_core(host: Any, request: Any) -> dict[str, Any]:
         hierarchy_execution=dict(result.get("hierarchy_execution", {})),
     )
     _apply_decision(result, decision, executions)
-    spec_rows = _spec_index(
-        host,
-        str((result.get("final_claims") or [{}])[0].get("domain") or request.domain or "general"),
-    )
+    spec_rows = _spec_index(host, str((result.get("final_claims") or [{}])[0].get("domain") or request.domain or "general"))
     persistent_reuse = set(result.get("persistent_falsifiers_reused", []))
     result["falsifiers"] = [
         row.model_dump(mode="json")
@@ -602,17 +556,11 @@ async def execute_production_core(host: Any, request: Any) -> dict[str, Any]:
         {"step": "provider_first_pass", "progress": bool(result.get("final_claims")), "claim_count": len(result.get("final_claims", []))},
         {"step": "claim_bound_falsifiers", "progress": bool(executions), "execution_count": len(executions)},
         *round_progress,
-        {
-            "step": "synthesis",
-            "progress": True,
-            "decision_hash": decision.hash,
-            "epistemic_status": decision.epistemic_status,
-            "stop_reason": decision.early_stop_reason,
-        },
+        {"step": "synthesis", "progress": True, "decision_hash": decision.hash, "epistemic_status": decision.epistemic_status, "stop_reason": decision.early_stop_reason},
     ]
     result["progress"] = progress_rows
     semantic = _semantic_record(result, request, boundary, executions, spec_rows)
     result["semantic_replay"] = semantic
-    result["replay_verified"] = True  # ledger integrity; semantic replay is reported separately.
+    result["replay_verified"] = True
     _persist_postprocessed(host, result, boundary, executions, communications, progress_rows)
     return result
