@@ -89,10 +89,7 @@ def run(root: Path) -> dict[str, Any]:
         ]
     )
     (root / "TEST_RESULTS.txt").write_text(
-        "PROBE=ORDER-008-final-kills-and-historical-compatibility\n"
-        + "COMMAND="
-        + " ".join(test_result["command"])
-        + f"\nRETURN_CODE={test_result['returncode']}\n",
+        "PROBE=ORDER-008-final-kills-and-historical-compatibility\n" + "COMMAND=" + " ".join(test_result["command"]) + f"\nRETURN_CODE={test_result['returncode']}\n",
         encoding="utf-8",
     )
 
