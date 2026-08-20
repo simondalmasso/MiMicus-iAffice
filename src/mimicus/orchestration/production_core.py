@@ -60,7 +60,16 @@ class ProductionProviderBoundary(Provider):
     async def generate_request_async(self, request: ProviderRequest) -> ProviderResponse:
         exact_request, projection_to_parent, projections = self._project_request(request)
         response = await self.delegate.generate_request_async(exact_request)
-        exact_claim = response.claim
+        provider_claim = response.claim
+        allowed_exact_refs = {
+            str(row.get("evidence_hash"))
+            for row in exact_request.evidence
+            if isinstance(row, dict) and isinstance(row.get("evidence_hash"), str)
+        }
+        provider_claimed_refs = list(dict.fromkeys(str(ref) for ref in provider_claim.evidence_refs))
+        validated_exact_refs = [ref for ref in provider_claimed_refs if ref in allowed_exact_refs]
+        rejected_exact_refs = [ref for ref in provider_claimed_refs if ref not in allowed_exact_refs]
+        exact_claim = provider_claim.model_copy(update={"evidence_refs": validated_exact_refs})
         # The legacy scheduler validates against its parent hashes. Preserve that
         # internal compatibility while recording/restoring exact projection refs
         # before the production result becomes authoritative.
@@ -79,6 +88,9 @@ class ProductionProviderBoundary(Provider):
                 },
                 "response": {
                     "claim": exact_claim.model_dump(mode="json"),
+                    "provider_claimed_evidence_refs": provider_claimed_refs,
+                    "validated_evidence_refs": validated_exact_refs,
+                    "rejected_evidence_refs": rejected_exact_refs,
                     "trace_id": response.trace_id,
                     "usage": dict(response.usage),
                     "cost": response.cost,
@@ -176,6 +188,9 @@ def _restore_projection_claims(result: dict[str, Any], boundary: ProductionProvi
         usage["evidence_hashes_supplied"] = exact_hashes
         usage["projection_hashes_supplied"] = projection_hashes
         usage["parent_evidence_hashes_supplied"] = [projection_to_parent.get(value, value) for value in exact_hashes]
+        usage["provider_claimed_evidence_refs"] = list(record["response"].get("provider_claimed_evidence_refs", []))
+        usage["validated_evidence_refs"] = list(record["response"].get("validated_evidence_refs", []))
+        usage["rejected_evidence_refs"] = list(record["response"].get("rejected_evidence_refs", []))
 
     for claim_row in result.get("final_claims", []):
         trace_id = claim_row.get("provider_trace_id")
@@ -183,11 +198,13 @@ def _restore_projection_claims(result: dict[str, Any], boundary: ProductionProvi
         if record is None:
             continue
         exact_claim = Claim.model_validate(record["response"]["claim"])
+        exact_hashes = {str(value) for value in record["request"].get("evidence_hashes", [])}
+        validated_refs = [ref for ref in exact_claim.evidence_refs if ref in exact_hashes]
         current = _claim_from_row(claim_row)
         exact_current = current.model_copy(
             update={
                 "assertion": exact_claim.assertion,
-                "evidence_refs": list(exact_claim.evidence_refs),
+                "evidence_refs": validated_refs,
             }
         )
         old_hash = str(claim_row.get("claim_hash") or current.identity_hash)
@@ -344,9 +361,15 @@ def _apply_decision(result: dict[str, Any], decision: Any, executions: list[Fals
         result["answer"] = f"INCONCLUSIVE: {decision.candidate_answer}" if decision.candidate_answer else "INCONCLUSIVE: verified evidence is insufficient."
     selected = set(decision.selected_claim_hashes)
     status_map = {"SUPPORTED": ClaimStatus.SUPPORTED.value, "FALSIFIED": ClaimStatus.FALSIFIED.value, "INCONCLUSIVE": ClaimStatus.INCONCLUSIVE.value}
+    local_status_by_claim: dict[str, str] = {}
+    if decision.hierarchical_fan_in is not None:
+        for subtask in decision.hierarchical_fan_in.subtask_decisions:
+            for claim in subtask.claims:
+                local_status_by_claim[claim.claim_hash] = status_map[claim.status]
     for row in result.get("final_claims", []):
-        if row.get("claim_hash") in selected:
-            row["status"] = status_map[decision.epistemic_status]
+        claim_hash = str(row.get("claim_hash", ""))
+        if claim_hash in selected:
+            row["status"] = local_status_by_claim.get(claim_hash, status_map[decision.epistemic_status])
 
 
 def _semantic_record(
