@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import subprocess
 import sys
@@ -8,20 +7,22 @@ from pathlib import Path
 from typing import Any
 
 
+def _display(command: list[str]) -> list[str]:
+    if command and command[0] == sys.executable:
+        return ["python", *command[1:]]
+    return command
+
+
 def _run(command: list[str]) -> dict[str, Any]:
     completed = subprocess.run(command, text=True, capture_output=True, check=False)
-    combined = completed.stdout + completed.stderr
-    payload = {
-        "pass": completed.returncode == 0,
-        "command": command,
-        "returncode": completed.returncode,
-        "stdout": completed.stdout,
-        "stderr": completed.stderr,
-        "output_sha256": hashlib.sha256(combined.encode("utf-8")).hexdigest(),
-    }
     if completed.returncode != 0:
+        combined = completed.stdout + completed.stderr
         raise RuntimeError(f"probe failed ({completed.returncode}): {' '.join(command)}\n{combined}")
-    return payload
+    return {
+        "pass": True,
+        "command": _display(command),
+        "returncode": completed.returncode,
+    }
 
 
 def _write_json(root: Path, name: str, payload: dict[str, Any]) -> None:
@@ -50,7 +51,7 @@ def run(root: Path) -> dict[str, Any]:
     for name, payload in probes.items():
         _write_json(root, name, payload)
 
-    regression_commands = [
+    regression = _run(
         [
             sys.executable,
             "-m",
@@ -59,17 +60,16 @@ def run(root: Path) -> dict[str, Any]:
             "tests/integration/test_order006_runtime.py",
             "tests/unit/test_order007_correctness.py",
             "-vv",
-        ],
-        [sys.executable, "scripts/order007_evidence.py", str(root / "order007-runtime-regression")],
-    ]
-    regression_chunks: list[str] = []
-    for command in regression_commands:
-        result = _run(command)
-        regression_chunks.append(
-            "$ " + " ".join(command) + "\n" + result["stdout"] + result["stderr"] + f"\nRETURN_CODE={result['returncode']}\nOUTPUT_SHA256={result['output_sha256']}\n"
-        )
+        ]
+    )
+    order007 = _run([sys.executable, "scripts/order007_evidence.py", str(root / "order007-runtime-regression")])
     (root / "RUNTIME_REGRESSION_F001_F037.txt").write_text(
-        "\n".join(regression_chunks),
+        "PROBE=production-runtime-F001-F037\n"
+        + "COMMAND="
+        + " ".join(regression["command"])
+        + f"\nRETURN_CODE={regression['returncode']}\n"
+        + "COMMAND=python scripts/order007_evidence.py <ORDER008_OUTPUT>/order007-runtime-regression\n"
+        + f"RETURN_CODE={order007['returncode']}\n",
         encoding="utf-8",
     )
 
@@ -89,12 +89,10 @@ def run(root: Path) -> dict[str, Any]:
         ]
     )
     (root / "TEST_RESULTS.txt").write_text(
-        "$ "
+        "PROBE=ORDER-008-final-kills-and-historical-compatibility\n"
+        + "COMMAND="
         + " ".join(test_result["command"])
-        + "\n"
-        + test_result["stdout"]
-        + test_result["stderr"]
-        + f"\nRETURN_CODE={test_result['returncode']}\nOUTPUT_SHA256={test_result['output_sha256']}\n",
+        + f"\nRETURN_CODE={test_result['returncode']}\n",
         encoding="utf-8",
     )
 
