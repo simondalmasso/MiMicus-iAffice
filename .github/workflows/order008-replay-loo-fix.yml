@@ -37,23 +37,30 @@ jobs:
               '''    bound_evidence: dict[str, object] = {\n        "primitive_evidence": raw.evidence,\n        "target_claim_identity_hash": claim.identity_hash,\n''',
               '''    bound_evidence: dict[str, object] = {\n        "primitive_evidence": raw.evidence,\n        "tested_evidence_context": dict(context),\n        "target_claim_identity_hash": claim.identity_hash,\n''',
           )
-
           replace(
               'src/mimicus/orchestration/production_core.py',
               '''        projections = [boundary.projections[value] for value in execution.evidence_projection_hashes if value in boundary.projections]\n        replay_executions.append(\n            {\n                "spec": specs[execution.spec_hash].model_dump(mode="json"),\n                "claim": claim.model_dump(mode="json"),\n                "evidence_context": _merge_projection_context(projections),\n                "evidence_projection_hashes": list(execution.evidence_projection_hashes),\n''',
               '''        tested_context = execution.evidence.get("tested_evidence_context")\n        if not isinstance(tested_context, dict):\n            raise RuntimeError("claim-bound execution is missing exact persisted evidence context")\n        replay_executions.append(\n            {\n                "spec": specs[execution.spec_hash].model_dump(mode="json"),\n                "claim": claim.model_dump(mode="json"),\n                "evidence_context": dict(tested_context),\n                "evidence_context_hash": sha256_obj(tested_context),\n                "evidence_projection_hashes": list(execution.evidence_projection_hashes),\n''',
           )
-
           replace(
               'src/mimicus/orchestration/semantic_replay.py',
               '''            execution = execute_claim_bound(\n                spec,\n                claim,\n                dict(row.get("evidence_context", {})),\n                evidence_projection_hashes=tuple(row.get("evidence_projection_hashes", [])),\n                selection_reason=row.get("selection_reason"),\n            )\n            replayed_executions.append(execution)\n            execution_ok = execution_ok and execution.execution_snapshot_hash == row.get("expected_snapshot_hash") and execution.verdict.value == row.get("expected_verdict")\n''',
               '''            exact_context = dict(row.get("evidence_context", {}))\n            context_hash_ok = sha256_obj(exact_context) == row.get("evidence_context_hash")\n            execution = execute_claim_bound(\n                spec,\n                claim,\n                exact_context,\n                evidence_projection_hashes=tuple(row.get("evidence_projection_hashes", [])),\n                selection_reason=row.get("selection_reason"),\n            )\n            replayed_executions.append(execution)\n            execution_ok = (\n                execution_ok\n                and context_hash_ok\n                and execution.execution_snapshot_hash == row.get("expected_snapshot_hash")\n                and execution.verdict.value == row.get("expected_verdict")\n            )\n''',
           )
-
           replace(
               'scripts/order007_evidence.py',
               '''            task="Assess this structured context.",\n            domain="research",\n            evidence=_evidence(sparse_facts, cluster="sparse"),\n            max_agents=4,\n            depth="deep",\n''',
               '''            task="Assess this structured context.",\n            domain="research",\n            evidence=_evidence(sparse_facts, cluster="sparse"),\n            max_agents=4,\n            depth="deep",\n            learn=True,\n''',
+          )
+          replace(
+              'scripts/order007_evidence.py',
+              '''            task="Assess this structured context.",\n            domain="general",\n            evidence=_evidence({"context": name}, cluster=name),\n            max_agents=2,\n            depth="normal",\n''',
+              '''            task="Assess this structured context.",\n            domain="general",\n            evidence=_evidence({"context": name}, cluster=name),\n            max_agents=2,\n            depth="normal",\n            learn=True,\n''',
+          )
+          replace(
+              'scripts/order007_evidence.py',
+              '''    assert all(row["method"] == "leave_one_out_semantic_decision_v1" for row in decisive["rows"])\n''',
+              '''    assert all(row["method"] == "production_decision_leave_one_out_v2" for row in decisive["rows"])\n''',
           )
           PY
           python -m pip install -r requirements.lock >/dev/null
