@@ -207,10 +207,7 @@ def synthesize_production(
         disagreements.append({"kind": "required_subtasks_falsified", "subtask_hashes": sorted(falsified)})
 
     confidence = min(confidence_components) if confidence_components else 0.0
-    if epistemic == "SUPPORTED":
-        confidence = min(0.95, max(0.5, confidence))
-    else:
-        confidence = min(0.60, confidence)
+    confidence = min(0.95, max(0.5, confidence)) if epistemic == "SUPPORTED" else min(0.6, confidence)
 
     if bool(budget.get("fail_closed")):
         stop = "budget fail-closed"
