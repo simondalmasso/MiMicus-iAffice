@@ -112,11 +112,7 @@ def test_runtime_projection_refs_proofs_and_restart_are_exact(tmp_path) -> None:
         assert projection.projection_snapshot_hash == sha256_obj(projection.projected_material)
 
     claim = run.final_claims[0]
-    snapshot = next(
-        str(row["execution_snapshot_hash"])
-        for row in run.falsifiers
-        if str(claim["claim_hash"]) in set(row["target_claim_hashes"])
-    )
+    snapshot = next(str(row["execution_snapshot_hash"]) for row in run.falsifiers if str(claim["claim_hash"]) in set(row["target_claim_hashes"]))
     token = "order008-f041-verifier-token-v1"
     restarted.register_verifier_authority(
         verifier_id="oracle:order008-f041",
