@@ -133,11 +133,7 @@ def _selected_claim(run: dict[str, Any]) -> dict[str, Any]:
 
 
 def _snapshot_for(run: dict[str, Any], claim_hash: str) -> str:
-    return next(
-        str(row["execution_snapshot_hash"])
-        for row in run["falsifiers"]
-        if claim_hash in set(row["target_claim_hashes"])
-    )
+    return next(str(row["execution_snapshot_hash"]) for row in run["falsifiers"] if claim_hash in set(row["target_claim_hashes"]))
 
 
 def run(output_dir: Path) -> dict[str, Any]:
@@ -201,10 +197,7 @@ def run(output_dir: Path) -> dict[str, Any]:
         try:
             after_restart = asyncio.run(_call(second_url, "get_mimicus_run", {"run_id": first["run_id"]}))
             assert after_restart["found"] is True
-            assert any(
-                row["receipt_hash"] == first_receipt_hash and row["learning_active"]
-                for row in after_restart["verification_receipts"]
-            )
+            assert any(row["receipt_hash"] == first_receipt_hash and row["learning_active"] for row in after_restart["verification_receipts"])
             reused = asyncio.run(_call(second_url, "run_mimicus", _run_args("reuse", learn=False)))
             assert memory_id in reused["persistent_memory_reused"]
 
