@@ -6,7 +6,6 @@ import pytest
 
 from mimicus.canonical import sha256_obj
 from mimicus.claims.evidence_bundle import EvidenceInput, build_evidence_bundle
-from mimicus.claims.models import Claim
 from mimicus.claims.projections import EvidenceProjection, derive_projection
 from mimicus.orchestration.engine import MiMicusEngine, RunRequest
 from mimicus.providers.base import ProviderRequest, ProviderResponse
