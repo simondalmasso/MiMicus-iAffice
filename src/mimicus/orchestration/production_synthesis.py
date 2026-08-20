@@ -125,7 +125,7 @@ def synthesize_production(
                 ClaimDecision(
                     claim_hash=claim.identity_hash,
                     statement=claim.statement,
-                    status=local_status,  # type: ignore[arg-type]
+                    status=local_status,
                     authority=max(0.0, min(1.0, authority)),
                     probability=claim.probability,
                     decisive_falsifier_hashes=decisive,
