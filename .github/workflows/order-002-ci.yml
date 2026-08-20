@@ -45,6 +45,68 @@ jobs:
       - name: F038 F042 F043 F044 runtime kills
         run: pytest tests/integration/test_order008_runtime.py -vv
 
+  order008-runtime-evidence-mcp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: python -m pip install -r requirements.lock && python -m pip install --no-deps -e .
+      - name: Generate executable ORDER-008 evidence
+        env: {OPENAI_API_KEY: ""}
+        run: python scripts/order008_evidence.py "$RUNNER_TEMP/ORDER-008"
+      - name: Execute ORDER-008 MCP restart and revocation E2E
+        env: {OPENAI_API_KEY: ""}
+        run: python scripts/order008_mcp_e2e.py "$RUNNER_TEMP/ORDER-008"
+      - name: Validate generated ORDER-008 evidence
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          root = Path(os.environ["RUNNER_TEMP"]) / "ORDER-008"
+          json_files = [
+              "CLAIM_BOUND_FALSIFIERS.json",
+              "HIERARCHICAL_COMPOSITE_SYNTHESIS.json",
+              "RECEIPT_CASCADE_REVOCATION.json",
+              "EVIDENCE_PROJECTION_INTEGRITY.json",
+              "VERIFIED_REMOVAL_SCOPE.json",
+              "CORE_MEMORY_LEARN_PROGRESS.json",
+              "SEMANTIC_REPLAY.json",
+              "MCP_E2E.json",
+          ]
+          for name in json_files:
+              payload = json.loads((root / name).read_text())
+              assert payload["pass"] is True, name
+          for name in ["RUNTIME_REGRESSION_F001_F037.txt", "TEST_RESULTS.txt"]:
+              assert (root / name).is_file() and (root / name).stat().st_size > 0, name
+          mcp = json.loads((root / "MCP_E2E.json").read_text())
+          assert mcp["legacy_escape_fields_exposed"] == []
+          assert mcp["restart_before_revocation"]["verified_memory_reused"] is True
+          assert mcp["restart_after_revocation"]["revoked_memory_excluded"] is True
+          assert mcp["restart_after_revocation"]["semantic_replay_verified"] is True
+          print("ORDER008_RUNTIME_EVIDENCE_MCP=PASS")
+          PY
+      - name: Emit generated evidence for exact commit materialization
+        shell: bash
+        run: |
+          root="$RUNNER_TEMP/ORDER-008"
+          for name in \
+            CLAIM_BOUND_FALSIFIERS.json \
+            HIERARCHICAL_COMPOSITE_SYNTHESIS.json \
+            RECEIPT_CASCADE_REVOCATION.json \
+            EVIDENCE_PROJECTION_INTEGRITY.json \
+            VERIFIED_REMOVAL_SCOPE.json \
+            CORE_MEMORY_LEARN_PROGRESS.json \
+            SEMANTIC_REPLAY.json \
+            RUNTIME_REGRESSION_F001_F037.txt \
+            MCP_E2E.json \
+            TEST_RESULTS.txt; do
+            echo "===ORDER008_FILE:${name}==="
+            cat "$root/$name"
+            echo "===ORDER008_END:${name}==="
+          done
+
   security-historical-regression:
     runs-on: ubuntu-latest
     steps:
