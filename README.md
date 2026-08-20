@@ -1,29 +1,22 @@
 # MiMicus Swarm
 
-MiMicus V0.2 is a research implementation of an **agentic immune swarm runtime**. It persists authority-bearing immune state, compiles a task-specific coalition into a hashable executable Morphology DAG, executes independent work concurrently under bounded capacity, performs structured sparse challenges, and records replayable provenance for claims, tests, memory and learning transitions.
+MiMicus is a Python 3.12 research runtime for a persistent **agentic immune swarm**. The current ORDER-008 production core profiles a task, selects a bounded coalition and executable morphology, runs sealed provider work, executes claim-bound deterministic falsifiers against typed assertions and exact evidence projections, synthesizes a provenance-bound decision, and admits learned state only through authenticated verification authority.
 
-The repository does **not** claim that MiMicus is the world's first immune swarm or that it dominates every multi-agent baseline. Those are empirical questions. ORDER-003 replaces the historical ORDER-002 architecture-scripted benchmark methodology with actual A/B/C/D/E runners and one common post-run grader.
+The repository does not claim universal superiority or world-first status. Comparative claims are limited to committed benchmark evidence.
 
-## Core thesis
+## Current production-runtime guarantees
 
-> MiMicus learns which verified tests expose which classes of error, persists that immune knowledge, selects the smallest useful task-specific coalition, runs independent work concurrently, challenges only where information value justifies communication, and prevents unverified memory, identity whitewashing, correlated consensus, or self-mutations from acquiring authority.
-
-## V0.2 properties
-
-- Python 3.12 reference runtime with a synchronous CLI wrapper over an async-first engine.
-- Plugin-composed `RuntimeServices` for storage, provider access, agent factory, falsifiers, memory, coalition, communication, sandbox and telemetry; no placeholder `object()` services.
-- Executable Morphology DAGs with `solo`, `parallel_fanout`, `paired_verify`, `sparse_graph`, and justified `hierarchical_fanout_fanin` plans.
-- Bounded concurrent execution with measured critical-path, serial-work, peak-concurrency, efficiency, finish-rate and avoidable-serialization metrics.
-- Persistent exact-fingerprint/domain calibration, bankruptcy, lineage/probation and dedicated recovery audition handling.
-- Persistent memory with WRITE, RETRIEVAL, PROMOTION and CROSS-AGENT gates reapplied across process restarts.
-- Structured sparse challenge/rebuttal provider calls with bounded rounds, claim/evidence hashes and no raw hidden chain-of-thought exchange.
-- Deterministic semantic proximity/marginal novelty signals that suppress redundancy while retaining useful contradiction.
-- Declarative `FalsifierSpec` primitives only; database/model text is never executed as Python or another generated programming language.
-- Integrated germinal learning: confirmed evasion -> persisted candidate -> frozen fossil regression -> deterministic PROMOTE/REJECT/QUARANTINE -> later restart reuse.
-- Hash-chained event ledger and replay/tamper detection.
-- SQLite by default; SQLAlchemy schema compiles for PostgreSQL.
-- OpenAI Agents SDK provider plus credential-free scripted provider behind the same typed adapter boundary.
-- Official MCP Python SDK Streamable HTTP endpoint at `/mcp`, including process-restart continuity tests.
+- Normal CLI/MCP requests are core-locked to `source_mode=runtime`; task wording cannot activate fixture or legacy semantics.
+- Deterministic F1..F5 falsifiers test the exact target claim assertion plus exact scoped evidence. Missing or incompatible typed assertions fail closed as `INCONCLUSIVE`.
+- Canonical caller evidence is immutable; hierarchical workers receive immutable derived projections with their own identities and parent provenance.
+- Provider evidence refs are validated against the exact material supplied to that provider call; unknown refs are rejected rather than auto-attached.
+- Five executable morphologies remain reachable when justified: `solo`, `paired_verify`, `parallel_fanout`, `sparse_graph`, and `hierarchical_fanout_fanin`.
+- Hierarchical fan-in composes complementary subtask decisions instead of treating different required propositions as disagreement.
+- Verification authority is authenticated and run/claim/proof-bound. Contradictory same-origin adjudication requires explicit supersession, and revocation cascades through authority-derived learning, memory, removal attribution and promoted falsifier eligibility.
+- `learn=False` is mutation-inert. With `learn=True`, authenticated verified outcomes can enter governed memory/learning; eligible state survives restart and revoked/superseded state is excluded.
+- Normal runtime persists task/progress state and bounded communication; no-progress work replans or terminates inconclusive rather than looping indefinitely.
+- Offline/scripted runtime supports semantic re-execution. Replay reports ledger/integrity verification separately from semantic re-execution truth; nondeterministic providers never claim semantic replay without a replayable record.
+- MCP uses the official Python SDK Streamable HTTP transport at `/mcp` and exposes runtime evidence, not hidden fixture switches.
 
 ## Locked install
 
@@ -36,31 +29,66 @@ python -m pip install --no-deps -e .
 mimicus doctor --profile offline
 ```
 
-`requirements.lock` is verified in CI and direct dependencies are pinned in project metadata.
+`requirements.lock` is checked in CI and the package is also built/installed from a wheel in the exact-head gate.
 
-## Offline reference run
+## Zero-key production quickstart
+
+This path uses the normal production core with explicit structured evidence. It requires no model API key and does not infer facts from task words.
 
 ```bash
+export MIMICUS_DATABASE_URL="sqlite:///mimicus-quickstart.db"
 mimicus db upgrade
-mimicus run --profile offline --task-file fixtures/tam_12x.json --budget-usd 0 --max-agents 4 --max-concurrency 4 --depth normal --learn
-mimicus replay <run_id>
-python -m mimicus.validation.order003_e2e evidence/ORDER-003
-mimicus benchmark --profile offline --episodes 200 --output-dir evidence/ORDER-003
+mimicus run \
+  --profile offline \
+  --task-file fixtures/order008_quickstart.json \
+  --budget-usd 0 \
+  --max-agents 1 \
+  --max-concurrency 1 \
+  --depth deep > /tmp/mimicus-order008-run.json
+
+RUN_ID="$(python -c 'import json; print(json.load(open("/tmp/mimicus-order008-run.json"))["run_id"])')"
+mimicus replay "$RUN_ID"
 ```
 
-Offline mode requires no model API key and is the normative reproducibility path.
+The task file contains caller-supplied `evidence` with numeric fields. CI executes this documented `run -> replay` path from a clean SQLite database.
 
-## OpenAI profile
+For deterministic offline runs, replay should report `verified: true`, `integrity_verified: true`, and `semantic_reexecution_verified: true`. These are distinct claims: integrity means persisted material/ledger is intact; semantic re-execution means the deterministic core reproduced the relevant semantic hashes. A nondeterministic/live provider can legitimately be integrity-verified without being semantically re-executable.
 
-Set `OPENAI_API_KEY` in the environment and run with `--profile openai`. The OpenAI Agents SDK is the model-facing adapter; MiMicus still owns coalition selection, falsification, memory authority, identity state, sparse communication, DAG execution and germinal policy. Missing live credentials do not invalidate the offline ORDER-003 gate; the reported status is `NOT_RUN_NO_CREDENTIAL` unless a live smoke is actually executed.
+## Public runtime evidence
+
+A runtime task file may include bounded evidence items such as:
+
+```json
+{
+  "task": "Verify the annual amount from explicit evidence.",
+  "domain": "finance",
+  "evidence": [
+    {
+      "origin": "caller://report",
+      "independence_cluster": "publisher-a",
+      "content": "Annual price is 100 and users are 12.",
+      "extracted_facts": {
+        "price": 100.0,
+        "users": 12.0,
+        "price_period": "annual",
+        "claimed": 1200.0
+      }
+    }
+  ]
+}
+```
+
+Caller-supplied provenance authority is normalized by MiMicus. Supplying no evidence to an evidence-dependent task does not create hidden fixture facts; deterministic falsifiers remain `INCONCLUSIVE` where their required material is absent.
 
 ## MCP
 
 ```bash
-mimicus serve --profile offline --host 0.0.0.0 --port 8765
+export MIMICUS_DATABASE_URL="sqlite:///mimicus.db"
+mimicus db upgrade
+mimicus serve --profile offline --host 127.0.0.1 --port 8765
 ```
 
-The server exposes `run_mimicus(...)` and `get_mimicus_run(run_id)` over Streamable HTTP `/mcp`. See `docs/MCP.md`.
+The server exposes `run_mimicus(...)`, `get_mimicus_run(run_id)` and verification surfaces over Streamable HTTP `/mcp`. Public `run_mimicus` accepts bounded structured evidence and does not expose `fixture`, `source_mode`, or `core_semantics` escape fields. See `docs/MCP.md`.
 
 ## Validation
 
@@ -71,19 +99,20 @@ mypy src/mimicus
 pytest tests/unit tests/integration --cov=mimicus --cov-report=term-missing --cov-fail-under=90
 python scripts/check_security.py
 python scripts/check_ledger.py
-python -m mimicus.validation.order003_e2e evidence/ORDER-003
-mimicus benchmark --profile offline --episodes 200 --output-dir evidence/ORDER-003
+python scripts/order008_evidence.py /tmp/ORDER-008
+python scripts/order008_mcp_e2e.py /tmp/ORDER-008
+mimicus benchmark --profile offline --episodes 200 --output-dir /tmp/benchmark
 ```
 
-The ORDER-003 process runner verifies restart persistence, verified-memory reuse with quarantined-memory rejection, bankruptcy/lineage whitewash defense and recovery, real sparse provider challenges, bounded parallelism, semantic proximity, germinal restart reuse, and MCP server restart continuity.
+The PR workflow additionally verifies migrations, PostgreSQL schema compilation, wheel installation, F001..F037 runtime regression mapping, claim-bound F1..F5 kills, F038..F044 closure, MCP restart/revocation, semantic replay/tamper behavior, >=200 episodes per architecture with all five MiMicus morphologies, and the committed ORDER-008 manifest against freshly regenerated evidence bytes.
 
 ## Security boundary
 
-MiMicus does not execute code generated by an LLM or stored in its database. Runtime falsifier mutations are validated data structures composed only from trusted source-controlled primitives. Out-of-tree plugins require an explicit allow-listed path plus SHA-256 match. See `SECURITY.md`, `docs/THREAT_MODEL.md`, `docs/K3_SEED_LINEAGE.md`, `docs/AGENT_IDENTITY.md`, and `docs/RESEARCH_LINEAGE.md`.
+MiMicus does not execute LLM- or database-generated Python/JavaScript/SQL. Runtime falsifier mutations are validated declarative data over trusted source-controlled primitives. Out-of-tree plugins require an explicit allow-listed path and SHA-256 match. See `SECURITY.md`, `docs/THREAT_MODEL.md`, `docs/K3_SEED_LINEAGE.md`, `docs/AGENT_IDENTITY.md`, and `docs/RESEARCH_LINEAGE.md`.
 
-## Evidence
+## Evidence history
 
-ORDER-002 evidence remains committed under `evidence/ORDER-002/` as historical provenance. Its architecture-scripted benchmark is explicitly superseded for comparative claims. ORDER-003 evidence is committed under `evidence/ORDER-003/`; exact-head CI reruns the required gates after the evidence commit so evidence is not treated as a substitute for current execution.
+Historical ORDER-002 through ORDER-007 evidence remains committed under `evidence/ORDER-00X/` for provenance. ORDER-008 acceptance is based on the normal production core and current exact-head CI/evidence under `evidence/ORDER-008/`; a legacy/fixture compatibility test is not treated as production-runtime proof.
 
 ## License
 

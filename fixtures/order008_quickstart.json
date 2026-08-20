@@ -1,0 +1,17 @@
+{
+  "task": "Verify the annual amount from the explicit structured evidence.",
+  "domain": "finance",
+  "evidence": [
+    {
+      "origin": "quickstart://annual-price-users",
+      "independence_cluster": "quickstart-primary",
+      "content": "Annual price is 100 and the user count is 12.",
+      "extracted_facts": {
+        "price": 100.0,
+        "users": 12.0,
+        "price_period": "annual",
+        "claimed": 1200.0
+      }
+    }
+  ]
+}
