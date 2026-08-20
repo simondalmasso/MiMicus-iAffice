@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 
 from pydantic import ConfigDict, Field, model_validator
@@ -22,9 +23,31 @@ from mimicus.orchestration.legacy_engine import (
 )
 from mimicus.orchestration.production_core import execute_production_core
 from mimicus.orchestration.semantic_replay import semantic_replay
+from mimicus.providers.base import Provider, ProviderCapabilities, ProviderRequest, ProviderResponse
 from mimicus.storage.swarm_state import SwarmStateStore
 from mimicus.verification.models import VerificationSubmission
 from mimicus.verification.service import submit_verification
+
+
+class _FixtureCompatibilityProvider(Provider):
+    """Keep the explicit fixture lane on its historical claim-ref contract."""
+
+    def __init__(self, delegate: Provider) -> None:
+        self.delegate = delegate
+
+    @property
+    def capabilities(self) -> ProviderCapabilities:
+        return self.delegate.capabilities
+
+    async def generate_request_async(self, request: ProviderRequest) -> ProviderResponse:
+        response = await self.delegate.generate_request_async(request)
+        return replace(response, claim=response.claim.model_copy(update={"evidence_refs": []}))
+
+    async def audition_async(self, request: Any) -> Any:
+        return await self.delegate.audition_async(request)
+
+    async def challenge_async(self, request: Any) -> Any:
+        return await self.delegate.challenge_async(request)
 
 
 class RunRequest(LegacyRunRequest):
@@ -65,7 +88,12 @@ class MiMicusEngine(LegacyMiMicusEngine):
             return RunResult.model_validate(await execute_production_core(self, core_request))
         # Explicit compatibility lane only; MCP and normal CLI do not expose it.
         legacy_request = LegacyRunRequest.model_validate(core_request.model_dump(mode="json", exclude={"core_semantics"}))
-        legacy = await super().run_async(legacy_request)
+        original_provider = self.provider
+        self.provider = _FixtureCompatibilityProvider(original_provider)
+        try:
+            legacy = await super().run_async(legacy_request)
+        finally:
+            self.provider = original_provider
         return RunResult.model_validate(legacy.model_dump(mode="json"))
 
     def register_verifier_authority(
@@ -96,7 +124,7 @@ class MiMicusEngine(LegacyMiMicusEngine):
         if result is None:
             return None
         store = SwarmStateStore(self.repository.engine)
-        replay = semantic_replay(self.repository, run_id)
+        replay = result["replay_state"] if result.get("evidence_provenance", {}).get("source_mode") == "fixture" else semantic_replay(self.repository, run_id)
         return result | {
             "verification_receipts": store.receipts_for_run(run_id),
             "swarm_learning": store.learned_state(),
