@@ -617,3 +617,59 @@ test('skill compatibility enforces role and data class', () => {
   assert.equal(skillCanHandle(candidate,'COPY','PUBLIC'),true);
   assert.equal(skillCanHandle(candidate,'WEB','SECRET'),false);
 });
+
+import {
+  evaluateDiscoveryJob,
+  dedupeBusinessFindings,
+  findingToBusinessSignal,
+  type DiscoverySourcePolicy
+} from '../dist/packages/sniper/src/discovery.js';
+
+const publicSource={
+  id:'PUBLIC_DIRECTORY',
+  freeVerified:true,
+  termsVerified:true,
+  automatedAccessAllowed:true,
+  publicBusinessDataOnly:true
+};
+
+test('discovery job requires zero-cost, terms-verified automated sources', () => {
+  const ok=evaluateDiscoveryJob({
+    jobId:'j1',locality:'Rafaela, Santa Fe',categories:['veterinaria'],maxCandidates:100,
+    sources:[publicSource],createdAt:'2026-09-28T00:00:00Z'
+  });
+  assert.equal(ok.allowed,true);
+  const denied=evaluateDiscoveryJob({
+    jobId:'j2',locality:'Rafaela, Santa Fe',categories:['veterinaria'],maxCandidates:100,
+    sources:[{...publicSource,freeVerified:false}],createdAt:'2026-09-28T00:00:00Z'
+  });
+  assert.equal(denied.allowed,false);
+  assert.ok(denied.reasons.includes('SOURCE_ZERO_COST_NOT_VERIFIED'));
+});
+
+test('discovery dedupes the same business across public sources', () => {
+  const findings=dedupeBusinessFindings([
+    {sourceId:'A',sourceRef:'a:1',name:'Demo SRL',category:'retail',locality:'Rafaela',websiteUrl:'https://demo.example',businessContacts:[{kind:'EMAIL',value:'ventas@demo.example',provenance:'PUBLIC_BUSINESS_LISTING'}],rating:4.5,reviewCount:20,observedAt:'2026-09-28T00:00:00Z'},
+    {sourceId:'B',sourceRef:'b:9',name:'DEMO S.R.L.',category:'retail',locality:'Rafaela',websiteUrl:'https://www.demo.example/',businessContacts:[{kind:'EMAIL',value:'ventas@demo.example',provenance:'BUSINESS_WEBSITE'}],rating:4.6,reviewCount:30,observedAt:'2026-09-28T00:01:00Z'}
+  ]);
+  assert.equal(findings.length,1);
+  assert.equal(findings[0].evidenceRefs.length,2);
+});
+
+test('discovery creates evidence-grounded business signal without private personal enrichment', () => {
+  const signal=findingToBusinessSignal({
+    sourceId:'DIR',sourceRef:'dir:1',name:'Negocio Demo',category:'aberturas',locality:'Santo Tomé',
+    websiteUrl:'https://negocio.example',
+    businessContacts:[{kind:'WHATSAPP',value:'+543420000000',provenance:'PUBLIC_BUSINESS_LISTING'}],
+    rating:4.7,reviewCount:100,observedAt:'2026-09-28T00:00:00Z'
+  },{
+    evidenceRef:'audit:1',httpOk:true,performanceScore:38,accessibilityScore:70,mobileReadabilityScore:42,
+    ecommerce:false,crm:null,whatsappAutomation:false,socialActive:true,booking:false,paymentsOnline:false,analytics:false
+  });
+  assert.equal(signal.locality,'Santo Tomé');
+  assert.equal(signal.digital.ecommerce,false);
+  assert.equal(signal.contacts.length,1);
+  assert.equal(signal.contacts[0].provenance,'PUBLIC_BUSINESS_LISTING');
+  assert.ok(signal.digital.websiteQuality < 60);
+  assert.equal('ownerPersonalPhone' in signal,false);
+});
