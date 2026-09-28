@@ -314,3 +314,41 @@ test('global planning never activates a case with material human gate for autono
   assert.equal(plan.active.some(x=>x.caseId==='d'),false);
   assert.equal(plan.humanAttention.some(x=>x.caseId==='d'),true);
 });
+
+import {
+  ORCHESTRATION_REFERENCES,
+  getAdoptedPatterns,
+  assertSingleRuntimeAuthority
+} from '../dist/packages/sniper/src/orchestrationRegistry.js';
+
+test('orchestration registry corrects canonical Swarms repository', () => {
+  const swarms=ORCHESTRATION_REFERENCES.find(x=>x.id==='SWARMS');
+  assert.equal(swarms.source,'https://github.com/kyegomez/swarms');
+  assert.equal(swarms.license,'Apache-2.0');
+});
+
+test('AutoGen is reference-only because upstream marks it maintenance mode', () => {
+  const autogen=ORCHESTRATION_REFERENCES.find(x=>x.id==='AUTOGEN');
+  assert.equal(autogen.adoption,'REFERENCE_ONLY');
+  assert.ok(autogen.notes.some(x=>x.includes('maintenance mode')));
+});
+
+test('topic pages and tutorial repos cannot become runtime authority', () => {
+  const topic=ORCHESTRATION_REFERENCES.find(x=>x.id==='AI_MARKETING_TOPIC');
+  const tutorial=ORCHESTRATION_REFERENCES.find(x=>x.id==='AI_AGENTS_101');
+  assert.equal(topic.adoption,'DISCOVERY_ONLY');
+  assert.equal(tutorial.adoption,'REFERENCE_ONLY');
+});
+
+test('registry adopts patterns without creating competing orchestrators', () => {
+  const patterns=getAdoptedPatterns();
+  assert.ok(patterns.includes('HIERARCHICAL_AGENT_OWNERSHIP'));
+  assert.ok(patterns.includes('DURABLE_STATE_GRAPH'));
+  assert.ok(patterns.includes('EVENT_DRIVEN_FLOWS'));
+  assert.doesNotThrow(()=>assertSingleRuntimeAuthority(ORCHESTRATION_REFERENCES));
+});
+
+test('global core remains the only runtime orchestration authority', () => {
+  const runtime=ORCHESTRATION_REFERENCES.filter(x=>x.adoption==='RUNTIME_AUTHORITY');
+  assert.deepEqual(runtime.map(x=>x.id),['ARIA_GLOBAL_CORE']);
+});
