@@ -708,3 +708,51 @@ test('source selection returns only enabled sources matching capability and loca
   const selected=selectDiscoverySources(synthetic,{capability:'PUBLIC_WEB_AUDIT',locality:'Santa Fe'});
   assert.deepEqual(selected.map(x=>x.id),['SCRAPLING_SELF_HOSTED']);
 });
+
+import {
+  evaluateDemoJob,
+  buildDemoArtifactManifest,
+  chooseDemoExecutorClass
+} from '../dist/packages/sniper/src/demoJobs.js';
+
+test('demo job requires a case, evidence, service pack and private preview', () => {
+  const decision=evaluateDemoJob({
+    jobId:'demo-1',caseId:'case-1',servicePackId:'OPENINGS_COMMERCE',
+    evidenceRefs:['audit:1'],requestedDeliverables:['VISUAL_CONFIGURATOR'],
+    privatePreview:true,productionDeploy:false,executorId:'oracle-free-1',
+    executorCostVerifiedZero:true,createdAt:'2026-09-28T00:00:00Z'
+  });
+  assert.equal(decision.allowed,true);
+});
+
+test('demo job denies production deployment and paid executor', () => {
+  const base={
+    jobId:'demo-2',caseId:'case-1',servicePackId:'LOCAL_COMMERCE_DIGITAL',
+    evidenceRefs:['audit:1'],requestedDeliverables:['HIGH_CONVERSION_WEBSITE'],
+    privatePreview:true,productionDeploy:false,executorId:'cloud-x',
+    executorCostVerifiedZero:true,createdAt:'2026-09-28T00:00:00Z'
+  };
+  assert.equal(evaluateDemoJob({...base,productionDeploy:true}).allowed,false);
+  assert.equal(evaluateDemoJob({...base,executorCostVerifiedZero:false}).allowed,false);
+});
+
+test('demo executor class routes 3d work away from normal worker execution', () => {
+  assert.equal(chooseDemoExecutorClass(['HIGH_CONVERSION_WEBSITE']),'WEB_BUILD');
+  assert.equal(chooseDemoExecutorClass(['EMBEDDABLE_3D_TOUR']),'HEAVY_3D');
+  assert.equal(chooseDemoExecutorClass(['VISUAL_CONFIGURATOR']),'BROWSER_3D');
+});
+
+test('demo artifact manifest remains private and auditable', () => {
+  const manifest=buildDemoArtifactManifest({
+    jobId:'demo-3',caseId:'case-3',servicePackId:'REAL_ESTATE_IMMERSIVE',
+    evidenceRefs:['photo:1','audit:2'],requestedDeliverables:['EMBEDDABLE_3D_TOUR'],
+    privatePreview:true,productionDeploy:false,executorId:'oracle-free-1',
+    executorCostVerifiedZero:true,createdAt:'2026-09-28T00:00:00Z'
+  },[
+    {kind:'WEB_PREVIEW',ref:'artifact:web:1',digest:'sha256:abc'}
+  ]);
+  assert.equal(manifest.visibility,'PRIVATE');
+  assert.equal(manifest.production,false);
+  assert.deepEqual(manifest.evidenceRefs,['photo:1','audit:2']);
+  assert.equal(manifest.auditRequired,true);
+});
