@@ -672,3 +672,39 @@ test('discovery creates evidence-grounded business signal without private person
   assert.ok(signal.digital.websiteQuality < 60);
   assert.equal('ownerPersonalPhone' in signal,false);
 });
+
+import {
+  DISCOVERY_SOURCE_CANDIDATES,
+  evaluateDiscoverySourceAdmission,
+  selectDiscoverySources
+} from '../dist/packages/sniper/src/discoverySources.js';
+
+test('discovery source registry separates library license from target-site permission', () => {
+  const crawl=DISCOVERY_SOURCE_CANDIDATES.find(x=>x.id==='CRAWL4AI_SELF_HOSTED');
+  assert.equal(crawl?.license,'Apache-2.0');
+  assert.equal(crawl?.runtimeCost,'FREE_SELF_HOSTED');
+  assert.equal(crawl?.targetTermsVerified,false);
+  assert.equal(evaluateDiscoverySourceAdmission(crawl).state,'QUARANTINED');
+});
+
+test('paid hosted browser path is rejected under zero-spend invariant', () => {
+  const hosted=DISCOVERY_SOURCE_CANDIDATES.find(x=>x.id==='BROWSER_USE_CLOUD');
+  const admission=evaluateDiscoverySourceAdmission(hosted);
+  assert.equal(admission.state,'REJECTED');
+  assert.ok(admission.reasons.includes('PAID_RUNTIME_FORBIDDEN'));
+});
+
+test('self-hosted crawlers remain quarantined until revision and target terms are pinned', () => {
+  for(const id of ['CRAWL4AI_SELF_HOSTED','BROWSER_USE_SELF_HOSTED','SCRAPLING_SELF_HOSTED']){
+    const src=DISCOVERY_SOURCE_CANDIDATES.find(x=>x.id===id);
+    assert.equal(evaluateDiscoverySourceAdmission(src).state,'QUARANTINED');
+  }
+});
+
+test('source selection returns only enabled sources matching capability and locality scope', () => {
+  const synthetic=DISCOVERY_SOURCE_CANDIDATES.map(x=>x.id==='SCRAPLING_SELF_HOSTED'?{
+    ...x,revisionPin:'abc1234',zeroCostVerified:true,targetTermsVerified:true,automationAllowed:true,health:'HEALTHY'
+  }:x);
+  const selected=selectDiscoverySources(synthetic,{capability:'PUBLIC_WEB_AUDIT',locality:'Santa Fe'});
+  assert.deepEqual(selected.map(x=>x.id),['SCRAPLING_SELF_HOSTED']);
+});
