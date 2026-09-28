@@ -9,7 +9,8 @@ import {
   type BusinessSignal,
   type LearningObservation,
   type TacticStats
-} from "./engine.js";\nimport { chooseNextMove, promoteEpisode, type CognitiveContext, type MemoryEpisode } from "./cognition.js";
+} from "./engine.js";
+import { chooseNextMove, promoteEpisode, type CognitiveContext, type MemoryEpisode } from "./cognition.js";
 
 export type OpportunityStatus =
   | "DISCOVERED"
@@ -214,7 +215,7 @@ export class SniperStore {
     return result.results.map(row => ({ id: row.id, opportunityId: row.opportunity_id, stream: row.stream, actor: row.actor, eventType: row.event_type, detail: parse(row.detail_json, {}), createdAt: row.created_at }));
   }
 
-  async dashboard(): Promise<ReturnType<typeof buildDashboardSnapshot> & { topOpportunities: OpportunityRecord[]; activity: Array<Record<string, unknown>> }> {
+  async dashboard(): Promise<ReturnType<typeof buildDashboardSnapshot> & { topOpportunities: OpportunityRecord[]; activity: Array<Record<string, unknown>>; memory: Record<string, unknown> }> {
     const opportunities = await this.list(50);
     const negotiations = await this.db.prepare("SELECT state,next_action FROM sniper_negotiations ORDER BY updated_at DESC LIMIT 50").all<{state:string;next_action:string}>();
     const deliveries = await this.db.prepare("SELECT state FROM sniper_deliveries ORDER BY updated_at DESC LIMIT 50").all<{state:string}>();
