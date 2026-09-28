@@ -352,3 +352,46 @@ test('global core remains the only runtime orchestration authority', () => {
   const runtime=ORCHESTRATION_REFERENCES.filter(x=>x.adoption==='RUNTIME_AUTHORITY');
   assert.deepEqual(runtime.map(x=>x.id),['ARIA_GLOBAL_CORE']);
 });
+
+import {
+  OPERATING_STAGES,
+  mapCaseToOperatingStage,
+  buildAgencyOperationsSnapshot,
+  requiredEffectClass
+} from '../dist/packages/sniper/src/operatingModel.js';
+
+test('agency operating model has exactly five canonical stages', () => {
+  assert.deepEqual(OPERATING_STAGES.map(x=>x.id),['ANALYZE','PROSPECT','EXECUTE','DELIVER','COLLECT']);
+});
+
+test('case status maps deterministically into one operating stage', () => {
+  assert.equal(mapCaseToOperatingStage('DISCOVERED'),'ANALYZE');
+  assert.equal(mapCaseToOperatingStage('QUALIFIED'),'ANALYZE');
+  assert.equal(mapCaseToOperatingStage('CONTACTED'),'PROSPECT');
+  assert.equal(mapCaseToOperatingStage('NEGOTIATING'),'PROSPECT');
+  assert.equal(mapCaseToOperatingStage('WON'),'EXECUTE');
+  assert.equal(mapCaseToOperatingStage('DELIVERING'),'DELIVER');
+  assert.equal(mapCaseToOperatingStage('DELIVERED'),'COLLECT');
+});
+
+test('external side effects are explicit and never owned directly by specialist agents', () => {
+  assert.equal(requiredEffectClass('SEND_OUTREACH'),'SEND_EXTERNAL');
+  assert.equal(requiredEffectClass('DEPLOY_CUSTOMER_WORK'),'DEPLOY');
+  assert.equal(requiredEffectClass('CREATE_PAYMENT_REQUEST'),'MONEY_MUTATION');
+  assert.equal(requiredEffectClass('ISSUE_INVOICE'),'MONEY_MUTATION');
+});
+
+test('agency operations snapshot groups cases by operational workstream', () => {
+  const snapshot=buildAgencyOperationsSnapshot([
+    {caseId:'a',businessName:'A',status:'QUALIFIED',owner:'MARKET_RESEARCH',nextAction:'BENCHMARK',score:90},
+    {caseId:'b',businessName:'B',status:'NEGOTIATING',owner:'NEGOTIATOR',nextAction:'COUNTER',score:82},
+    {caseId:'c',businessName:'C',status:'WON',owner:'WEB',nextAction:'BUILD',score:75},
+    {caseId:'d',businessName:'D',status:'DELIVERING',owner:'DELIVERY',nextAction:'QA',score:71},
+    {caseId:'e',businessName:'E',status:'DELIVERED',owner:'PAYMENTS',nextAction:'COLLECT',score:70}
+  ]);
+  assert.equal(snapshot.ANALYZE.length,1);
+  assert.equal(snapshot.PROSPECT.length,1);
+  assert.equal(snapshot.EXECUTE.length,1);
+  assert.equal(snapshot.DELIVER.length,1);
+  assert.equal(snapshot.COLLECT.length,1);
+});
