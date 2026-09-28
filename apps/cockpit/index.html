@@ -30,8 +30,8 @@ input{width:100%;padding:9px;border:1px solid #bbb;border-radius:8px;background:
 <nav id="tabs" aria-label="Operations sections"></nav>
 <main id="app" aria-live="polite"></main>
 <script>
-const sections=['Revenue','Cases','Live','Decisions','Learning','Squad','Approvals','Compute','System'];
-let current='Revenue',core={},sniper={pipeline:{},money:{},topOpportunities:[],activity:[],memory:{}},caseIndex=[],squad=[],compute={providers:[],budget:{}},healthState={},adminToken='',selectedCase=null,selectedCaseId=null,casesViewMode='BOARD';
+const sections=['Revenue','Global Core','Cases','Live','Decisions','Learning','Squad','Approvals','Compute','System'];
+let current='Revenue',core={},sniper={pipeline:{},money:{},topOpportunities:[],activity:[],memory:{}},globalState={portfolio:{total:0,signals:[]},latest:null,architecture:{}},caseIndex=[],squad=[],compute={providers:[],budget:{}},healthState={},adminToken='',selectedCase=null,selectedCaseId=null,casesViewMode='BOARD';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>Number(n||0).toLocaleString('es-AR');
 const empty=t=>'<div class="empty">'+esc(t)+'</div>';
@@ -50,6 +50,29 @@ function revenue(){
  (ops.length?'<table><thead><tr><th>Business</th><th>Score</th><th>Status</th><th>Recommended offer</th><th>Next owner</th><th>Next action</th></tr></thead><tbody>'+
  ops.map(x=>'<tr><td><button class="case-link" data-case="'+esc(x.id)+'"><strong>'+esc(x.businessName)+'</strong></button><div class="muted">'+esc(x.category)+' · '+esc(x.locality)+'</div></td><td><div class="score">'+esc(x.score)+'</div><div class="progress"><span style="width:'+Math.max(0,Math.min(100,Number(x.score||0)))+'%"></span></div></td><td>'+badge(x.status)+'</td><td>'+esc((x.offer?.primary||[]).join(' + ')||'research')+'<div class="muted">'+esc((x.reasons||[]).slice(0,3).join(' · '))+'</div></td><td><span class="owner">'+esc(x.nextOwner)+'</span></td><td>'+esc(x.nextAction)+'</td></tr>').join('')+
  '</tbody></table>':empty('No opportunities recorded yet.'));
+}
+
+function globalCoreView(){
+ const g=globalState||{},latest=g.latest||null,portfolio=g.portfolio||{total:0,signals:[]},arch=g.architecture||{};
+ const active=latest?.active||[],deferred=latest?.deferred||[],human=latest?.humanAttention||[],ranked=latest?.ranked||[];
+ const sys1=latest?.system1||{provider:'LAYA_COMPATIBLE',state:'NOT_CONNECTED'};
+ return '<div class="hero"><div><div class="eyebrow">Company-level cognition</div><h1>Global Decision Core</h1><p>This layer sees the entire portfolio, allocates scarce attention, routes cases to specialists and escalates only when policy or uncertainty requires it.</p></div><div>'+badge(sys1.state||'NOT_CONNECTED')+'</div></div>'+
+ '<div class="grid">'+
+ '<div class="card"><div class="eyebrow">Portfolio</div><div class="metric">'+fmt(portfolio.total||0)+'</div><div class="muted">all known cases</div></div>'+
+ '<div class="card"><div class="eyebrow">Active allocations</div><div class="metric">'+fmt(active.length)+'</div><div class="muted">cases currently receiving company attention</div></div>'+
+ '<div class="card"><div class="eyebrow">Human attention</div><div class="metric">'+fmt(human.length)+'</div><div class="muted">HUMAN_GATE / exceptional review</div></div>'+
+ '<div class="card"><div class="eyebrow">System 1</div><div class="metric" style="font-size:18px">'+esc(sys1.provider||'LAYA_COMPATIBLE')+'</div><div class="muted">'+esc(sys1.state||'NOT_CONNECTED')+'</div></div>'+
+ '</div>'+
+ '<div class="section"><h2>Architecture</h2><span class="muted">System 1 → System 2 → policy/AUD</span></div>'+
+ '<div class="grid three"><div class="card"><div class="eyebrow">System 1</div><strong>'+esc(arch.system1||'typed calibrated decision service')+'</strong><p class="muted">Fast routing, scoring and abstention. Laya-compatible runtime candidate.</p></div><div class="card"><div class="eyebrow">System 2</div><strong>'+esc(arch.system2||'aria-models reasoning')+'</strong><p class="muted">Deliberation, specialist synthesis and complex reasoning.</p></div><div class="card"><div class="eyebrow">Authority</div><strong>'+esc(arch.authority||'deterministic policy + audited memory + human gate')+'</strong><p class="muted">No model can silently expand authority.</p></div></div>'+
+ '<div class="section"><h2>Active allocations</h2><span class="muted">'+(latest?('decision '+esc(latest.decisionId)):'no plan yet')+'</span></div>'+
+ (active.length?'<div class="grid three">'+active.map(x=>'<button class="card case-card" data-case="'+esc(x.caseId)+'" style="text-align:left;cursor:pointer"><div class="eyebrow">'+esc(x.ownerRole)+'</div><h3>'+esc(x.caseId)+'</h3><div class="score">'+Number(x.globalScore||0).toFixed(1)+'</div><div class="muted">'+esc(x.nextObjective)+'</div><div style="margin-top:8px">'+(x.reasons||[]).slice(0,4).map(r=>'<span class="badge">'+esc(r)+'</span>').join('')+'</div></button>').join('')+'</div>':empty('No active global allocation persisted yet.'))+
+ '<div class="section"><h2>Portfolio ranking</h2><span class="muted">global score, not local case score</span></div>'+
+ (ranked.length?'<table><thead><tr><th>Case</th><th>Global score</th><th>Status</th><th>Evidence</th><th>Route signals</th></tr></thead><tbody>'+ranked.map(x=>'<tr><td><button class="case-link" data-case="'+esc(x.caseId)+'">'+esc(x.caseId)+'</button></td><td><strong>'+Number(x.globalScore||0).toFixed(1)+'</strong></td><td>'+badge(x.status)+'</td><td>'+fmt(x.evidenceCount)+'</td><td>'+esc((x.reasons||[]).join(' · '))+'</td></tr>').join('')+'</tbody></table>':empty('The first business tick will persist a portfolio plan.'))+
+ '<div class="section"><h2>Human attention</h2></div>'+
+ (human.length?'<div class="list">'+human.map(x=>'<div class="row"><strong>'+esc(x.caseId)+'</strong> <span class="badge warn">HUMAN_GATE</span><div class="muted">'+esc((x.reasons||[]).join(' · '))+'</div></div>').join('')+'</div>':empty('No case currently requires human attention.'))+
+ '<div class="section"><h2>Deferred</h2></div>'+
+ (deferred.length?'<div class="list">'+deferred.slice(0,40).map(x=>'<div class="row"><strong>'+esc(x.caseId)+'</strong> <span class="badge">'+Number(x.globalScore||0).toFixed(1)+'</span><div class="muted">'+esc((x.reasons||[]).join(' · '))+'</div></div>').join('')+'</div>':empty('No deferred cases in latest plan.'));
 }
 function casesView(){
  const ops=caseIndex||[];
@@ -128,10 +151,10 @@ function system(){
  return '<div class="hero"><div><div class="eyebrow">Cloud runtime</div><h1>System</h1><p>Cloud-only architecture. The browser is an operator surface; durable state and agents live in the cloud.</p></div></div>'+
  '<div class="grid"><div class="card"><div class="eyebrow">Canonical state</div><div class="metric">D1</div></div><div class="card"><div class="eyebrow">Business effects</div><div class="metric" style="font-size:20px">aria-effects</div></div><div class="card"><div class="eyebrow">Model execution</div><div class="metric" style="font-size:20px">aria-models</div></div><div class="card"><div class="eyebrow">Deploy SHA</div><div class="muted">'+esc(healthState.sha||'unknown')+'</div></div></div>';
 }
-function render(){const views={Revenue:revenue(),Cases:casesView(),Live:live(),Decisions:decisions(),Learning:learning(),Squad:squadView(),Approvals:approvals(),Compute:computeView(),System:system()};app.innerHTML=views[current]||views.Revenue;if(current==='Approvals')bindApprovals();bindCaseActions()}
+function render(){const views={Revenue:revenue(),'Global Core':globalCoreView(),Cases:casesView(),Live:live(),Decisions:decisions(),Learning:learning(),Squad:squadView(),Approvals:approvals(),Compute:computeView(),System:system()};app.innerHTML=views[current]||views.Revenue;if(current==='Approvals')bindApprovals();bindCaseActions()}
 function bindApprovals(){const input=document.getElementById('adminToken');if(input){input.value=adminToken;input.oninput=()=>adminToken=input.value}document.querySelectorAll('[data-id]').forEach(b=>b.onclick=async()=>{if(!adminToken)return;b.disabled=true;try{const r=await fetch('/api/approvals/'+encodeURIComponent(b.dataset.id)+'/'+b.dataset.op,{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+adminToken},body:JSON.stringify({actor:'cockpit-human'})});if(!r.ok)throw new Error((await r.json()).error||('HTTP '+r.status));await load()}finally{b.disabled=false}})}
 async function safe(url,fallback){try{const r=await fetch(url,{cache:'no-store'});return r.ok?await r.json():fallback}catch{return fallback}}
-async function load(){const [h,c,d,ci,sq,p,b]=await Promise.all([safe('/api/health',{ok:false}),safe('/api/state',{}),safe('/api/sniper/dashboard',{pipeline:{},money:{},topOpportunities:[],activity:[],memory:{}}),safe('/api/sniper/opportunities?limit=500',[]),safe('/api/sniper/squad',[]),safe('/api/compute/providers',[]),safe('/api/compute/budget',{})]);healthState=h;core=c;sniper=d;caseIndex=ci;squad=sq;compute={providers:p,budget:b};health.textContent='health · '+(h.ok?'PASS':'DEGRADED');if(selectedCaseId)selectedCase=await safe('/api/sniper/cases/'+encodeURIComponent(selectedCaseId),selectedCase);render()}
+async function load(){const [h,c,d,g,ci,sq,p,b]=await Promise.all([safe('/api/health',{ok:false}),safe('/api/state',{}),safe('/api/sniper/dashboard',{pipeline:{},money:{},topOpportunities:[],activity:[],memory:{}}),safe('/api/sniper/global',{portfolio:{total:0,signals:[]},latest:null,architecture:{}}),safe('/api/sniper/opportunities?limit=500',[]),safe('/api/sniper/squad',[]),safe('/api/compute/providers',[]),safe('/api/compute/budget',{})]);healthState=h;core=c;sniper=d;globalState=g;caseIndex=ci;squad=sq;compute={providers:p,budget:b};health.textContent='health · '+(h.ok?'PASS':'DEGRADED');if(selectedCaseId)selectedCase=await safe('/api/sniper/cases/'+encodeURIComponent(selectedCaseId),selectedCase);render()}
 nav();render();load();setInterval(load,8000);
 </script>
 </body>
