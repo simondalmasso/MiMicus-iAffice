@@ -202,3 +202,58 @@ test('memory promotion requires audited outcome evidence', () => {
     observation:'prospect replied',outcome:'REPLIED',audited:true,evidenceRefs:['mail:2'],createdAt:'2026-09-28T00:00:00Z'
   }).promoted,true);
 });
+
+import { buildCaseEvaluation } from '../dist/packages/sniper/src/case.js';
+
+test('each business is projected as one inspectable case dossier', () => {
+  const dossier = buildCaseEvaluation({
+    opportunity: {
+      id:'case-1',
+      businessId:'biz-1',
+      businessName:'Comercio Demo',
+      category:'retail',
+      locality:'Santa Fe',
+      status:'NEGOTIATING',
+      score:88,
+      reasons:['WEBSITE_QUALITY_GAP','NO_CRM'],
+      offer:{primary:['WEBSITE','CRM'],secondary:['ANALYTICS'],why:['WEBSITE: weak conversion path','CRM: no CRM signal detected']},
+      persuasion:{observedFacts:['Observed website quality score: 31/100.'],demoBrief:'before/after',quantifiedClaim:null,rules:['NO_FABRICATED_UPLIFT']},
+      contacts:[],
+      evidenceRefs:['audit:1','maps:1'],
+      nextOwner:'NEGOTIATOR',
+      nextAction:'COUNTER_OFFER',
+      createdAt:'2026-09-28T00:00:00Z',
+      updatedAt:'2026-09-28T01:00:00Z'
+    },
+    negotiations:[{state:'ACTIVE',currentOfferArs:180000,floorPriceArs:140000,objections:['too expensive'],concessions:['split delivery'],nextAction:'counter offer',humanGate:false,humanGateReasons:[],lastContactAt:'2026-09-28T00:30:00Z',updatedAt:'2026-09-28T00:31:00Z'}],
+    deliveries:[],
+    payments:[],
+    activity:[{stream:'NEGOTIATION',actor:'NEGOTIATOR',eventType:'NEGOTIATION_UPDATED',detail:{},createdAt:'2026-09-28T00:31:00Z'}],
+    episodes:[{episodeId:'e1',agentRole:'NEGOTIATOR',tacticId:'demo-first',observation:'prospect objected to price',outcome:'REPLIED',audited:true,evidenceRefs:['mail:1'],createdAt:'2026-09-28T00:30:00Z'}],
+    decisions:[{decisionId:'d1',selectedMove:'NEGOTIATE',selectedTacticId:'diagnostic-negotiation',selectedScore:.91,reasons:['ACTIVE_OBJECTION'],alternatives:[],createdAt:'2026-09-28T00:31:00Z'}]
+  });
+  assert.equal(dossier.caseId,'case-1');
+  assert.equal(dossier.business.name,'Comercio Demo');
+  assert.equal(dossier.evaluation.score,88);
+  assert.equal(dossier.commercial.negotiations.length,1);
+  assert.equal(dossier.cognition.decisions.length,1);
+  assert.equal(dossier.memory.episodes.length,1);
+  assert.deepEqual(dossier.evidence.refs,['audit:1','maps:1']);
+});
+
+test('case dossier keeps observed evidence separate from inferred commercial recommendation', () => {
+  const dossier = buildCaseEvaluation({
+    opportunity: {
+      id:'case-2', businessId:'biz-2', businessName:'Demo 2', category:'services', locality:'Santa Fe',
+      status:'QUALIFIED', score:70, reasons:['NO_CRM'],
+      offer:{primary:['CRM'],secondary:[],why:['CRM: no CRM signal detected']},
+      persuasion:{observedFacts:['No CRM signal was detected.'],demoBrief:'crm demo',quantifiedClaim:null,rules:['NO_FABRICATED_UPLIFT']},
+      contacts:[], evidenceRefs:['source:1'], nextOwner:'DEMO', nextAction:'BUILD_DEMO',
+      createdAt:'2026-09-28T00:00:00Z', updatedAt:'2026-09-28T00:00:00Z'
+    },
+    negotiations:[], deliveries:[], payments:[], activity:[], episodes:[], decisions:[]
+  });
+  assert.deepEqual(dossier.evidence.observedFacts,['No CRM signal was detected.']);
+  assert.deepEqual(dossier.recommendation.primary,['CRM']);
+  assert.equal(dossier.recommendation.isInference,true);
+});
