@@ -10,7 +10,9 @@ import { referenceEvents } from "../../../packages/fixtures/src/reference.js";
 import { redactSecrets, WebhookIngestConnector } from "../../../packages/connectors/src/index.js";
 import { ServiceModelGateway, ServiceModelProvider } from "../../../packages/router/src/serviceModelGateway.js";
 import type { ComputeRequest } from "../../../packages/router/src/computeTypes.js";
-import { buildComputeRuntime, executeComputeRequest, probeProvider } from "./computeRuntime.js";\nimport { SniperStore } from "../../../packages/sniper/src/store.js";\nimport { buildAgentSquad, requiresHumanGate, type BusinessSignal, type LearningObservation } from "../../../packages/sniper/src/engine.js";
+import { buildComputeRuntime, executeComputeRequest, probeProvider } from "./computeRuntime.js";
+import { SniperStore } from "../../../packages/sniper/src/store.js";
+import { buildAgentSquad, requiresHumanGate, type BusinessSignal, type LearningObservation } from "../../../packages/sniper/src/engine.js";
 import type { Env, MessageBatch, ServiceBindingLike } from "./runtime-types.js";
 export { AriaCoordinator } from "./coordinator.js";
 export { ComputeGovernorDO } from "./computeGovernorDO.js";
@@ -38,7 +40,7 @@ async function sniperGet(url:URL,env:Env):Promise<Response|null>{
   if(url.pathname==="/api/sniper/opportunities")return json(await sniper.list(Number(url.searchParams.get("limit")??100)));
   if(url.pathname==="/api/sniper/activity")return json(await sniper.activityFeed(Number(url.searchParams.get("limit")??100)));
   if(url.pathname==="/api/sniper/squad")return json(buildAgentSquad());
-  const match=url.pathname.match(/^\\/api\\/sniper\\/opportunities\\/([^/]+)$/);
+  const match=url.pathname.match(/^\/api\/sniper\/opportunities\/([^/]+)$/);
   if(match)return json(await sniper.get(decodeURIComponent(match[1]!)));
   return null;
 }
