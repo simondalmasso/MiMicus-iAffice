@@ -15,6 +15,7 @@ import { buildCaseEvaluation } from "./case.js";
 import { planGlobalFocus, rankPortfolioCases, type GlobalCaseSignal, type GlobalPolicy } from "./globalCore.js";
 import { OBSERVABILITY_REFERENCES, buildTraceTree, normalizeTelemetrySpan, summarizeTelemetry, type TelemetrySpan, type TelemetrySpanInput } from "./telemetry.js";
 import { buildAgencyOperationsSnapshot, OPERATING_STAGES } from "./operatingModel.js";
+import { SKILL_SOURCE_CANDIDATES, evaluateSkillAdmission, type SkillHealth } from "./skillRegistry.js";
 
 export type OpportunityStatus =
   | "DISCOVERED"
@@ -442,6 +443,69 @@ export class SniperStore {
     return result.results.map(row => ({ id: row.id, opportunityId: row.opportunity_id, stream: row.stream, actor: row.actor, eventType: row.event_type, detail: parse(row.detail_json, {}), createdAt: row.created_at }));
   }
 
+
+
+  async skillRegistryOverview(): Promise<Record<string,unknown>> {
+    const rows=await this.db.prepare(
+      "SELECT source_id,revision_pin,benchmark_score,health,admission_state,admission_reasons_json,verified_at,updated_at FROM sniper_skill_registry ORDER BY source_id"
+    ).all<Record<string,unknown>>();
+    const persisted=new Map(rows.results.map(row=>[String(row.source_id),row]));
+    const sources=SKILL_SOURCE_CANDIDATES.map(source=>{
+      const row=persisted.get(source.id);
+      const effective=row?{
+        ...source,
+        revisionPin:String(row.revision_pin),
+        benchmarkScore:Number(row.benchmark_score),
+        health:String(row.health) as SkillHealth
+      }:source;
+      const admission=evaluateSkillAdmission(effective);
+      return {
+        ...effective,
+        admission,
+        verifiedAt:row?String(row.verified_at):null,
+        updatedAt:row?String(row.updated_at):null
+      };
+    });
+    return {
+      policy:{
+        directExternalWrite:false,
+        secretData:false,
+        paidSkills:false,
+        revisionPinRequired:true,
+        benchmarkRequired:true,
+        healthRequired:true
+      },
+      totals:{
+        sources:sources.length,
+        enabled:sources.filter(x=>x.admission.state==="ENABLED").length,
+        quarantined:sources.filter(x=>x.admission.state==="QUARANTINED").length,
+        rejected:sources.filter(x=>x.admission.state==="REJECTED").length
+      },
+      sources
+    };
+  }
+
+  async verifySkillSource(input:{
+    sourceId:string;
+    revisionPin:string;
+    benchmarkScore:number;
+    health:SkillHealth;
+    verifiedAt?:string;
+  }, now=new Date().toISOString()):Promise<Record<string,unknown>> {
+    const source=SKILL_SOURCE_CANDIDATES.find(x=>x.id===input.sourceId);
+    if(!source) throw new Error("SKILL_SOURCE_NOT_FOUND");
+    if(!input.revisionPin || input.revisionPin.length<7) throw new Error("SKILL_REVISION_PIN_INVALID");
+    if(!Number.isFinite(input.benchmarkScore)||input.benchmarkScore<0||input.benchmarkScore>1) throw new Error("SKILL_BENCHMARK_INVALID");
+    if(!["HEALTHY","UNKNOWN","DEGRADED"].includes(input.health)) throw new Error("SKILL_HEALTH_INVALID");
+    const effective={...source,revisionPin:input.revisionPin,benchmarkScore:input.benchmarkScore,health:input.health};
+    const admission=evaluateSkillAdmission(effective);
+    const verifiedAt=input.verifiedAt??now;
+    await this.db.prepare(
+      "INSERT INTO sniper_skill_registry (source_id,revision_pin,benchmark_score,health,admission_state,admission_reasons_json,verified_at,updated_at) VALUES (?1,?2,?3,?4,?5,?6,?7,?8) ON CONFLICT(source_id) DO UPDATE SET revision_pin=excluded.revision_pin,benchmark_score=excluded.benchmark_score,health=excluded.health,admission_state=excluded.admission_state,admission_reasons_json=excluded.admission_reasons_json,verified_at=excluded.verified_at,updated_at=excluded.updated_at"
+    ).bind(source.id,input.revisionPin,input.benchmarkScore,input.health,admission.state,JSON.stringify(admission.reasons),verifiedAt,now).run();
+    await this.activity(null,"SKILL","AUD","SKILL_SOURCE_VERIFIED",{sourceId:source.id,revisionPin:input.revisionPin,benchmarkScore:input.benchmarkScore,health:input.health,admission},now);
+    return {...effective,admission,verifiedAt,updatedAt:now};
+  }
 
   async operationsOverview(): Promise<Record<string,unknown>> {
     const opportunities=await this.list(500);
