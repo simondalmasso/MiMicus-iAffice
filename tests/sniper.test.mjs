@@ -621,8 +621,7 @@ test('skill compatibility enforces role and data class', () => {
 import {
   evaluateDiscoveryJob,
   dedupeBusinessFindings,
-  findingToBusinessSignal,
-  type DiscoverySourcePolicy
+  findingToBusinessSignal
 } from '../dist/packages/sniper/src/discovery.js';
 
 const publicSource={
