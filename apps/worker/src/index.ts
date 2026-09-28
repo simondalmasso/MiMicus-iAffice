@@ -42,6 +42,7 @@ async function sniperGet(url:URL,env:Env):Promise<Response|null>{
   if(url.pathname==="/api/sniper/activity")return json(await sniper.activityFeed(Number(url.searchParams.get("limit")??100)));
   if(url.pathname==="/api/sniper/squad")return json(buildAgentSquad());
   if(url.pathname==="/api/sniper/memory")return json(await sniper.memorySummary());
+  if(url.pathname==="/api/sniper/global")return json(await sniper.globalOverview());
   const caseMatch=url.pathname.match(/^\/api\/sniper\/cases\/([^/]+)$/);
   if(caseMatch){const dossier=await sniper.caseView(decodeURIComponent(caseMatch[1]!));return dossier?json(dossier):json({error:"SNIPER_CASE_NOT_FOUND"},404);}
   const match=url.pathname.match(/^\/api\/sniper\/opportunities\/([^/]+)$/);
@@ -55,6 +56,15 @@ async function api(request:Request,env:Env):Promise<Response|null>{const url=new
     if(!validSignal(body))return json({error:"SNIPER_SIGNAL_SCHEMA_INVALID"},400);
     const sniper=new SniperStore(env.DB),record=await sniper.ingest(body);
     return json(record,201);
+  }
+ if(request.method==="POST"&&url.pathname==="/api/sniper/global/plan"){
+    const body=await request.json() as {preferredTags?:string[];maxConcurrentCases?:number;minEvidenceCount?:number};
+    const policy={
+      preferredTags:Array.isArray(body.preferredTags)?body.preferredTags.map(String):[],
+      maxConcurrentCases:Number(body.maxConcurrentCases??8),
+      minEvidenceCount:Number(body.minEvidenceCount??2)
+    };
+    try{return json(await new SniperStore(env.DB).planGlobal(policy),201);}catch(error){return json({error:error instanceof Error?error.message:"GLOBAL_PLAN_FAILED"},400);}
   }
  if(request.method==="POST"&&url.pathname==="/api/sniper/decision"){
     const body=await request.json() as Partial<CognitiveContext>;
