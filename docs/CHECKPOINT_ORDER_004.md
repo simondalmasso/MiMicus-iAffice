@@ -3,7 +3,7 @@
 Updated: 2026-09-28
 Status: ACTIVE / IMPLEMENTED PARTIAL / NOT VERIFIED / NOT MERGE-READY
 
-Current branch HEAD at this checkpoint: `be4aab51872d112365788aab8fd69fef7322ea8a`
+Reference implementation HEAD immediately before this checkpoint refresh: `be4aab51872d112365788aab8fd69fef7322ea8a`. Always fetch the live branch HEAD before continuing; do not assume this reference SHA is current.
 Parent drift at this checkpoint: base/merge-base remains `204ae12a74dd451561dc801631d671d35e65dd56`; ORDER-004 is 54 commits ahead and 0 behind.
 
 ## READ THIS FIRST
