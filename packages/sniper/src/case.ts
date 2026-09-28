@@ -79,6 +79,20 @@ export interface CaseDecision {
   createdAt: string;
 }
 
+export interface CaseDemo {
+  jobId: string;
+  servicePackId: string;
+  executorId: string;
+  executorClass: string;
+  state: string;
+  requestedDeliverables: string[];
+  artifactManifest: unknown;
+  auditVerdict: string | null;
+  auditEvidenceRefs: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface CaseEvaluationInput {
   opportunity: CaseOpportunity;
   negotiations: CaseNegotiation[];
@@ -87,6 +101,7 @@ export interface CaseEvaluationInput {
   activity: CaseActivity[];
   episodes: CaseEpisode[];
   decisions: CaseDecision[];
+  demos?: CaseDemo[];
 }
 
 export function buildCaseEvaluation(input: CaseEvaluationInput) {
@@ -123,6 +138,7 @@ export function buildCaseEvaluation(input: CaseEvaluationInput) {
       demoBrief: o.persuasion.demoBrief,
       isInference: true
     },
+    demos: (input.demos ?? []).map(x => structuredClone(x)),
     commercial: {
       negotiations: input.negotiations.map(x => structuredClone(x)),
       deliveries: input.deliveries.map(x => structuredClone(x)),
