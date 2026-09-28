@@ -3,6 +3,9 @@
 Updated: 2026-09-28
 Status: ACTIVE / IMPLEMENTED PARTIAL / NOT VERIFIED / NOT MERGE-READY
 
+Current branch HEAD at this checkpoint: `be4aab51872d112365788aab8fd69fef7322ea8a`
+Parent drift at this checkpoint: base/merge-base remains `204ae12a74dd451561dc801631d671d35e65dd56`; ORDER-004 is 54 commits ahead and 0 behind.
+
 ## READ THIS FIRST
 
 You are continuing a cloud-only implementation. Do not use the user's PC.
@@ -675,3 +678,229 @@ Then:
 7. only then connect optional Laya service behind a cloud interface;
 8. preserve Cloudflare as source of truth/control plane;
 9. keep Oracle optional and stateless relative to canonical D1 state.
+
+## Five-stage operating model
+
+The company now has one canonical operating model:
+
+`ANALYZE → PROSPECT → EXECUTE → DELIVER → COLLECT`
+
+Implemented:
+- `packages/sniper/src/operatingModel.ts`
+- `SniperStore.operationsOverview()`
+- GET `/api/sniper/operations`
+- dashboard section `Operations`
+
+Canonical labels:
+- ANALYZE = Analizan
+- PROSPECT = Prospectan
+- EXECUTE = Ejecutan
+- DELIVER = Entregan
+- COLLECT = Cobran
+
+Every business remains one CASE.
+Each CASE is projected into exactly one current operating stage from durable status.
+
+External effects remain explicit.
+Examples:
+- SEND_OUTREACH → SEND_EXTERNAL
+- DEPLOY_CUSTOMER_WORK → DEPLOY
+- CREATE_PAYMENT_REQUEST → MONEY_MUTATION
+- ISSUE_INVOICE → MONEY_MUTATION
+
+The five-stage board does not bypass A1.
+
+## Commercial autonomy policy
+
+Implemented:
+`packages/sniper/src/commercialPolicy.ts`
+
+Purpose:
+allow high-speed, evidence-backed autonomous selling without teaching the system spam, fabrication, coercion or unauthorized money/deploy behavior.
+
+Current hard denials include:
+- explicit refusal / opt-out → DO_NOT_CONTACT;
+- unverified contact provenance;
+- bulk blast;
+- unsupported claims;
+- false urgency;
+- human impersonation;
+- autonomous contact-fatigue limit;
+- contact cooldown;
+- payment request before accepted offer;
+- production deploy without customer approval;
+- invoice without verified payment;
+- credential handoff without approval.
+
+Current default autonomous-contact limits:
+- max autonomous contacts in window: 3
+- minimum interval: 48 hours
+
+These defaults are policy constants and may later be made jurisdiction/channel-aware.
+Do not relax them silently.
+
+## Canonical observability fabric
+
+Implemented:
+- `packages/sniper/src/telemetry.ts`
+- `migrations/0006_sniper_observability.sql`
+- `SniperStore.recordTelemetrySpan()`
+- `SniperStore.telemetryTrace()`
+- `SniperStore.telemetryOverview()`
+- GET `/api/sniper/telemetry`
+- GET `/api/sniper/telemetry/traces/:traceId`
+- protected POST `/api/sniper/telemetry/span`
+- dashboard section `Telemetry`
+
+Telemetry authority:
+`ARIA_TELEMETRY_FABRIC`
+
+Design:
+- OpenTelemetry-compatible contract direction;
+- OpenInference-compatible semantic direction;
+- metadata/digests only by default;
+- raw prompts/responses are NOT stored by the canonical schema;
+- trace_id / span_id / parent_span_id;
+- CASE linkage;
+- agent role;
+- operating stage;
+- agent/model/tool/decision/memory/effect/job/policy kinds;
+- status;
+- latency;
+- model/provider;
+- input/output tokens;
+- actual monetary cost;
+- error code;
+- input/output digests;
+- typed attributes.
+
+Hard invariant:
+`actualCostUsd > 0` is rejected by canonical telemetry because ORDER-003 zero-spend remains binding.
+
+Automatic instrumentation currently exists for:
+- GLOBAL_CORE portfolio plan decisions;
+- ORCHESTRATOR next-move decisions.
+
+All future specialist/tool/model/effect runtimes should emit spans through this contract.
+
+Dashboard Telemetry currently exposes:
+- trace count;
+- span count;
+- errors / denied / abstained;
+- p95 latency;
+- input/output tokens;
+- actual spend;
+- health grouped by agent;
+- recent spans;
+- trace explorer with parent→child tree;
+- adapter/reference registry.
+
+### Verified observability-source status
+
+Verified from current upstream repositories before this checkpoint:
+
+- Langfuse:
+  - repo exists;
+  - self-hosted tracing;
+  - core is MIT-style but EE directories are separately licensed;
+  - REFERENCE_ONLY until exact reused surface is pinned.
+
+- AgentOps:
+  - MIT;
+  - agent monitoring/session replay/self-hosting;
+  - REFERENCE_ONLY.
+
+- Laminar (`lmnr-ai/lmnr`):
+  - Apache-2.0;
+  - OpenTelemetry-native;
+  - realtime traces + SQL/dashboard;
+  - ADAPTER_CANDIDATE.
+
+- Dify:
+  - modified Apache-2.0 with additional conditions including multi-tenant restrictions;
+  - REFERENCE_ONLY, not platform dependency.
+
+- Flowise:
+  - upstream repository is archived;
+  - REJECT as new dependency.
+
+- Arize Phoenix:
+  - OpenTelemetry/OpenInference;
+  - current repo license is Elastic License 2.0;
+  - REFERENCE_ONLY due hosted/managed-service restrictions.
+
+- OpenLIT:
+  - Apache-2.0;
+  - OpenTelemetry-native agent/tool/model/token/cost telemetry;
+  - ADAPTER_CANDIDATE.
+
+- Helicone:
+  - Apache-2.0;
+  - tracing/cost/gateway capabilities;
+  - REFERENCE_ONLY because gateway role overlaps with `aria-models`.
+
+- AutoGen Studio:
+  - AutoGen upstream explicitly states maintenance mode;
+  - REJECT as new dependency.
+
+- Observra:
+  - Apache-2.0;
+  - framework-agnostic agent telemetry and OTel export;
+  - ADAPTER_CANDIDATE.
+
+Do NOT install multiple observability platforms into the control plane.
+If an external backend is later used, export canonical spans to ONE selected backend at a time through an adapter.
+
+## Orchestration reference registry
+
+Implemented:
+`packages/sniper/src/orchestrationRegistry.ts`
+
+Rule:
+`ARIA_GLOBAL_CORE` is the only runtime orchestration authority.
+
+Verified sources currently include:
+- Swarms canonical repo: `kyegomez/swarms`, Apache-2.0;
+- Marketing Swarm Template, MIT;
+- Multi-Agent Marketing Course, MIT;
+- CrewAI, MIT;
+- LangGraph, MIT;
+- AutoGen reference-only because maintenance mode;
+- ai-agents-101 is an n8n tutorial/reference rather than runtime;
+- GitHub ai-marketing topic is discovery-only.
+
+Swarms/CrewAI/LangGraph contribute patterns, not competing runtime authority.
+
+## Updated exact continuation after observability
+
+A fresh GPT should now:
+
+1. Read issue #7 and this entire checkpoint.
+2. Fetch the current ORDER-004 HEAD; do not assume the SHA above is still current.
+3. Compare parent drift against ORDER-003 and record it.
+4. Inspect at minimum:
+   - packages/sniper/src/globalCore.ts
+   - packages/sniper/src/cognition.ts
+   - packages/sniper/src/operatingModel.ts
+   - packages/sniper/src/commercialPolicy.ts
+   - packages/sniper/src/telemetry.ts
+   - packages/sniper/src/orchestrationRegistry.ts
+   - packages/sniper/src/store.ts
+   - apps/worker/src/index.ts
+   - apps/cockpit/index.html
+   - migrations/0003..0006
+   - tests/sniper.test.mjs
+5. Obtain a cloud-only $0 verification runner.
+6. Run typecheck/tests/security/architecture/UI smoke.
+7. Fix failures before claiming PASS.
+8. Instrument specialist jobs, model calls, tool calls and effects with canonical spans.
+9. Add a versioned SKILL REGISTRY.
+10. Add DISCOVERY JOB and DEMO JOB contracts.
+11. Connect audited procedural memory into Global Core scoring.
+12. Implement semantic-memory support/contradiction/decay/supersession.
+13. Only after the telemetry contract is stable, benchmark ONE external observability adapter from:
+   - Laminar;
+   - OpenLIT;
+   - Observra.
+14. Do not replace the product dashboard with a third-party observability UI.
+15. Update this checkpoint before ending substantial work.
