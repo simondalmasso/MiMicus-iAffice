@@ -1,0 +1,113 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  scoreOpportunity,
+  chooseOffer,
+  requiresHumanGate,
+  buildAgentSquad,
+  buildPersuasionCase,
+  applyLearningFeedback,
+  buildDashboardSnapshot
+} from '../dist/packages/sniper/src/engine.js';
+
+const signal = {
+  businessId: 'biz-1',
+  name: 'Comercio Demo',
+  category: 'retail',
+  locality: 'Santa Fe',
+  observedAt: '2026-09-28T08:00:00.000Z',
+  demand: { rating: 4.7, reviewCount: 620 },
+  digital: {
+    websiteUrl: null,
+    websiteQuality: null,
+    ecommerce: false,
+    crm: false,
+    whatsappAutomation: false,
+    socialActive: true,
+    booking: false,
+    paymentsOnline: false,
+    analytics: false
+  },
+  contacts: [
+    { kind: 'EMAIL', value: 'ventas@example.test', provenance: 'PUBLIC_BUSINESS_LISTING' },
+    { kind: 'WHATSAPP', value: '+543420000000', provenance: 'PUBLIC_BUSINESS_LISTING' }
+  ],
+  evidenceRefs: ['maps:biz-1', 'site-audit:biz-1']
+};
+
+test('opportunity score rewards visible demand plus concrete digital gaps', () => {
+  const scored = scoreOpportunity(signal);
+  assert.ok(scored.score >= 75);
+  assert.ok(scored.reasons.some(x => x.includes('NO_WEBSITE')));
+  assert.ok(scored.reasons.some(x => x.includes('NO_CRM')));
+  assert.ok(scored.reasons.some(x => x.includes('NO_WHATSAPP_AUTOMATION')));
+});
+
+test('offer selection is evidence-backed and does not sell everything', () => {
+  const offer = chooseOffer(signal);
+  assert.deepEqual(offer.primary.slice(0, 3), ['WEBSITE', 'ECOMMERCE', 'WHATSAPP_AUTOMATION']);
+  assert.ok(!offer.primary.includes('SOCIAL_MANAGEMENT'));
+  assert.ok(offer.why.length >= 3);
+});
+
+test('persuasion case never invents revenue uplift without baseline evidence', () => {
+  const p = buildPersuasionCase(signal, chooseOffer(signal));
+  assert.equal(p.quantifiedClaim, null);
+  assert.ok(p.observedFacts.length > 0);
+  assert.ok(p.demoBrief.includes('before/after'));
+  assert.ok(p.rules.includes('NO_FABRICATED_UPLIFT'));
+});
+
+test('persuasion case may calculate transparent scenario only from explicit baseline inputs', () => {
+  const p = buildPersuasionCase(signal, chooseOffer(signal), {
+    monthlyLeads: 200,
+    conversionRate: 0.1,
+    averageOrderValue: 25000,
+    scenarioConversionRate: 0.13
+  });
+  assert.equal(p.quantifiedClaim?.baselineMonthlyRevenue, 500000);
+  assert.equal(p.quantifiedClaim?.scenarioMonthlyRevenue, 650000);
+  assert.equal(p.quantifiedClaim?.scenarioDelta, 150000);
+  assert.equal(p.quantifiedClaim?.isForecast, true);
+});
+
+test('human gate is narrow but mandatory for large, requested or non-standard deals', () => {
+  assert.equal(requiresHumanGate({ amountArs: 120000, meetingRequested: false, nonStandardTerms: false, legalCommitment: false }).required, false);
+  assert.equal(requiresHumanGate({ amountArs: 1500000, meetingRequested: false, nonStandardTerms: false, legalCommitment: false }).required, true);
+  assert.equal(requiresHumanGate({ amountArs: 120000, meetingRequested: true, nonStandardTerms: false, legalCommitment: false }).required, true);
+  assert.equal(requiresHumanGate({ amountArs: 120000, meetingRequested: false, nonStandardTerms: true, legalCommitment: false }).required, true);
+});
+
+test('specialist squad is outcome-owned and keeps AUD and memory independent', () => {
+  const squad = buildAgentSquad();
+  const roles = new Set(squad.map(x => x.role));
+  for (const role of ['ORCHESTRATOR','SCOUT','MARKET_RESEARCH','QUALIFIER','SALES','NEGOTIATOR','UX_AUDITOR','WEB','DESIGN','SOCIAL','CATALOG','CRM','AUTOMATION','PAYMENTS','PRODUCT','ANALYTICS','COPY','DEMO','DELIVERY','AUD','MEMORY']) {
+    assert.ok(roles.has(role), role);
+  }
+  assert.equal(squad.every(x => x.owns.length > 0 && x.definitionOfDone.length > 0), true);
+});
+
+test('learning feedback changes tactic priors only from outcome-labelled observations', () => {
+  const base = { tacticId: 'demo-first', attempts: 4, replies: 1, meetings: 0, wins: 0, losses: 1, score: 0.25 };
+  const next = applyLearningFeedback(base, { outcome: 'WON', audited: true });
+  assert.equal(next.attempts, 5);
+  assert.equal(next.wins, 1);
+  assert.ok(next.score > base.score);
+  const ignored = applyLearningFeedback(base, { outcome: 'UNKNOWN', audited: true });
+  assert.deepEqual(ignored, base);
+});
+
+test('dashboard snapshot exposes pipeline, negotiations, delivery, collections and learning', () => {
+  const snapshot = buildDashboardSnapshot({
+    opportunities: [{ status: 'QUALIFIED' }, { status: 'NEGOTIATING' }, { status: 'WON' }],
+    negotiations: [{ state: 'ACTIVE', nextAction: 'counter-offer' }],
+    deliveries: [{ state: 'IN_PROGRESS' }],
+    payments: [{ state: 'PENDING', amountArs: 120000 }],
+    learnings: [{ tacticId: 'demo-first', score: 0.6 }]
+  });
+  assert.equal(snapshot.pipeline.total, 3);
+  assert.equal(snapshot.pipeline.negotiating, 1);
+  assert.equal(snapshot.pipeline.won, 1);
+  assert.equal(snapshot.money.pendingArs, 120000);
+  assert.equal(snapshot.live.length >= 3, true);
+});
