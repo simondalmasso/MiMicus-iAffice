@@ -30,8 +30,8 @@ input{width:100%;padding:9px;border:1px solid #bbb;border-radius:8px;background:
 <nav id="tabs" aria-label="Operations sections"></nav>
 <main id="app" aria-live="polite"></main>
 <script>
-const sections=['Revenue','Global Core','Operations','Cases','Live','Decisions','Learning','Telemetry','Squad','Approvals','Compute','System'];
-let current='Revenue',core={},sniper={pipeline:{},money:{},topOpportunities:[],activity:[],memory:{}},globalState={portfolio:{total:0,signals:[]},latest:null,architecture:{}},operationsState={stages:[],workstreams:{},totalCases:0},telemetryState={summary:{},recentSpans:[],recentTraceIds:[],adapters:[]},selectedTrace=null,selectedTraceId=null,caseIndex=[],squad=[],compute={providers:[],budget:{}},healthState={},adminToken='',selectedCase=null,selectedCaseId=null,casesViewMode='BOARD';
+const sections=['Revenue','Global Core','Operations','Cases','Live','Decisions','Learning','Telemetry','Skills','Squad','Approvals','Compute','System'];
+let current='Revenue',core={},sniper={pipeline:{},money:{},topOpportunities:[],activity:[],memory:{}},globalState={portfolio:{total:0,signals:[]},latest:null,architecture:{}},operationsState={stages:[],workstreams:{},totalCases:0},telemetryState={summary:{},recentSpans:[],recentTraceIds:[],adapters:[]},skillsState={policy:{},totals:{},sources:[]},selectedTrace=null,selectedTraceId=null,caseIndex=[],squad=[],compute={providers:[],budget:{}},healthState={},adminToken='',selectedCase=null,selectedCaseId=null,casesViewMode='BOARD';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>Number(n||0).toLocaleString('es-AR');
 const empty=t=>'<div class="empty">'+esc(t)+'</div>';
@@ -160,10 +160,10 @@ function system(){
  return '<div class="hero"><div><div class="eyebrow">Cloud runtime</div><h1>System</h1><p>Cloud-only architecture. The browser is an operator surface; durable state and agents live in the cloud.</p></div></div>'+
  '<div class="grid"><div class="card"><div class="eyebrow">Canonical state</div><div class="metric">D1</div></div><div class="card"><div class="eyebrow">Business effects</div><div class="metric" style="font-size:20px">aria-effects</div></div><div class="card"><div class="eyebrow">Model execution</div><div class="metric" style="font-size:20px">aria-models</div></div><div class="card"><div class="eyebrow">Deploy SHA</div><div class="muted">'+esc(healthState.sha||'unknown')+'</div></div></div>';
 }
-function render(){const views={Revenue:revenue(),'Global Core':globalCoreView(),Operations:operationsView(),Cases:casesView(),Live:live(),Decisions:decisions(),Learning:learning(),Telemetry:telemetryView(),Squad:squadView(),Approvals:approvals(),Compute:computeView(),System:system()};app.innerHTML=views[current]||views.Revenue;if(current==='Approvals')bindApprovals();bindCaseActions();bindTelemetry()}
+function render(){const views={Revenue:revenue(),'Global Core':globalCoreView(),Operations:operationsView(),Cases:casesView(),Live:live(),Decisions:decisions(),Learning:learning(),Telemetry:telemetryView(),Skills:skillsView(),Squad:squadView(),Approvals:approvals(),Compute:computeView(),System:system()};app.innerHTML=views[current]||views.Revenue;if(current==='Approvals')bindApprovals();bindCaseActions();bindTelemetry()}
 function bindApprovals(){const input=document.getElementById('adminToken');if(input){input.value=adminToken;input.oninput=()=>adminToken=input.value}document.querySelectorAll('[data-id]').forEach(b=>b.onclick=async()=>{if(!adminToken)return;b.disabled=true;try{const r=await fetch('/api/approvals/'+encodeURIComponent(b.dataset.id)+'/'+b.dataset.op,{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+adminToken},body:JSON.stringify({actor:'cockpit-human'})});if(!r.ok)throw new Error((await r.json()).error||('HTTP '+r.status));await load()}finally{b.disabled=false}})}
 async function safe(url,fallback){try{const r=await fetch(url,{cache:'no-store'});return r.ok?await r.json():fallback}catch{return fallback}}
-async function load(){const [h,c,d,g,o,t,ci,sq,p,b]=await Promise.all([safe('/api/health',{ok:false}),safe('/api/state',{}),safe('/api/sniper/dashboard',{pipeline:{},money:{},topOpportunities:[],activity:[],memory:{}}),safe('/api/sniper/global',{portfolio:{total:0,signals:[]},latest:null,architecture:{}}),safe('/api/sniper/operations',{stages:[],workstreams:{},totalCases:0}),safe('/api/sniper/telemetry',{summary:{},recentSpans:[],recentTraceIds:[],adapters:[]}),safe('/api/sniper/opportunities?limit=500',[]),safe('/api/sniper/squad',[]),safe('/api/compute/providers',[]),safe('/api/compute/budget',{})]);healthState=h;core=c;sniper=d;globalState=g;operationsState=o;telemetryState=t;caseIndex=ci;squad=sq;compute={providers:p,budget:b};health.textContent='health · '+(h.ok?'PASS':'DEGRADED');if(selectedCaseId)selectedCase=await safe('/api/sniper/cases/'+encodeURIComponent(selectedCaseId),selectedCase);if(selectedTraceId)selectedTrace=await safe('/api/sniper/telemetry/traces/'+encodeURIComponent(selectedTraceId),selectedTrace);render()}
+async function load(){const [h,c,d,g,o,t,sk,ci,sq,p,b]=await Promise.all([safe('/api/health',{ok:false}),safe('/api/state',{}),safe('/api/sniper/dashboard',{pipeline:{},money:{},topOpportunities:[],activity:[],memory:{}}),safe('/api/sniper/global',{portfolio:{total:0,signals:[]},latest:null,architecture:{}}),safe('/api/sniper/operations',{stages:[],workstreams:{},totalCases:0}),safe('/api/sniper/telemetry',{summary:{},recentSpans:[],recentTraceIds:[],adapters:[]}),safe('/api/sniper/skills',{policy:{},totals:{},sources:[]}),safe('/api/sniper/opportunities?limit=500',[]),safe('/api/sniper/squad',[]),safe('/api/compute/providers',[]),safe('/api/compute/budget',{})]);healthState=h;core=c;sniper=d;globalState=g;operationsState=o;telemetryState=t;skillsState=sk;caseIndex=ci;squad=sq;compute={providers:p,budget:b};health.textContent='health · '+(h.ok?'PASS':'DEGRADED');if(selectedCaseId)selectedCase=await safe('/api/sniper/cases/'+encodeURIComponent(selectedCaseId),selectedCase);if(selectedTraceId)selectedTrace=await safe('/api/sniper/telemetry/traces/'+encodeURIComponent(selectedTraceId),selectedTrace);render()}
 nav();render();load();setInterval(load,8000);
 </script>
 </body>
@@ -189,6 +189,21 @@ function telemetryView(){
 }
 async function openTrace(id){selectedTraceId=id;selectedTrace=await safe('/api/sniper/telemetry/traces/'+encodeURIComponent(id),null);current='Telemetry';nav();render()}
 function bindTelemetry(){document.querySelectorAll('[data-trace]').forEach(b=>b.onclick=()=>openTrace(b.dataset.trace))}
+
+
+function skillsView(){
+ const s=skillsState||{},tot=s.totals||{},sources=s.sources||[],policy=s.policy||{};
+ return '<div class="hero"><div><div class="eyebrow">Governed capability layer</div><h1>Skills</h1><p>External skill libraries are admitted only after source/license/cost review, revision pin, health check and benchmark. Popularity alone grants no execution authority.</p></div></div>'+
+ '<div class="grid">'+
+ '<div class="card"><div class="eyebrow">Sources</div><div class="metric">'+fmt(tot.sources)+'</div></div>'+
+ '<div class="card"><div class="eyebrow">Enabled</div><div class="metric">'+fmt(tot.enabled)+'</div></div>'+
+ '<div class="card"><div class="eyebrow">Quarantined</div><div class="metric">'+fmt(tot.quarantined)+'</div></div>'+
+ '<div class="card"><div class="eyebrow">Rejected</div><div class="metric">'+fmt(tot.rejected)+'</div></div>'+
+ '</div>'+
+ '<div class="section"><h2>Admission policy</h2></div><div class="card"><pre>'+esc(JSON.stringify(policy,null,2))+'</pre></div>'+
+ '<div class="section"><h2>Skill sources</h2><span class="muted">source-level admission; individual skills may require stricter gates</span></div>'+
+ (sources.length?'<table><thead><tr><th>Source</th><th>Admission</th><th>License</th><th>Pin</th><th>Benchmark</th><th>Runtime</th><th>Network</th><th>Roles</th><th>Capabilities</th><th>Reasons</th></tr></thead><tbody>'+sources.map(x=>'<tr><td><strong>'+esc(x.label)+'</strong><div class="muted">'+esc(x.source)+'</div></td><td>'+badge(x.admission?.state)+'</td><td>'+esc(x.license||'—')+'</td><td class="tiny">'+esc(x.revisionPin||'UNPINNED')+'</td><td>'+((x.benchmarkScore===null||x.benchmarkScore===undefined)?'—':Number(x.benchmarkScore).toFixed(2))+'</td><td>'+esc(x.runtime)+'</td><td>'+esc(x.networkPermission)+'</td><td>'+esc((x.roles||[]).join(' · '))+'</td><td>'+esc((x.capabilities||[]).join(' · '))+'</td><td class="muted">'+esc((x.admission?.reasons||[]).join(' · '))+'</td></tr>').join('')+'</tbody></table>':empty('No skill sources registered.'));
+}
 
 function squadView(){
  return '<div class="hero"><div><div class="eyebrow">Outcome-owned specialists</div><h1>Squad</h1><p>Skills are tools; recurring ownership becomes an agent. Each specialist has one outcome and explicit fences.</p></div></div>'+
