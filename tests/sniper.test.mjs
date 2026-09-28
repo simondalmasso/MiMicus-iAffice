@@ -130,3 +130,73 @@ test('service packs are reusable patterns, not hardcoded prospect targets', () =
   assert.equal(SERVICE_PACKS.every(x => !JSON.stringify(x).includes('rodriguezanton')), true);
   assert.equal(SERVICE_PACKS.every(x => x.verticalSignals.length > 0 && x.deliverables.length > 0), true);
 });
+
+import {
+  chooseNextMove,
+  promoteEpisode,
+  rankDecisionCandidates
+} from '../dist/packages/sniper/src/cognition.js';
+
+test('cognitive policy escalates only when human gate is materially required', () => {
+  const decision = chooseNextMove({
+    opportunityId:'o1',
+    stage:'NEGOTIATING',
+    contactsAvailable:true,
+    demoReady:true,
+    replyState:'ENGAGED',
+    objection:'needs-owner-call',
+    attempts:2,
+    daysSinceLastTouch:0,
+    humanGate:{required:true,reasons:['BUYER_REQUESTED_HUMAN_MEETING']},
+    tacticStats:[]
+  });
+  assert.equal(decision.move,'ESCALATE_HUMAN');
+  assert.ok(decision.reasons.includes('BUYER_REQUESTED_HUMAN_MEETING'));
+});
+
+test('cognitive policy prefers proof/demo before outreach when demo is missing', () => {
+  const decision = chooseNextMove({
+    opportunityId:'o2',
+    stage:'QUALIFIED',
+    contactsAvailable:true,
+    demoReady:false,
+    replyState:'NONE',
+    objection:null,
+    attempts:0,
+    daysSinceLastTouch:0,
+    humanGate:{required:false,reasons:[]},
+    tacticStats:[]
+  });
+  assert.equal(decision.move,'BUILD_DEMO');
+});
+
+test('ranker combines learned tactic score with context fit and contact fatigue', () => {
+  const ranked = rankDecisionCandidates({
+    opportunityId:'o3',
+    stage:'CONTACTED',
+    contactsAvailable:true,
+    demoReady:true,
+    replyState:'NO_REPLY',
+    objection:null,
+    attempts:1,
+    daysSinceLastTouch:4,
+    humanGate:{required:false,reasons:[]},
+    tacticStats:[
+      {tacticId:'demo-first',attempts:20,replies:9,meetings:4,wins:2,losses:3,score:.72},
+      {tacticId:'generic-followup',attempts:30,replies:2,meetings:0,wins:0,losses:8,score:.08}
+    ]
+  });
+  assert.equal(ranked[0].move,'FOLLOW_UP_WITH_VALUE');
+  assert.ok(ranked[0].score>ranked.at(-1).score);
+});
+
+test('memory promotion requires audited outcome evidence', () => {
+  assert.equal(promoteEpisode({
+    episodeId:'e1',opportunityId:'o1',agentRole:'NEGOTIATOR',tacticId:'demo-first',
+    observation:'prospect replied',outcome:'REPLIED',audited:false,evidenceRefs:['mail:1'],createdAt:'2026-09-28T00:00:00Z'
+  }).promoted,false);
+  assert.equal(promoteEpisode({
+    episodeId:'e2',opportunityId:'o1',agentRole:'NEGOTIATOR',tacticId:'demo-first',
+    observation:'prospect replied',outcome:'REPLIED',audited:true,evidenceRefs:['mail:2'],createdAt:'2026-09-28T00:00:00Z'
+  }).promoted,true);
+});
