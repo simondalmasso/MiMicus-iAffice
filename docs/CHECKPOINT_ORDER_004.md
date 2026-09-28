@@ -988,3 +988,93 @@ Therefore ORDER-004 remains:
 `UNVERIFIED_CLOUD_RUNNER`
 
 Do not claim typecheck/test PASS until a real cloud runner executes the current branch.
+
+## Governed market discovery
+
+Implemented:
+- `packages/sniper/src/discovery.ts`
+- `packages/sniper/src/discoverySources.ts`
+- `migrations/0008_sniper_discovery.sql`
+- durable source verification, jobs, findings and digital audits in `SniperStore`
+- GET `/api/sniper/discovery/sources`
+- GET `/api/sniper/discovery/jobs`
+- protected POST `/api/sniper/discovery/source/verify`
+- protected POST `/api/sniper/discovery/jobs`
+- protected POST `/api/sniper/discovery/finding`
+- dashboard section `Discovery`
+
+Discovery invariant:
+**crawler/source code license is NOT permission to automate a target source.**
+
+Every source requires independent proof for:
+- exact source revision;
+- runtime cost = $0;
+- target terms;
+- automation permission;
+- public-business-data scope;
+- runtime health.
+
+Current source candidates:
+
+1. Firecrawl self-hosted
+   - upstream active
+   - AGPL-3.0
+   - dedicated network-use license review required
+   - hosted API is not assumed free
+   - QUARANTINED
+
+2. Crawl4AI self-hosted
+   - upstream active
+   - Apache-2.0
+   - open-source self-host path is candidate
+   - hosted cloud is pay-as-you-go and is NOT the zero-cost path
+   - target automation terms not yet verified
+   - QUARANTINED
+
+3. Browser Use self-hosted
+   - upstream active
+   - MIT
+   - self-host path may be a candidate
+   - hosted Browser Use cloud is paid and is REJECTED for ORDER-003
+   - target automation terms not yet verified
+   - QUARANTINED
+
+4. Scrapling self-hosted
+   - upstream active
+   - BSD-3-Clause
+   - target automation terms not yet verified
+   - QUARANTINED
+
+No discovery source is currently ENABLED.
+
+### Discovery job flow
+
+`Global Core / operator goal → DiscoveryJob(locality,categories) → admitted source adapter → RawBusinessFinding → dedupe → DigitalAuditEvidence → BusinessSignal → SniperStore.ingest → CASE`
+
+Rules:
+- one business becomes one CASE;
+- findings from multiple sources dedupe by domain/contact/name+locality;
+- only published business contacts are eligible;
+- no private personal phone/email enrichment;
+- evidence refs remain attached;
+- digital audit evidence drives website-quality/gap signals;
+- named examples supplied in chat remain examples only, never hardcoded.
+
+Current D1 tables:
+- sniper_discovery_sources
+- sniper_discovery_jobs
+- sniper_discovery_findings
+- sniper_digital_audits
+
+The executor that performs real crawling/browser work is NOT connected yet.
+Do not claim real Santa Fe market scanning is live until an admitted source adapter and cloud executor pass verification.
+
+### Exact next continuation after discovery
+
+1. Build Demo Job contract and private-preview lifecycle.
+2. Keep heavy browser/build/3D execution outside normal Worker request execution.
+3. Add cloud executor registry (Cloudflare lightweight / Oracle Free Tier heavy).
+4. Add delivery transitions and acceptance.
+5. Instrument discovery/demo execution with canonical telemetry.
+6. Only then connect one admitted discovery adapter.
+7. Continue to preserve no-PC and zero-spend invariants.
