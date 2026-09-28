@@ -7,8 +7,7 @@ import {
   buildAgentSquad,
   buildPersuasionCase,
   applyLearningFeedback,
-  buildDashboardSnapshot
-} from '../dist/packages/sniper/src/engine.js';
+  buildDashboardSnapshot\n} from '../dist/packages/sniper/src/engine.js';\nimport { recommendVerticalPack, SERVICE_PACKS } from '../dist/packages/sniper/src/servicePacks.js';
 
 const signal = {
   businessId: 'biz-1',
@@ -110,4 +109,24 @@ test('dashboard snapshot exposes pipeline, negotiations, delivery, collections a
   assert.equal(snapshot.pipeline.won, 1);
   assert.equal(snapshot.money.pendingArs, 120000);
   assert.equal(snapshot.live.length >= 3, true);
+});
+
+test('openings retailer pack recommends visual configurator and quote commerce', () => {
+  const pack = recommendVerticalPack({ category: 'aberturas', hasWebsite: true, websiteQuality: 31, hasEcommerce: false, has3d: false });
+  assert.equal(pack.id, 'OPENINGS_COMMERCE');
+  assert.ok(pack.deliverables.includes('VISUAL_CONFIGURATOR'));
+  assert.ok(pack.deliverables.includes('QUOTE_TO_WHATSAPP'));
+  assert.ok(pack.demoProof.includes('interactive room/material preview'));
+});
+
+test('real-estate pack can propose embeddable 3d tour without promising a measured twin', () => {
+  const pack = recommendVerticalPack({ category: 'inmobiliaria', hasWebsite: true, websiteQuality: 70, hasEcommerce: false, has3d: false });
+  assert.equal(pack.id, 'REAL_ESTATE_IMMERSIVE');
+  assert.ok(pack.deliverables.includes('EMBEDDABLE_3D_TOUR'));
+  assert.ok(pack.constraints.includes('NO_MEASURED_DIGITAL_TWIN_CLAIM_FROM_PHOTOS_ALONE'));
+});
+
+test('service packs are reusable patterns, not hardcoded prospect targets', () => {
+  assert.equal(SERVICE_PACKS.every(x => !JSON.stringify(x).includes('rodriguezanton')), true);
+  assert.equal(SERVICE_PACKS.every(x => x.verticalSignals.length > 0 && x.deliverables.length > 0), true);
 });
