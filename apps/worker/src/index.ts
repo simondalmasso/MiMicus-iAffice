@@ -44,6 +44,7 @@ async function sniperGet(url:URL,env:Env):Promise<Response|null>{
   if(url.pathname==="/api/sniper/squad")return json(buildAgentSquad());
   if(url.pathname==="/api/sniper/memory")return json(await sniper.memorySummary());
   if(url.pathname==="/api/sniper/global")return json(await sniper.globalOverview());
+  if(url.pathname==="/api/sniper/operations")return json(await sniper.operationsOverview());
   if(url.pathname==="/api/sniper/telemetry")return json(await sniper.telemetryOverview(Number(url.searchParams.get("limit")??500)));
   const traceMatch=url.pathname.match(/^\/api\/sniper\/telemetry\/traces\/([^/]+)$/);
   if(traceMatch)return json(await sniper.telemetryTrace(decodeURIComponent(traceMatch[1]!)));
