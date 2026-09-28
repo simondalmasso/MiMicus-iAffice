@@ -509,3 +509,169 @@ Current board groups:
 Important:
 The UI groups cases for operator visibility only.
 Case state remains canonical in D1; the board does not create a separate source of truth.
+
+## Global Decision Core
+
+There are now TWO cognition levels.
+
+### 1. GLOBAL CORE — company level
+
+Implemented in:
+- `packages/sniper/src/globalCore.ts`
+- `migrations/0005_sniper_global_core.sql`
+- `packages/sniper/src/store.ts`
+- `apps/worker/src/index.ts`
+- `apps/cockpit/index.html`
+
+Purpose:
+see the whole portfolio at once and decide where the company spends scarce attention.
+
+The Global Core currently:
+- ranks all cases globally;
+- applies strategic-tag fit;
+- considers evidence sufficiency;
+- considers contactability;
+- considers demo readiness;
+- considers idle/stale cases;
+- isolates HUMAN_GATE cases;
+- allocates a bounded number of active cases;
+- assigns owner role + next objective;
+- persists every portfolio plan and allocation;
+- exposes latest global plan to the dashboard;
+- recalculates automatically on Cloudflare `business_tick`.
+
+Current default business-tick policy:
+- maxConcurrentCases = 8
+- minEvidenceCount = 2
+- preferredTags = []
+
+Do not hardcode Santa Fe or a vertical into the core policy. Market focus belongs in configurable goals/policy.
+
+### 2. CASE CORE — one business level
+
+Implemented primarily in:
+- `packages/sniper/src/cognition.ts`
+- `packages/sniper/src/case.ts`
+
+Purpose:
+decide the next move INSIDE one business case.
+
+The Case Core handles:
+- enrich contact;
+- build demo;
+- send diagnostic;
+- follow up with value;
+- negotiate;
+- send proposal;
+- deliver;
+- collect;
+- escalate human;
+- defer.
+
+### Laya / System-1 architecture
+
+Laya is NOT treated as another sales agent.
+
+It is a candidate **System-1 typed decision coprocessor** for the Global Core and selected case decisions.
+
+Verified from upstream repository:
+- Laya is a multilingual non-autoregressive decision engine.
+- It accepts typed questions:
+  - choice
+  - score
+  - noul
+- It returns probabilities/confidence and supports abstention thresholds.
+- It does not generate sales copy.
+- Node/ONNX runtime exists but published weights are large enough that this should NOT live inside a normal Cloudflare Worker process.
+
+Architecture direction:
+
+`Cloudflare Global Core state → typed decision request → optional Laya service on isolated cloud executor/Oracle → calibrated result/confidence → deterministic policy envelope → System-2 if needed → persisted global decision`
+
+Current state:
+- `buildGlobalTypedQuestions()` exists.
+- `interpretGlobalSystemOne()` exists.
+- confidence/abstention semantics exist.
+- dashboard exposes Laya-compatible System-1 status.
+- actual live Laya service is NOT CONNECTED yet.
+
+Do not claim Laya runtime is deployed.
+
+If/when connecting Laya:
+- run it behind an interface;
+- pin model/runtime revision;
+- record license/model evidence;
+- expose health/latency;
+- use confidence threshold;
+- preserve deterministic fallback;
+- never let it create external effects.
+
+### Global D1 tables
+
+`migrations/0005_sniper_global_core.sql` adds:
+- sniper_global_goals
+- sniper_global_decisions
+- sniper_global_allocations
+
+Every global decision stores:
+- portfolio hash;
+- policy;
+- global ranking;
+- active cases;
+- deferred cases;
+- human-attention cases;
+- System-1 result when available;
+- reasons;
+- timestamp.
+
+### Global API
+
+Read:
+- GET `/api/sniper/global`
+
+Protected write:
+- POST `/api/sniper/global/plan`
+
+The scheduled Cloudflare `business_tick` also computes/persists a global plan automatically.
+
+### Global dashboard
+
+Dashboard section:
+`Global Core`
+
+It shows:
+- total portfolio;
+- active allocations;
+- human-attention count;
+- System-1/Laya-compatible state;
+- System-1/System-2/authority architecture;
+- active allocations by owner/objective;
+- global case ranking;
+- HUMAN_GATE queue;
+- deferred portfolio.
+
+This is distinct from `Cases`.
+
+`Global Core` answers:
+**What should the company do now?**
+
+`Cases` answers:
+**What is happening with this specific business?**
+
+## Updated continuation order after Global Core
+
+Before adding more specialist agents or connectors, a fresh GPT should also inspect:
+- packages/sniper/src/globalCore.ts
+- packages/sniper/src/case.ts
+- migrations/0005_sniper_global_core.sql
+
+Then:
+1. cloud-verify typecheck/tests/security;
+2. connect audited procedural memory to global ranking instead of current neutral `auditedWinRate=0`;
+3. implement contextual semantic-memory promotion;
+4. implement versioned skill registry;
+5. implement discovery jobs;
+6. implement demo jobs;
+7. only then connect optional Laya service behind a cloud interface;
+8. preserve Cloudflare as source of truth/control plane;
+9. keep Oracle optional and stateless relative to canonical D1 state.
