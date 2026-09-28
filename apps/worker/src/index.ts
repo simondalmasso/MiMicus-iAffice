@@ -14,6 +14,7 @@ import { buildComputeRuntime, executeComputeRequest, probeProvider } from "./com
 import { SniperStore } from "../../../packages/sniper/src/store.js";
 import { buildAgentSquad, requiresHumanGate, type BusinessSignal, type LearningObservation } from "../../../packages/sniper/src/engine.js";
 import type { CognitiveContext, MemoryEpisode } from "../../../packages/sniper/src/cognition.js";
+import type { TelemetrySpanInput } from "../../../packages/sniper/src/telemetry.js";
 import type { Env, MessageBatch, ServiceBindingLike } from "./runtime-types.js";
 export { AriaCoordinator } from "./coordinator.js";
 export { ComputeGovernorDO } from "./computeGovernorDO.js";
@@ -43,6 +44,9 @@ async function sniperGet(url:URL,env:Env):Promise<Response|null>{
   if(url.pathname==="/api/sniper/squad")return json(buildAgentSquad());
   if(url.pathname==="/api/sniper/memory")return json(await sniper.memorySummary());
   if(url.pathname==="/api/sniper/global")return json(await sniper.globalOverview());
+  if(url.pathname==="/api/sniper/telemetry")return json(await sniper.telemetryOverview(Number(url.searchParams.get("limit")??500)));
+  const traceMatch=url.pathname.match(/^\/api\/sniper\/telemetry\/traces\/([^/]+)$/);
+  if(traceMatch)return json(await sniper.telemetryTrace(decodeURIComponent(traceMatch[1]!)));
   const caseMatch=url.pathname.match(/^\/api\/sniper\/cases\/([^/]+)$/);
   if(caseMatch){const dossier=await sniper.caseView(decodeURIComponent(caseMatch[1]!));return dossier?json(dossier):json({error:"SNIPER_CASE_NOT_FOUND"},404);}
   const match=url.pathname.match(/^\/api\/sniper\/opportunities\/([^/]+)$/);
@@ -56,6 +60,11 @@ async function api(request:Request,env:Env):Promise<Response|null>{const url=new
     if(!validSignal(body))return json({error:"SNIPER_SIGNAL_SCHEMA_INVALID"},400);
     const sniper=new SniperStore(env.DB),record=await sniper.ingest(body);
     return json(record,201);
+  }
+ if(request.method==="POST"&&url.pathname==="/api/sniper/telemetry/span"){
+    const body=await request.json() as Partial<TelemetrySpanInput>;
+    if(!body.traceId||!body.spanId||!body.kind||!body.operation||!body.status||!body.startedAt||!body.endedAt||typeof body.inputTokens!=="number"||typeof body.outputTokens!=="number"||typeof body.actualCostUsd!=="number"||!body.attributes||typeof body.attributes!=="object")return json({error:"TELEMETRY_SPAN_SCHEMA_INVALID"},400);
+    try{return json(await new SniperStore(env.DB).recordTelemetrySpan(body as TelemetrySpanInput),201);}catch(error){return json({error:error instanceof Error?error.message:"TELEMETRY_SPAN_FAILED"},400);}
   }
  if(request.method==="POST"&&url.pathname==="/api/sniper/global/plan"){
     const body=await request.json() as {preferredTags?:string[];maxConcurrentCases?:number;minEvidenceCount?:number};
