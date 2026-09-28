@@ -582,3 +582,38 @@ test('telemetry summary exposes health, latency, tokens, errors and zero spend',
   assert.equal(summary.actualCostUsd,0);
   assert.equal(summary.p95LatencyMs,2000);
 });
+
+import {
+  SKILL_SOURCE_CANDIDATES,
+  evaluateSkillAdmission,
+  skillCanHandle
+} from '../dist/packages/sniper/src/skillRegistry.js';
+
+test('verified skill sources are catalogued but not auto-enabled without revision pin', () => {
+  const source=SKILL_SOURCE_CANDIDATES.find(x=>x.id==='COREY_MARKETING_SKILLS');
+  assert.equal(source?.license,'MIT');
+  assert.equal(source?.sourceVerified,true);
+  assert.equal(source?.revisionPin,null);
+  const admission=evaluateSkillAdmission(source);
+  assert.equal(admission.state,'QUARANTINED');
+  assert.ok(admission.reasons.includes('REVISION_PIN_REQUIRED'));
+});
+
+test('skill admission rejects paid, unknown-license and direct-write capabilities', () => {
+  const base={...SKILL_SOURCE_CANDIDATES[0],revisionPin:'deadbeef',license:'MIT',sourceVerified:true,costClass:'FREE_VERIFIED',networkPermission:'PUBLIC_READ',benchmarkScore:.9,health:'HEALTHY'};
+  assert.equal(evaluateSkillAdmission({...base,costClass:'PAID'}).state,'REJECTED');
+  assert.equal(evaluateSkillAdmission({...base,license:null}).state,'REJECTED');
+  assert.equal(evaluateSkillAdmission({...base,networkPermission:'EXTERNAL_WRITE'}).state,'REJECTED');
+});
+
+test('skill admission enables only pinned, healthy, benchmarked zero-cost sources', () => {
+  const candidate={...SKILL_SOURCE_CANDIDATES[0],revisionPin:'abc123',license:'MIT',sourceVerified:true,costClass:'FREE_VERIFIED',networkPermission:'PUBLIC_READ',benchmarkScore:.82,health:'HEALTHY'};
+  const admission=evaluateSkillAdmission(candidate);
+  assert.equal(admission.state,'ENABLED');
+});
+
+test('skill compatibility enforces role and data class', () => {
+  const candidate={...SKILL_SOURCE_CANDIDATES[0],revisionPin:'abc123',license:'MIT',sourceVerified:true,costClass:'FREE_VERIFIED',networkPermission:'PUBLIC_READ',benchmarkScore:.82,health:'HEALTHY'};
+  assert.equal(skillCanHandle(candidate,'COPY','PUBLIC'),true);
+  assert.equal(skillCanHandle(candidate,'WEB','SECRET'),false);
+});
