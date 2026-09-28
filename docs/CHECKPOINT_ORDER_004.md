@@ -261,6 +261,7 @@ Implemented/rebuilt in:
 
 Current sections:
 - Revenue
+- Cases
 - Live
 - Decisions
 - Learning
@@ -415,6 +416,7 @@ A fresh GPT/ARQ should:
 16. Add operator visibility for all of the above.
 17. Re-run all gates.
 18. Update THIS checkpoint in present tense before ending every substantial work session.
+19. Preserve the invariant **one business = one case**. New commercial/evidence/learning features should attach to the case dossier instead of creating disconnected parallel records.
 
 ## Near-term architecture direction
 
@@ -463,3 +465,47 @@ Manual analysis of one example prospect is not progress unless it produces:
 - a reusable skill;
 - a benchmark;
 - or a reusable evidence/audit mechanism.
+
+## Cases / per-business dossiers
+
+Current rule:
+**one business = one case**.
+
+Implemented:
+- `packages/sniper/src/case.ts` — canonical case dossier projection.
+- `GET /api/sniper/cases/:id` — case dossier endpoint.
+- `apps/cockpit/index.html` — Cases operator workspace.
+
+A case currently exposes:
+- business identity/category/locality;
+- current status/owner/next action;
+- opportunity score/reasons;
+- evidence references;
+- observed facts;
+- inferred recommendation;
+- demo brief;
+- contacts;
+- negotiation history;
+- objections/concessions;
+- HUMAN_GATE state;
+- cognitive decisions and alternatives;
+- case-specific memory episodes;
+- deliveries;
+- payments;
+- complete activity timeline.
+
+The dashboard now supports:
+- **BOARD** view grouped by commercial stage;
+- **CARDS** view for scan/browse;
+- **CASE DETAIL** for the full dossier.
+
+Current board groups:
+- DISCOVERY
+- QUALIFIED
+- CONTACT
+- DEAL
+- DELIVERY
+
+Important:
+The UI groups cases for operator visibility only.
+Case state remains canonical in D1; the board does not create a separate source of truth.
