@@ -16,6 +16,8 @@ import { planGlobalFocus, rankPortfolioCases, type GlobalCaseSignal, type Global
 import { OBSERVABILITY_REFERENCES, buildTraceTree, normalizeTelemetrySpan, summarizeTelemetry, type TelemetrySpan, type TelemetrySpanInput } from "./telemetry.js";
 import { buildAgencyOperationsSnapshot, OPERATING_STAGES } from "./operatingModel.js";
 import { SKILL_SOURCE_CANDIDATES, evaluateSkillAdmission, type SkillHealth } from "./skillRegistry.js";
+import { evaluateDiscoveryJob, findingToBusinessSignal, type DigitalAuditEvidence, type DiscoveryJobRequest, type RawBusinessFinding } from "./discovery.js";
+import { DISCOVERY_SOURCE_CANDIDATES, evaluateDiscoverySourceAdmission, type DiscoverySourceHealth } from "./discoverySources.js";
 
 export type OpportunityStatus =
   | "DISCOVERED"
@@ -505,6 +507,160 @@ export class SniperStore {
     ).bind(source.id,input.revisionPin,input.benchmarkScore,input.health,admission.state,JSON.stringify(admission.reasons),verifiedAt,now).run();
     await this.activity(null,"SKILL","AUD","SKILL_SOURCE_VERIFIED",{sourceId:source.id,revisionPin:input.revisionPin,benchmarkScore:input.benchmarkScore,health:input.health,admission},now);
     return {...effective,admission,verifiedAt,updatedAt:now};
+  }
+
+
+  async discoverySourcesOverview(): Promise<Record<string,unknown>> {
+    const rows=await this.db.prepare(
+      "SELECT source_id,revision_pin,zero_cost_verified,target_terms_verified,automation_allowed,health,admission_state,admission_reasons_json,evidence_refs_json,verified_at,updated_at FROM sniper_discovery_sources ORDER BY source_id"
+    ).all<Record<string,unknown>>();
+    const persisted=new Map(rows.results.map(row=>[String(row.source_id),row]));
+    const sources=DISCOVERY_SOURCE_CANDIDATES.map(source=>{
+      const row=persisted.get(source.id);
+      const effective=row?{
+        ...source,
+        revisionPin:String(row.revision_pin),
+        zeroCostVerified:Number(row.zero_cost_verified)===1,
+        targetTermsVerified:Number(row.target_terms_verified)===1,
+        automationAllowed:Number(row.automation_allowed)===1,
+        health:String(row.health) as DiscoverySourceHealth
+      }:source;
+      const admission=evaluateDiscoverySourceAdmission(effective);
+      return {
+        ...effective,
+        admission,
+        evidenceRefs:row?parse<string[]>(row.evidence_refs_json,[]):[],
+        verifiedAt:row?String(row.verified_at):null,
+        updatedAt:row?String(row.updated_at):null
+      };
+    });
+    return {
+      policy:{
+        zeroCostRequired:true,
+        targetTermsRequired:true,
+        automationPermissionRequired:true,
+        publicBusinessDataOnly:true,
+        privatePersonalEnrichment:false
+      },
+      totals:{
+        sources:sources.length,
+        enabled:sources.filter(x=>x.admission.state==="ENABLED").length,
+        quarantined:sources.filter(x=>x.admission.state==="QUARANTINED").length,
+        rejected:sources.filter(x=>x.admission.state==="REJECTED").length
+      },
+      sources
+    };
+  }
+
+  async verifyDiscoverySource(input:{
+    sourceId:string;
+    revisionPin:string;
+    zeroCostVerified:boolean;
+    targetTermsVerified:boolean;
+    automationAllowed:boolean;
+    health:DiscoverySourceHealth;
+    evidenceRefs:string[];
+    verifiedAt?:string;
+  }, now=new Date().toISOString()):Promise<Record<string,unknown>> {
+    const source=DISCOVERY_SOURCE_CANDIDATES.find(x=>x.id===input.sourceId);
+    if(!source) throw new Error("DISCOVERY_SOURCE_NOT_FOUND");
+    if(!input.revisionPin||input.revisionPin.length<7) throw new Error("DISCOVERY_REVISION_PIN_INVALID");
+    if(!["HEALTHY","UNKNOWN","DEGRADED"].includes(input.health)) throw new Error("DISCOVERY_HEALTH_INVALID");
+    if(input.evidenceRefs.length===0) throw new Error("DISCOVERY_EVIDENCE_REQUIRED");
+    const effective={...source,revisionPin:input.revisionPin,zeroCostVerified:input.zeroCostVerified,targetTermsVerified:input.targetTermsVerified,automationAllowed:input.automationAllowed,health:input.health};
+    const admission=evaluateDiscoverySourceAdmission(effective);
+    const verifiedAt=input.verifiedAt??now;
+    await this.db.prepare(
+      "INSERT INTO sniper_discovery_sources (source_id,revision_pin,zero_cost_verified,target_terms_verified,automation_allowed,health,admission_state,admission_reasons_json,evidence_refs_json,verified_at,updated_at) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11) ON CONFLICT(source_id) DO UPDATE SET revision_pin=excluded.revision_pin,zero_cost_verified=excluded.zero_cost_verified,target_terms_verified=excluded.target_terms_verified,automation_allowed=excluded.automation_allowed,health=excluded.health,admission_state=excluded.admission_state,admission_reasons_json=excluded.admission_reasons_json,evidence_refs_json=excluded.evidence_refs_json,verified_at=excluded.verified_at,updated_at=excluded.updated_at"
+    ).bind(source.id,input.revisionPin,input.zeroCostVerified?1:0,input.targetTermsVerified?1:0,input.automationAllowed?1:0,input.health,admission.state,JSON.stringify(admission.reasons),JSON.stringify(input.evidenceRefs),verifiedAt,now).run();
+    await this.activity(null,"DISCOVERY","AUD","DISCOVERY_SOURCE_VERIFIED",{sourceId:source.id,revisionPin:input.revisionPin,admission,evidenceRefs:input.evidenceRefs},now);
+    return {...effective,admission,evidenceRefs:input.evidenceRefs,verifiedAt,updatedAt:now};
+  }
+
+  async createDiscoveryJob(input:{
+    jobId:string;
+    locality:string;
+    categories:string[];
+    maxCandidates:number;
+    sourceIds:string[];
+  }, now=new Date().toISOString()):Promise<Record<string,unknown>> {
+    const overview=await this.discoverySourcesOverview() as {sources:Array<Record<string,unknown>>};
+    const enabled=new Map(overview.sources.filter(x=>(x.admission as {state?:string}|undefined)?.state==="ENABLED").map(x=>[String(x.id),x]));
+    const selected=input.sourceIds.map(id=>enabled.get(id)).filter((x):x is Record<string,unknown>=>Boolean(x));
+    const request:DiscoveryJobRequest={
+      jobId:input.jobId,
+      locality:input.locality,
+      categories:input.categories,
+      maxCandidates:input.maxCandidates,
+      sources:selected.map(x=>({
+        id:String(x.id),
+        freeVerified:Boolean(x.zeroCostVerified),
+        termsVerified:Boolean(x.targetTermsVerified),
+        automatedAccessAllowed:Boolean(x.automationAllowed),
+        publicBusinessDataOnly:Boolean(x.publicBusinessDataOnly)
+      })),
+      createdAt:now
+    };
+    const missing=input.sourceIds.filter(id=>!enabled.has(id));
+    const decision=evaluateDiscoveryJob(request);
+    if(missing.length) decision.reasons.push("SOURCE_NOT_ENABLED:"+missing.join(","));
+    decision.allowed=decision.allowed&&missing.length===0;
+    const state=decision.allowed?"QUEUED":"BLOCKED";
+    await this.db.prepare(
+      "INSERT INTO sniper_discovery_jobs (job_id,locality,categories_json,max_candidates,source_ids_json,state,decision_reasons_json,created_at,updated_at) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?8)"
+    ).bind(input.jobId,input.locality,JSON.stringify(input.categories),input.maxCandidates,JSON.stringify(input.sourceIds),state,JSON.stringify(decision.reasons),now).run();
+    await this.activity(null,"DISCOVERY","GLOBAL_CORE","DISCOVERY_JOB_CREATED",{jobId:input.jobId,locality:input.locality,categories:input.categories,sourceIds:input.sourceIds,state,reasons:decision.reasons},now);
+    return {jobId:input.jobId,state,decision,locality:input.locality,categories:input.categories,maxCandidates:input.maxCandidates,sourceIds:input.sourceIds,createdAt:now};
+  }
+
+  async listDiscoveryJobs(limit=100):Promise<Array<Record<string,unknown>>> {
+    const safe=Math.max(1,Math.min(500,Math.trunc(limit)));
+    const rows=await this.db.prepare(
+      "SELECT job_id,locality,categories_json,max_candidates,source_ids_json,state,decision_reasons_json,found_count,deduped_count,case_count,error_code,created_at,started_at,completed_at,updated_at FROM sniper_discovery_jobs ORDER BY updated_at DESC LIMIT ?1"
+    ).bind(safe).all<Record<string,unknown>>();
+    return rows.results.map(row=>({
+      jobId:String(row.job_id),
+      locality:String(row.locality),
+      categories:parse(row.categories_json,[]),
+      maxCandidates:Number(row.max_candidates),
+      sourceIds:parse(row.source_ids_json,[]),
+      state:String(row.state),
+      decisionReasons:parse(row.decision_reasons_json,[]),
+      foundCount:Number(row.found_count),
+      dedupedCount:Number(row.deduped_count),
+      caseCount:Number(row.case_count),
+      errorCode:row.error_code==null?null:String(row.error_code),
+      createdAt:String(row.created_at),
+      startedAt:row.started_at==null?null:String(row.started_at),
+      completedAt:row.completed_at==null?null:String(row.completed_at),
+      updatedAt:String(row.updated_at)
+    }));
+  }
+
+  async recordDiscoveryFinding(input:{
+    jobId:string;
+    findingId:string;
+    finding:RawBusinessFinding;
+    auditId:string;
+    audit:DigitalAuditEvidence;
+    rawEvidenceDigest?:string|null;
+  }, now=new Date().toISOString()):Promise<{case:OpportunityRecord;findingId:string;auditId:string}> {
+    const job=await this.db.prepare("SELECT state FROM sniper_discovery_jobs WHERE job_id=?1").bind(input.jobId).first<Record<string,unknown>>();
+    if(!job) throw new Error("DISCOVERY_JOB_NOT_FOUND");
+    if(!["QUEUED","RUNNING"].includes(String(job.state))) throw new Error("DISCOVERY_JOB_NOT_ACTIVE");
+    const signal=findingToBusinessSignal(input.finding,input.audit);
+    await this.db.prepare(
+      "INSERT OR IGNORE INTO sniper_discovery_findings (finding_id,job_id,source_id,source_ref,business_key,business_name,category,locality,website_url,contacts_json,demand_json,raw_evidence_digest,observed_at,created_at) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14)"
+    ).bind(input.findingId,input.jobId,input.finding.sourceId,input.finding.sourceRef,signal.businessId,input.finding.name,input.finding.category,input.finding.locality,input.finding.websiteUrl,JSON.stringify(input.finding.businessContacts),JSON.stringify({rating:input.finding.rating,reviewCount:input.finding.reviewCount}),input.rawEvidenceDigest??null,input.finding.observedAt,now).run();
+    await this.db.prepare(
+      "INSERT OR IGNORE INTO sniper_digital_audits (audit_id,job_id,finding_id,evidence_ref,audit_json,created_at) VALUES (?1,?2,?3,?4,?5,?6)"
+    ).bind(input.auditId,input.jobId,input.findingId,input.audit.evidenceRef,JSON.stringify(input.audit),now).run();
+    const record=await this.ingest(signal,now);
+    await this.db.prepare(
+      "UPDATE sniper_discovery_jobs SET found_count=found_count+1,deduped_count=(SELECT COUNT(DISTINCT business_key) FROM sniper_discovery_findings WHERE job_id=?1),case_count=(SELECT COUNT(DISTINCT business_key) FROM sniper_discovery_findings WHERE job_id=?1),state='RUNNING',started_at=COALESCE(started_at,?2),updated_at=?2 WHERE job_id=?1"
+    ).bind(input.jobId,now).run();
+    await this.activity(record.id,"DISCOVERY","SCOUT","DISCOVERY_FINDING_INGESTED",{jobId:input.jobId,findingId:input.findingId,auditId:input.auditId,sourceId:input.finding.sourceId},now);
+    return {case:record,findingId:input.findingId,auditId:input.auditId};
   }
 
   async operationsOverview(): Promise<Record<string,unknown>> {
