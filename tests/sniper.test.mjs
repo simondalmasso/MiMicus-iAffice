@@ -523,3 +523,62 @@ test('commercial policy requires customer approval for deploy and verified payme
     acceptedOffer:true,customerApproval:true,paymentVerified:false
   }).decision,'DENY');
 });
+
+import {
+  OBSERVABILITY_REFERENCES,
+  normalizeTelemetrySpan,
+  buildTraceTree,
+  summarizeTelemetry,
+  assertSingleTelemetryAuthority
+} from '../dist/packages/sniper/src/telemetry.js';
+
+test('telemetry fabric is the single runtime authority', () => {
+  const runtime=OBSERVABILITY_REFERENCES.filter(x=>x.adoption==='RUNTIME_AUTHORITY');
+  assert.deepEqual(runtime.map(x=>x.id),['ARIA_TELEMETRY_FABRIC']);
+  assert.doesNotThrow(()=>assertSingleTelemetryAuthority(OBSERVABILITY_REFERENCES));
+});
+
+test('observability registry rejects archived or license-conflicting runtime choices', () => {
+  assert.equal(OBSERVABILITY_REFERENCES.find(x=>x.id==='FLOWISE')?.adoption,'REJECT');
+  assert.equal(OBSERVABILITY_REFERENCES.find(x=>x.id==='DIFY')?.adoption,'REFERENCE_ONLY');
+  assert.equal(OBSERVABILITY_REFERENCES.find(x=>x.id==='PHOENIX')?.adoption,'REFERENCE_ONLY');
+  assert.equal(OBSERVABILITY_REFERENCES.find(x=>x.id==='AUTOGEN_STUDIO')?.adoption,'REJECT');
+});
+
+test('telemetry spans store metadata by default and reject paid execution', () => {
+  const span=normalizeTelemetrySpan({
+    traceId:'tr1',spanId:'sp1',parentSpanId:null,caseId:'case-1',agentRole:'NEGOTIATOR',
+    stage:'PROSPECT',kind:'AGENT',operation:'HANDLE_OBJECTION',status:'OK',
+    startedAt:'2026-09-28T12:00:00.000Z',endedAt:'2026-09-28T12:00:01.250Z',
+    provider:'cloudflare',model:'free-model',inputTokens:100,outputTokens:40,actualCostUsd:0,
+    errorCode:null,inputDigest:'sha256:a',outputDigest:'sha256:b',attributes:{tactic:'demo-first'}
+  });
+  assert.equal(span.latencyMs,1250);
+  assert.equal(span.contentPolicy,'METADATA_ONLY');
+  assert.equal('rawPrompt' in span,false);
+  assert.throws(()=>normalizeTelemetrySpan({...span,actualCostUsd:.01}),/TELEMETRY_PAID_EXECUTION_FORBIDDEN/);
+});
+
+test('trace tree preserves parent-child agent and tool relationships', () => {
+  const spans=[
+    normalizeTelemetrySpan({traceId:'t',spanId:'root',parentSpanId:null,caseId:'c',agentRole:'ORCHESTRATOR',stage:'ANALYZE',kind:'AGENT',operation:'PLAN',status:'OK',startedAt:'2026-09-28T00:00:00Z',endedAt:'2026-09-28T00:00:01Z',provider:null,model:null,inputTokens:0,outputTokens:0,actualCostUsd:0,errorCode:null,inputDigest:null,outputDigest:null,attributes:{}}),
+    normalizeTelemetrySpan({traceId:'t',spanId:'child',parentSpanId:'root',caseId:'c',agentRole:'SCOUT',stage:'ANALYZE',kind:'TOOL',operation:'CRAWL',status:'OK',startedAt:'2026-09-28T00:00:00.100Z',endedAt:'2026-09-28T00:00:00.700Z',provider:null,model:null,inputTokens:0,outputTokens:0,actualCostUsd:0,errorCode:null,inputDigest:null,outputDigest:null,attributes:{}})
+  ];
+  const tree=buildTraceTree(spans);
+  assert.equal(tree.length,1);
+  assert.equal(tree[0].children[0].span.spanId,'child');
+});
+
+test('telemetry summary exposes health, latency, tokens, errors and zero spend', () => {
+  const spans=[
+    normalizeTelemetrySpan({traceId:'t1',spanId:'a',parentSpanId:null,caseId:'c1',agentRole:'SALES',stage:'PROSPECT',kind:'LLM',operation:'DRAFT',status:'OK',startedAt:'2026-09-28T00:00:00Z',endedAt:'2026-09-28T00:00:01Z',provider:'cf',model:'m1',inputTokens:100,outputTokens:50,actualCostUsd:0,errorCode:null,inputDigest:null,outputDigest:null,attributes:{}}),
+    normalizeTelemetrySpan({traceId:'t2',spanId:'b',parentSpanId:null,caseId:'c2',agentRole:'WEB',stage:'EXECUTE',kind:'TOOL',operation:'BUILD',status:'ERROR',startedAt:'2026-09-28T00:00:00Z',endedAt:'2026-09-28T00:00:02Z',provider:null,model:null,inputTokens:0,outputTokens:0,actualCostUsd:0,errorCode:'BUILD_FAILED',inputDigest:null,outputDigest:null,attributes:{}})
+  ];
+  const summary=summarizeTelemetry(spans);
+  assert.equal(summary.spans,2);
+  assert.equal(summary.errors,1);
+  assert.equal(summary.inputTokens,100);
+  assert.equal(summary.outputTokens,50);
+  assert.equal(summary.actualCostUsd,0);
+  assert.equal(summary.p95LatencyMs,2000);
+});
