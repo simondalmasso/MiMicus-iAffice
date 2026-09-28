@@ -904,3 +904,87 @@ A fresh GPT should now:
    - Observra.
 14. Do not replace the product dashboard with a third-party observability UI.
 15. Update this checkpoint before ending substantial work.
+
+## Governed Skill Registry
+
+Implemented:
+- `packages/sniper/src/skillRegistry.ts`
+- `migrations/0007_sniper_skill_registry.sql`
+- `SniperStore.skillRegistryOverview()`
+- `SniperStore.verifySkillSource()`
+- GET `/api/sniper/skills`
+- protected POST `/api/sniper/skills/verify`
+- dashboard section `Skills`
+
+Admission gates:
+- source must be verified;
+- license must be known;
+- source artifact must be zero-cost;
+- direct external-write permission is forbidden;
+- SECRET data access is forbidden;
+- exact revision pin is required;
+- health must be verified;
+- benchmark is required;
+- benchmark threshold currently >= 0.60;
+- secret-bound sources remain quarantined for dedicated review.
+
+States:
+- ENABLED
+- QUARANTINED
+- REJECTED
+
+Important:
+External source popularity never grants execution authority.
+
+### First verified skill-source batch
+
+Verified from upstream repositories:
+
+1. `coreyhaines31/marketingskills`
+   - MIT
+   - Agent Skills spec compatible
+   - CRO/copywriting/SEO/analytics/growth/attribution/pricing/sales enablement
+   - source verified but currently UNPINNED / UNBENCHMARKED → QUARANTINED
+
+2. `alirezarezvani/claude-skills`
+   - MIT
+   - very large cross-domain library
+   - individual selection required; never enable wholesale
+   - source verified but currently UNPINNED / UNBENCHMARKED → QUARANTINED
+
+3. `ericosiu/ai-marketing-skills`
+   - MIT
+   - growth experiments/SEO/CRO/content/competitive analysis/decks
+   - bundled scripts/dependencies require full-skill review
+   - source verified but currently UNPINNED / UNBENCHMARKED → QUARANTINED
+
+4. `aaron-he-zhu/aaron-marketing-skills`
+   - Apache-2.0
+   - 120 marketing skills with internal quality-gate patterns
+   - source verified but currently UNPINNED / UNBENCHMARKED → QUARANTINED
+
+5. `addyosmani/agent-skills`
+   - MIT
+   - spec/plan/build/TDD/review/web performance/ship gates
+   - source verified but currently UNPINNED / UNBENCHMARKED → QUARANTINED
+
+6. `emilkowalski/skills`
+   - MIT
+   - UI taste/animation/mobile-native/prototype/library selection
+   - source verified but currently UNPINNED / UNBENCHMARKED → QUARANTINED
+
+Do not mark any of these ENABLED until an exact commit/release is pinned and benchmark evidence is stored.
+
+## Cloud verification status update
+
+Rechecked after observability/skill work:
+
+- Codex Tasks registered environments: none.
+- Floot provides its own project VM/typecheck/tests, but does not execute this existing GitHub repository as-is.
+- No user-PC execution is allowed.
+- No paid hosted runner was enabled.
+
+Therefore ORDER-004 remains:
+`UNVERIFIED_CLOUD_RUNNER`
+
+Do not claim typecheck/test PASS until a real cloud runner executes the current branch.
