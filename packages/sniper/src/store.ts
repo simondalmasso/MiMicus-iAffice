@@ -14,6 +14,7 @@ import { chooseNextMove, promoteEpisode, type CognitiveContext, type MemoryEpiso
 import { buildCaseEvaluation } from "./case.js";
 import { planGlobalFocus, rankPortfolioCases, type GlobalCaseSignal, type GlobalPolicy } from "./globalCore.js";
 import { OBSERVABILITY_REFERENCES, buildTraceTree, normalizeTelemetrySpan, summarizeTelemetry, type TelemetrySpan, type TelemetrySpanInput } from "./telemetry.js";
+import { buildAgencyOperationsSnapshot, OPERATING_STAGES } from "./operatingModel.js";
 
 export type OpportunityStatus =
   | "DISCOVERED"
@@ -439,6 +440,24 @@ export class SniperStore {
     const safe = Math.max(1, Math.min(500, Math.trunc(limit)));
     const result = await this.db.prepare("SELECT id,opportunity_id,stream,actor,event_type,detail_json,created_at FROM sniper_activity ORDER BY created_at DESC LIMIT ?1").bind(safe).all<Record<string, unknown>>();
     return result.results.map(row => ({ id: row.id, opportunityId: row.opportunity_id, stream: row.stream, actor: row.actor, eventType: row.event_type, detail: parse(row.detail_json, {}), createdAt: row.created_at }));
+  }
+
+
+  async operationsOverview(): Promise<Record<string,unknown>> {
+    const opportunities=await this.list(500);
+    const cases=opportunities.map(o=>({
+      caseId:o.id,
+      businessName:o.businessName,
+      status:o.status,
+      owner:o.nextOwner,
+      nextAction:o.nextAction,
+      score:o.score
+    }));
+    return {
+      stages:OPERATING_STAGES,
+      workstreams:buildAgencyOperationsSnapshot(cases),
+      totalCases:cases.length
+    };
   }
 
   async dashboard(): Promise<ReturnType<typeof buildDashboardSnapshot> & { topOpportunities: OpportunityRecord[]; activity: Array<Record<string, unknown>>; memory: Record<string, unknown> }> {
