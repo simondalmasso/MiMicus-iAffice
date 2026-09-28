@@ -45,6 +45,7 @@ async function sniperGet(url:URL,env:Env):Promise<Response|null>{
   if(url.pathname==="/api/sniper/memory")return json(await sniper.memorySummary());
   if(url.pathname==="/api/sniper/global")return json(await sniper.globalOverview());
   if(url.pathname==="/api/sniper/operations")return json(await sniper.operationsOverview());
+  if(url.pathname==="/api/sniper/skills")return json(await sniper.skillRegistryOverview());
   if(url.pathname==="/api/sniper/telemetry")return json(await sniper.telemetryOverview(Number(url.searchParams.get("limit")??500)));
   const traceMatch=url.pathname.match(/^\/api\/sniper\/telemetry\/traces\/([^/]+)$/);
   if(traceMatch)return json(await sniper.telemetryTrace(decodeURIComponent(traceMatch[1]!)));
@@ -61,6 +62,11 @@ async function api(request:Request,env:Env):Promise<Response|null>{const url=new
     if(!validSignal(body))return json({error:"SNIPER_SIGNAL_SCHEMA_INVALID"},400);
     const sniper=new SniperStore(env.DB),record=await sniper.ingest(body);
     return json(record,201);
+  }
+ if(request.method==="POST"&&url.pathname==="/api/sniper/skills/verify"){
+    const body=await request.json() as {sourceId?:string;revisionPin?:string;benchmarkScore?:number;health?:"HEALTHY"|"UNKNOWN"|"DEGRADED";verifiedAt?:string};
+    if(!body.sourceId||!body.revisionPin||typeof body.benchmarkScore!=="number"||!body.health)return json({error:"SKILL_VERIFY_SCHEMA_INVALID"},400);
+    try{return json(await new SniperStore(env.DB).verifySkillSource({sourceId:body.sourceId,revisionPin:body.revisionPin,benchmarkScore:body.benchmarkScore,health:body.health,...(body.verifiedAt?{verifiedAt:body.verifiedAt}:{})}),201);}catch(error){return json({error:error instanceof Error?error.message:"SKILL_VERIFY_FAILED"},400);}
   }
  if(request.method==="POST"&&url.pathname==="/api/sniper/telemetry/span"){
     const body=await request.json() as Partial<TelemetrySpanInput>;
