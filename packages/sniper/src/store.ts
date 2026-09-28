@@ -11,6 +11,7 @@ import {
   type TacticStats
 } from "./engine.js";
 import { chooseNextMove, promoteEpisode, type CognitiveContext, type MemoryEpisode } from "./cognition.js";
+import { buildCaseEvaluation } from "./case.js";
 
 export type OpportunityStatus =
   | "DISCOVERED"
@@ -200,6 +201,94 @@ export class SniperStore {
       patterns:patterns.results.map(x=>({...x,evidenceRefs:parse(x.evidence_refs_json,[])})),
       tactics:tactics.results.map(x=>({...x,evidenceRefs:parse(x.evidence_refs_json,[])}))
     };
+  }
+
+
+  async caseView(id: string): Promise<ReturnType<typeof buildCaseEvaluation> | null> {
+    const opportunity = await this.get(id);
+    if (!opportunity) return null;
+    const [negotiations, deliveries, payments, activity, episodes, decisions] = await Promise.all([
+      this.db.prepare("SELECT state,current_offer_ars,floor_price_ars,objections_json,concessions_json,next_action,human_gate,human_gate_reasons_json,last_contact_at,updated_at FROM sniper_negotiations WHERE opportunity_id=?1 ORDER BY updated_at DESC").bind(id).all<Record<string,unknown>>(),
+      this.db.prepare("SELECT service_kind,state,acceptance_json,artifact_refs_json,due_at,updated_at FROM sniper_deliveries WHERE opportunity_id=?1 ORDER BY updated_at DESC").bind(id).all<Record<string,unknown>>(),
+      this.db.prepare("SELECT state,amount_ars,provider,external_reference,created_at,updated_at FROM sniper_payments WHERE opportunity_id=?1 ORDER BY updated_at DESC").bind(id).all<Record<string,unknown>>(),
+      this.db.prepare("SELECT stream,actor,event_type,detail_json,created_at FROM sniper_activity WHERE opportunity_id=?1 ORDER BY created_at DESC LIMIT 300").bind(id).all<Record<string,unknown>>(),
+      this.db.prepare("SELECT episode_id,agent_role,tactic_id,observation,outcome,audited,evidence_refs_json,created_at FROM sniper_memory_episodes WHERE opportunity_id=?1 ORDER BY created_at DESC LIMIT 200").bind(id).all<Record<string,unknown>>(),
+      this.db.prepare("SELECT decision_id,selected_move,selected_tactic_id,selected_score,alternatives_json,reasons_json,created_at FROM sniper_decision_trace WHERE opportunity_id=?1 ORDER BY created_at DESC LIMIT 200").bind(id).all<Record<string,unknown>>()
+    ]);
+    return buildCaseEvaluation({
+      opportunity: {
+        id: opportunity.id,
+        businessId: opportunity.businessId,
+        businessName: opportunity.businessName,
+        category: opportunity.category,
+        locality: opportunity.locality,
+        status: opportunity.status,
+        score: opportunity.score,
+        reasons: opportunity.reasons,
+        offer: opportunity.offer,
+        persuasion: opportunity.persuasion,
+        contacts: opportunity.contacts as unknown as Array<Record<string,unknown>>,
+        evidenceRefs: opportunity.evidenceRefs,
+        nextOwner: opportunity.nextOwner,
+        nextAction: opportunity.nextAction,
+        createdAt: opportunity.createdAt,
+        updatedAt: opportunity.updatedAt
+      },
+      negotiations: negotiations.results.map(x=>({
+        state:String(x.state),
+        currentOfferArs:x.current_offer_ars===null||x.current_offer_ars===undefined?null:Number(x.current_offer_ars),
+        floorPriceArs:x.floor_price_ars===null||x.floor_price_ars===undefined?null:Number(x.floor_price_ars),
+        objections:parse<string[]>(x.objections_json,[]),
+        concessions:parse<string[]>(x.concessions_json,[]),
+        nextAction:String(x.next_action),
+        humanGate:Number(x.human_gate)===1,
+        humanGateReasons:parse<string[]>(x.human_gate_reasons_json,[]),
+        lastContactAt:x.last_contact_at==null?null:String(x.last_contact_at),
+        updatedAt:String(x.updated_at)
+      })),
+      deliveries: deliveries.results.map(x=>({
+        serviceKind:String(x.service_kind),
+        state:String(x.state),
+        acceptance:parse(x.acceptance_json,{}),
+        artifactRefs:parse<string[]>(x.artifact_refs_json,[]),
+        dueAt:x.due_at==null?null:String(x.due_at),
+        updatedAt:String(x.updated_at)
+      })),
+      payments: payments.results.map(x=>({
+        state:String(x.state),
+        amountArs:Number(x.amount_ars),
+        provider:String(x.provider),
+        externalReference:x.external_reference==null?null:String(x.external_reference),
+        createdAt:String(x.created_at),
+        updatedAt:String(x.updated_at)
+      })),
+      activity: activity.results.map(x=>({
+        stream:String(x.stream),
+        actor:String(x.actor),
+        eventType:String(x.event_type),
+        detail:parse<Record<string,unknown>>(x.detail_json,{}),
+        createdAt:String(x.created_at)
+      })),
+      episodes: episodes.results.map(x=>({
+        episodeId:String(x.episode_id),
+        agentRole:String(x.agent_role),
+        tacticId:String(x.tactic_id),
+        observation:String(x.observation),
+        outcome:String(x.outcome),
+        audited:Number(x.audited)===1,
+        evidenceRefs:parse<string[]>(x.evidence_refs_json,[]),
+        createdAt:String(x.created_at)
+      })),
+      decisions: decisions.results.map(x=>({
+        decisionId:String(x.decision_id),
+        selectedMove:String(x.selected_move),
+        selectedTacticId:String(x.selected_tactic_id),
+        selectedScore:Number(x.selected_score),
+        reasons:parse<string[]>(x.reasons_json,[]),
+        alternatives:parse<unknown[]>(x.alternatives_json,[]),
+        createdAt:String(x.created_at)
+      }))
+    });
   }
 
   async activity(opportunityId: string | null, stream: string, actor: string, eventType: string, detail: Record<string, unknown>, now = new Date().toISOString()): Promise<string> {
