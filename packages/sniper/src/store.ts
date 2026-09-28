@@ -9,7 +9,7 @@ import {
   type BusinessSignal,
   type LearningObservation,
   type TacticStats
-} from "./engine.js";
+} from "./engine.js";\nimport { chooseNextMove, promoteEpisode, type CognitiveContext, type MemoryEpisode } from "./cognition.js";
 
 export type OpportunityStatus =
   | "DISCOVERED"
@@ -160,6 +160,47 @@ export class SniperStore {
     return next;
   }
 
+
+  async recordEpisode(episode: MemoryEpisode): Promise<{ promotion: ReturnType<typeof promoteEpisode>; tactic?: TacticStats }> {
+    if (!episode.episodeId || !episode.opportunityId || !episode.agentRole || !episode.tacticId || !episode.observation || !episode.createdAt) throw new Error("SNIPER_EPISODE_SCHEMA_INVALID");
+    await this.db.prepare(
+      "INSERT OR IGNORE INTO sniper_memory_episodes (episode_id,opportunity_id,agent_role,tactic_id,observation,outcome,audited,evidence_refs_json,created_at) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)"
+    ).bind(episode.episodeId,episode.opportunityId,episode.agentRole,episode.tacticId,episode.observation,episode.outcome,episode.audited?1:0,JSON.stringify(episode.evidenceRefs),episode.createdAt).run();
+    const promotion=promoteEpisode(episode);
+    let tactic:TacticStats|undefined;
+    if(promotion.promoted){
+      tactic=await this.learn(episode.tacticId,{outcome:episode.outcome,audited:true},episode.evidenceRefs,episode.createdAt);
+    }
+    await this.activity(episode.opportunityId,"MEMORY",episode.agentRole,"EPISODE_RECORDED",{tacticId:episode.tacticId,outcome:episode.outcome,audited:episode.audited,promoted:promotion.promoted},episode.createdAt);
+    return {promotion,...(tactic?{tactic}:{})};
+  }
+
+  async decide(context: CognitiveContext, now = new Date().toISOString()): Promise<ReturnType<typeof chooseNextMove> & { decisionId:string }> {
+    const decision=chooseNextMove(context);
+    const decisionId=await stableId("sniper-decision",{context,move:decision.move,tacticId:decision.tacticId,now});
+    await this.db.prepare(
+      "INSERT OR IGNORE INTO sniper_decision_trace (decision_id,opportunity_id,context_json,selected_move,selected_tactic_id,selected_score,alternatives_json,reasons_json,created_at) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)"
+    ).bind(decisionId,context.opportunityId,JSON.stringify(context),decision.move,decision.tacticId,decision.score,JSON.stringify(decision.alternatives),JSON.stringify(decision.reasons),now).run();
+    await this.activity(context.opportunityId,"DECISION","ORCHESTRATOR","NEXT_MOVE_SELECTED",{decisionId,move:decision.move,tacticId:decision.tacticId,score:decision.score,reasons:decision.reasons},now);
+    return {...decision,decisionId};
+  }
+
+  async memorySummary(): Promise<Record<string,unknown>> {
+    const [episodes,decisions,patterns,tactics]=await Promise.all([
+      this.db.prepare("SELECT episode_id,opportunity_id,agent_role,tactic_id,observation,outcome,audited,evidence_refs_json,created_at FROM sniper_memory_episodes ORDER BY created_at DESC LIMIT 100").all<Record<string,unknown>>(),
+      this.db.prepare("SELECT decision_id,opportunity_id,selected_move,selected_tactic_id,selected_score,reasons_json,created_at FROM sniper_decision_trace ORDER BY created_at DESC LIMIT 100").all<Record<string,unknown>>(),
+      this.db.prepare("SELECT pattern_id,scope_key,statement,confidence,evidence_refs_json,support_count,contradiction_count,status,updated_at FROM sniper_semantic_patterns ORDER BY confidence DESC,updated_at DESC LIMIT 100").all<Record<string,unknown>>(),
+      this.db.prepare("SELECT tactic_id,attempts,replies,meetings,wins,losses,score,evidence_refs_json,updated_at FROM sniper_tactic_learning ORDER BY score DESC,attempts DESC LIMIT 100").all<Record<string,unknown>>()
+    ]);
+    return {
+      architecture:{working:"current opportunity dossier",episodic:"interaction/outcome episodes",semantic:"audited reusable patterns",procedural:"tactic and skill performance"},
+      episodes:episodes.results.map(x=>({...x,evidenceRefs:parse(x.evidence_refs_json,[])})),
+      decisions:decisions.results.map(x=>({...x,reasons:parse(x.reasons_json,[])})),
+      patterns:patterns.results.map(x=>({...x,evidenceRefs:parse(x.evidence_refs_json,[])})),
+      tactics:tactics.results.map(x=>({...x,evidenceRefs:parse(x.evidence_refs_json,[])}))
+    };
+  }
+
   async activity(opportunityId: string | null, stream: string, actor: string, eventType: string, detail: Record<string, unknown>, now = new Date().toISOString()): Promise<string> {
     const id = await stableId("sniper-activity", { opportunityId, stream, actor, eventType, detail, now });
     await this.db.prepare("INSERT OR IGNORE INTO sniper_activity (id,opportunity_id,stream,actor,event_type,detail_json,created_at) VALUES (?1,?2,?3,?4,?5,?6,?7)")
@@ -186,7 +227,7 @@ export class SniperStore {
       payments: payments.results.map(x => ({ state: x.state, amountArs: Number(x.amount_ars) })),
       learnings: learnings.results.map(x => ({ tacticId: x.tactic_id, score: Number(x.score) }))
     });
-    return { ...snapshot, topOpportunities: opportunities.slice(0, 15), activity: await this.activityFeed(50) };
+    return { ...snapshot, topOpportunities: opportunities.slice(0, 15), activity: await this.activityFeed(50), memory: await this.memorySummary() };
   }
 
   private mapOpportunity(row: Record<string, unknown>): OpportunityRecord {
