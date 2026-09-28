@@ -7,7 +7,9 @@ import {
   buildAgentSquad,
   buildPersuasionCase,
   applyLearningFeedback,
-  buildDashboardSnapshot\n} from '../dist/packages/sniper/src/engine.js';\nimport { recommendVerticalPack, SERVICE_PACKS } from '../dist/packages/sniper/src/servicePacks.js';
+  buildDashboardSnapshot
+} from '../dist/packages/sniper/src/engine.js';
+import { recommendVerticalPack, SERVICE_PACKS } from '../dist/packages/sniper/src/servicePacks.js';
 
 const signal = {
   businessId: 'biz-1',
