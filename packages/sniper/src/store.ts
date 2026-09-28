@@ -12,6 +12,7 @@ import {
 } from "./engine.js";
 import { chooseNextMove, promoteEpisode, type CognitiveContext, type MemoryEpisode } from "./cognition.js";
 import { buildCaseEvaluation } from "./case.js";
+import { planGlobalFocus, rankPortfolioCases, type GlobalCaseSignal, type GlobalPolicy } from "./globalCore.js";
 
 export type OpportunityStatus =
   | "DISCOVERED"
@@ -289,6 +290,98 @@ export class SniperStore {
         createdAt:String(x.created_at)
       }))
     });
+  }
+
+
+  async globalSignals(now = new Date().toISOString()): Promise<GlobalCaseSignal[]> {
+    const opportunities=await this.list(500);
+    const negotiationRows=await this.db.prepare(
+      "SELECT opportunity_id,human_gate,updated_at FROM sniper_negotiations ORDER BY updated_at DESC"
+    ).all<Record<string,unknown>>();
+    const latestGate=new Map<string,boolean>();
+    for(const row of negotiationRows.results){
+      const id=String(row.opportunity_id);
+      if(!latestGate.has(id)) latestGate.set(id,Number(row.human_gate)===1);
+    }
+    const nowMs=Date.parse(now);
+    return opportunities.map(o=>{
+      const updated=Date.parse(o.updatedAt);
+      const daysIdle=Number.isFinite(nowMs)&&Number.isFinite(updated)?Math.max(0,Math.floor((nowMs-updated)/86400000)):0;
+      const demoReady=["DEMO_READY","CONTACTED","ENGAGED","NEGOTIATING","WON","DELIVERING","DELIVERED"].includes(o.status);
+      return {
+        caseId:o.id,
+        status:o.status,
+        score:o.score,
+        evidenceCount:o.evidenceRefs.length,
+        contactable:o.contacts.length>0,
+        demoReady,
+        humanGate:latestGate.get(o.id)??false,
+        daysIdle,
+        strategicTags:[o.category,o.locality],
+        auditedWinRate:0
+      };
+    });
+  }
+
+  async planGlobal(policy: GlobalPolicy, now = new Date().toISOString()) {
+    if(!Number.isInteger(policy.maxConcurrentCases)||policy.maxConcurrentCases<1||policy.maxConcurrentCases>100) throw new Error("GLOBAL_POLICY_MAX_CONCURRENT_INVALID");
+    if(!Number.isInteger(policy.minEvidenceCount)||policy.minEvidenceCount<0||policy.minEvidenceCount>1000) throw new Error("GLOBAL_POLICY_MIN_EVIDENCE_INVALID");
+    if(!Array.isArray(policy.preferredTags)) throw new Error("GLOBAL_POLICY_TAGS_INVALID");
+    const signals=await this.globalSignals(now);
+    const ranked=rankPortfolioCases(signals,policy);
+    const plan=planGlobalFocus(signals,policy);
+    const portfolioHash=await stableId("sniper-global-portfolio",signals.map(x=>({caseId:x.caseId,status:x.status,score:x.score,evidenceCount:x.evidenceCount,humanGate:x.humanGate,daysIdle:x.daysIdle})));
+    const decisionId=await stableId("sniper-global-decision",{portfolioHash,policy,active:plan.active.map(x=>x.caseId),human:plan.humanAttention.map(x=>x.caseId),now});
+    const reasons=[
+      `ACTIVE=${plan.active.length}`,
+      `DEFERRED=${plan.deferred.length}`,
+      `HUMAN_ATTENTION=${plan.humanAttention.length}`,
+      `CAPACITY=${policy.maxConcurrentCases}`
+    ];
+    await this.db.prepare(
+      "INSERT OR IGNORE INTO sniper_global_decisions (decision_id,portfolio_hash,policy_json,ranked_cases_json,active_cases_json,deferred_cases_json,human_attention_json,system1_json,reasons_json,created_at) VALUES (?1,?2,?3,?4,?5,?6,?7,NULL,?8,?9)"
+    ).bind(decisionId,portfolioHash,JSON.stringify(policy),JSON.stringify(ranked),JSON.stringify(plan.active),JSON.stringify(plan.deferred),JSON.stringify(plan.humanAttention),JSON.stringify(reasons),now).run();
+    for(const item of plan.active){
+      const allocationId=await stableId("sniper-global-allocation",{decisionId,caseId:item.caseId,owner:item.ownerRole,objective:item.nextObjective});
+      await this.db.prepare(
+        "INSERT OR IGNORE INTO sniper_global_allocations (allocation_id,decision_id,case_id,owner_role,objective,priority_score,state,created_at,updated_at) VALUES (?1,?2,?3,?4,?5,?6,'ACTIVE',?7,?7)"
+      ).bind(allocationId,decisionId,item.caseId,item.ownerRole,item.nextObjective,item.globalScore,now).run();
+    }
+    await this.activity(null,"GLOBAL","GLOBAL_CORE","PORTFOLIO_PLAN_UPDATED",{decisionId,portfolioHash,policy,reasons,active:plan.active.map(x=>({caseId:x.caseId,ownerRole:x.ownerRole,nextObjective:x.nextObjective,globalScore:x.globalScore})),humanAttention:plan.humanAttention.map(x=>x.caseId)},now);
+    return {decisionId,portfolioHash,policy,ranked,...plan,reasons,system1:{provider:"LAYA_COMPATIBLE",state:"NOT_CONNECTED"}};
+  }
+
+  async latestGlobalPlan(): Promise<Record<string,unknown> | null> {
+    const row=await this.db.prepare(
+      "SELECT decision_id,portfolio_hash,policy_json,ranked_cases_json,active_cases_json,deferred_cases_json,human_attention_json,system1_json,reasons_json,created_at FROM sniper_global_decisions ORDER BY created_at DESC LIMIT 1"
+    ).first<Record<string,unknown>>();
+    if(!row)return null;
+    return {
+      decisionId:String(row.decision_id),
+      portfolioHash:String(row.portfolio_hash),
+      policy:parse(row.policy_json,{}),
+      ranked:parse(row.ranked_cases_json,[]),
+      active:parse(row.active_cases_json,[]),
+      deferred:parse(row.deferred_cases_json,[]),
+      humanAttention:parse(row.human_attention_json,[]),
+      system1:row.system1_json?parse(row.system1_json,{}):{provider:"LAYA_COMPATIBLE",state:"NOT_CONNECTED"},
+      reasons:parse(row.reasons_json,[]),
+      createdAt:String(row.created_at)
+    };
+  }
+
+  async globalOverview(now = new Date().toISOString()): Promise<Record<string,unknown>> {
+    const signals=await this.globalSignals(now);
+    const latest=await this.latestGlobalPlan();
+    return {
+      architecture:{
+        system1:"typed calibrated decision service; Laya-compatible candidate",
+        system2:"aria-models reasoning / specialist deliberation",
+        authority:"deterministic policy + audited memory + human gate"
+      },
+      portfolio:{total:signals.length,signals},
+      latest
+    };
   }
 
   async activity(opportunityId: string | null, stream: string, actor: string, eventType: string, detail: Record<string, unknown>, now = new Date().toISOString()): Promise<string> {
