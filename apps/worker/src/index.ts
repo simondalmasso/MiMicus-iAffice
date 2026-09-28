@@ -46,6 +46,8 @@ async function sniperGet(url:URL,env:Env):Promise<Response|null>{
   if(url.pathname==="/api/sniper/global")return json(await sniper.globalOverview());
   if(url.pathname==="/api/sniper/operations")return json(await sniper.operationsOverview());
   if(url.pathname==="/api/sniper/skills")return json(await sniper.skillRegistryOverview());
+  if(url.pathname==="/api/sniper/discovery/sources")return json(await sniper.discoverySourcesOverview());
+  if(url.pathname==="/api/sniper/discovery/jobs")return json(await sniper.listDiscoveryJobs(Number(url.searchParams.get("limit")??100)));
   if(url.pathname==="/api/sniper/telemetry")return json(await sniper.telemetryOverview(Number(url.searchParams.get("limit")??500)));
   const traceMatch=url.pathname.match(/^\/api\/sniper\/telemetry\/traces\/([^/]+)$/);
   if(traceMatch)return json(await sniper.telemetryTrace(decodeURIComponent(traceMatch[1]!)));
@@ -62,6 +64,21 @@ async function api(request:Request,env:Env):Promise<Response|null>{const url=new
     if(!validSignal(body))return json({error:"SNIPER_SIGNAL_SCHEMA_INVALID"},400);
     const sniper=new SniperStore(env.DB),record=await sniper.ingest(body);
     return json(record,201);
+  }
+ if(request.method==="POST"&&url.pathname==="/api/sniper/discovery/source/verify"){
+    const body=await request.json() as {sourceId?:string;revisionPin?:string;zeroCostVerified?:boolean;targetTermsVerified?:boolean;automationAllowed?:boolean;health?:"HEALTHY"|"UNKNOWN"|"DEGRADED";evidenceRefs?:string[];verifiedAt?:string};
+    if(!body.sourceId||!body.revisionPin||typeof body.zeroCostVerified!=="boolean"||typeof body.targetTermsVerified!=="boolean"||typeof body.automationAllowed!=="boolean"||!body.health||!Array.isArray(body.evidenceRefs))return json({error:"DISCOVERY_SOURCE_VERIFY_SCHEMA_INVALID"},400);
+    try{return json(await new SniperStore(env.DB).verifyDiscoverySource({sourceId:body.sourceId,revisionPin:body.revisionPin,zeroCostVerified:body.zeroCostVerified,targetTermsVerified:body.targetTermsVerified,automationAllowed:body.automationAllowed,health:body.health,evidenceRefs:body.evidenceRefs,...(body.verifiedAt?{verifiedAt:body.verifiedAt}:{})}),201);}catch(error){return json({error:error instanceof Error?error.message:"DISCOVERY_SOURCE_VERIFY_FAILED"},400);}
+  }
+ if(request.method==="POST"&&url.pathname==="/api/sniper/discovery/jobs"){
+    const body=await request.json() as {jobId?:string;locality?:string;categories?:string[];maxCandidates?:number;sourceIds?:string[]};
+    if(!body.jobId||!body.locality||!Array.isArray(body.categories)||typeof body.maxCandidates!=="number"||!Array.isArray(body.sourceIds))return json({error:"DISCOVERY_JOB_SCHEMA_INVALID"},400);
+    try{return json(await new SniperStore(env.DB).createDiscoveryJob({jobId:body.jobId,locality:body.locality,categories:body.categories.map(String),maxCandidates:body.maxCandidates,sourceIds:body.sourceIds.map(String)}),201);}catch(error){return json({error:error instanceof Error?error.message:"DISCOVERY_JOB_FAILED"},400);}
+  }
+ if(request.method==="POST"&&url.pathname==="/api/sniper/discovery/finding"){
+    const body=await request.json() as {jobId?:string;findingId?:string;finding?:unknown;auditId?:string;audit?:unknown;rawEvidenceDigest?:string|null};
+    if(!body.jobId||!body.findingId||!body.finding||typeof body.finding!=="object"||!body.auditId||!body.audit||typeof body.audit!=="object")return json({error:"DISCOVERY_FINDING_SCHEMA_INVALID"},400);
+    try{return json(await new SniperStore(env.DB).recordDiscoveryFinding({jobId:body.jobId,findingId:body.findingId,finding:body.finding as import("../../../packages/sniper/src/discovery.js").RawBusinessFinding,auditId:body.auditId,audit:body.audit as import("../../../packages/sniper/src/discovery.js").DigitalAuditEvidence,...(body.rawEvidenceDigest!==undefined?{rawEvidenceDigest:body.rawEvidenceDigest}:{})}),201);}catch(error){return json({error:error instanceof Error?error.message:"DISCOVERY_FINDING_FAILED"},400);}
   }
  if(request.method==="POST"&&url.pathname==="/api/sniper/skills/verify"){
     const body=await request.json() as {sourceId?:string;revisionPin?:string;benchmarkScore?:number;health?:"HEALTHY"|"UNKNOWN"|"DEGRADED";verifiedAt?:string};
