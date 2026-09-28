@@ -18,6 +18,7 @@ import { buildAgencyOperationsSnapshot, OPERATING_STAGES } from "./operatingMode
 import { SKILL_SOURCE_CANDIDATES, evaluateSkillAdmission, type SkillHealth } from "./skillRegistry.js";
 import { evaluateDiscoveryJob, findingToBusinessSignal, type DigitalAuditEvidence, type DiscoveryJobRequest, type RawBusinessFinding } from "./discovery.js";
 import { DISCOVERY_SOURCE_CANDIDATES, evaluateDiscoverySourceAdmission, type DiscoverySourceHealth } from "./discoverySources.js";
+import { buildDemoArtifactManifest, evaluateDemoJob, type DemoArtifactRef, type DemoJobRequest } from "./demoJobs.js";
 
 export type OpportunityStatus =
   | "DISCOVERED"
@@ -661,6 +662,90 @@ export class SniperStore {
     ).bind(input.jobId,now).run();
     await this.activity(record.id,"DISCOVERY","SCOUT","DISCOVERY_FINDING_INGESTED",{jobId:input.jobId,findingId:input.findingId,auditId:input.auditId,sourceId:input.finding.sourceId},now);
     return {case:record,findingId:input.findingId,auditId:input.auditId};
+  }
+
+
+  async createDemoJob(request:DemoJobRequest, now=new Date().toISOString()):Promise<Record<string,unknown>> {
+    const opportunity=await this.get(request.caseId);
+    if(!opportunity) throw new Error("DEMO_CASE_NOT_FOUND");
+    const decision=evaluateDemoJob(request);
+    const state=decision.allowed?"QUEUED":"BLOCKED";
+    await this.db.prepare(
+      "INSERT INTO sniper_demo_jobs (job_id,case_id,service_pack_id,evidence_refs_json,requested_deliverables_json,executor_id,executor_class,zero_cost_verified,state,decision_reasons_json,created_at,updated_at) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?11)"
+    ).bind(request.jobId,request.caseId,request.servicePackId,JSON.stringify(request.evidenceRefs),JSON.stringify(request.requestedDeliverables),request.executorId,decision.executorClass,request.executorCostVerifiedZero?1:0,state,JSON.stringify(decision.reasons),now).run();
+    await this.activity(request.caseId,"DEMO","DEMO","DEMO_JOB_CREATED",{jobId:request.jobId,servicePackId:request.servicePackId,executorId:request.executorId,executorClass:decision.executorClass,state,reasons:decision.reasons},now);
+    return {...request,executorClass:decision.executorClass,state,decision};
+  }
+
+  async recordDemoArtifacts(input:{jobId:string;artifacts:DemoArtifactRef[]}, now=new Date().toISOString()):Promise<Record<string,unknown>> {
+    const row=await this.db.prepare("SELECT * FROM sniper_demo_jobs WHERE job_id=?1").bind(input.jobId).first<Record<string,unknown>>();
+    if(!row) throw new Error("DEMO_JOB_NOT_FOUND");
+    if(!["QUEUED","BUILDING"].includes(String(row.state))) throw new Error("DEMO_JOB_NOT_BUILDABLE");
+    const request:DemoJobRequest={
+      jobId:String(row.job_id),
+      caseId:String(row.case_id),
+      servicePackId:String(row.service_pack_id) as DemoJobRequest["servicePackId"],
+      evidenceRefs:parse(row.evidence_refs_json,[]),
+      requestedDeliverables:parse(row.requested_deliverables_json,[]),
+      privatePreview:true,
+      productionDeploy:false,
+      executorId:String(row.executor_id),
+      executorCostVerifiedZero:Number(row.zero_cost_verified)===1,
+      createdAt:String(row.created_at)
+    };
+    const manifest=buildDemoArtifactManifest(request,input.artifacts);
+    await this.db.prepare(
+      "UPDATE sniper_demo_jobs SET state='AUDIT_REQUIRED',artifact_manifest_json=?2,started_at=COALESCE(started_at,?3),updated_at=?3 WHERE job_id=?1"
+    ).bind(input.jobId,JSON.stringify(manifest),now).run();
+    await this.activity(request.caseId,"DEMO","DEMO","DEMO_ARTIFACTS_READY",{jobId:input.jobId,artifactCount:input.artifacts.length,state:"AUDIT_REQUIRED"},now);
+    return {jobId:input.jobId,state:"AUDIT_REQUIRED",manifest};
+  }
+
+  async auditDemo(input:{jobId:string;verdict:"PASS"|"FAIL"|"UNCERTAIN";evidenceRefs:string[]}, now=new Date().toISOString()):Promise<Record<string,unknown>> {
+    if(input.evidenceRefs.length===0) throw new Error("DEMO_AUDIT_EVIDENCE_REQUIRED");
+    const row=await this.db.prepare("SELECT case_id,state FROM sniper_demo_jobs WHERE job_id=?1").bind(input.jobId).first<Record<string,unknown>>();
+    if(!row) throw new Error("DEMO_JOB_NOT_FOUND");
+    if(String(row.state)!=="AUDIT_REQUIRED") throw new Error("DEMO_AUDIT_STATE_INVALID");
+    const state=input.verdict==="PASS"?"READY":input.verdict==="FAIL"?"FAILED":"AUDIT_REQUIRED";
+    await this.db.prepare(
+      "UPDATE sniper_demo_jobs SET state=?2,audit_verdict=?3,audit_evidence_refs_json=?4,completed_at=CASE WHEN ?2 IN ('READY','FAILED') THEN ?5 ELSE completed_at END,updated_at=?5 WHERE job_id=?1"
+    ).bind(input.jobId,state,input.verdict,JSON.stringify(input.evidenceRefs),now).run();
+    const caseId=String(row.case_id);
+    await this.activity(caseId,"DEMO","AUD","DEMO_AUDITED",{jobId:input.jobId,verdict:input.verdict,state,evidenceRefs:input.evidenceRefs},now);
+    if(input.verdict==="PASS"){
+      const opportunity=await this.get(caseId);
+      if(opportunity&&["QUALIFIED","DISCOVERED"].includes(opportunity.status)){
+        await this.setStatus(caseId,"DEMO_READY","SALES","PREPARE_EVIDENCE_BACKED_OUTREACH",now);
+      }
+    }
+    return {jobId:input.jobId,caseId,verdict:input.verdict,state,evidenceRefs:input.evidenceRefs};
+  }
+
+  async listDemoJobs(limit=100):Promise<Array<Record<string,unknown>>> {
+    const safe=Math.max(1,Math.min(500,Math.trunc(limit)));
+    const rows=await this.db.prepare(
+      "SELECT job_id,case_id,service_pack_id,evidence_refs_json,requested_deliverables_json,executor_id,executor_class,zero_cost_verified,state,decision_reasons_json,artifact_manifest_json,audit_verdict,audit_evidence_refs_json,error_code,created_at,started_at,completed_at,updated_at FROM sniper_demo_jobs ORDER BY updated_at DESC LIMIT ?1"
+    ).bind(safe).all<Record<string,unknown>>();
+    return rows.results.map(row=>({
+      jobId:String(row.job_id),
+      caseId:String(row.case_id),
+      servicePackId:String(row.service_pack_id),
+      evidenceRefs:parse(row.evidence_refs_json,[]),
+      requestedDeliverables:parse(row.requested_deliverables_json,[]),
+      executorId:String(row.executor_id),
+      executorClass:String(row.executor_class),
+      zeroCostVerified:Number(row.zero_cost_verified)===1,
+      state:String(row.state),
+      decisionReasons:parse(row.decision_reasons_json,[]),
+      artifactManifest:row.artifact_manifest_json?parse(row.artifact_manifest_json,{}):null,
+      auditVerdict:row.audit_verdict==null?null:String(row.audit_verdict),
+      auditEvidenceRefs:parse(row.audit_evidence_refs_json,[]),
+      errorCode:row.error_code==null?null:String(row.error_code),
+      createdAt:String(row.created_at),
+      startedAt:row.started_at==null?null:String(row.started_at),
+      completedAt:row.completed_at==null?null:String(row.completed_at),
+      updatedAt:String(row.updated_at)
+    }));
   }
 
   async operationsOverview(): Promise<Record<string,unknown>> {
