@@ -31,7 +31,7 @@ input{width:100%;padding:9px;border:1px solid #bbb;border-radius:8px;background:
 <main id="app" aria-live="polite"></main>
 <script>
 const sections=['Revenue','Cases','Live','Decisions','Learning','Squad','Approvals','Compute','System'];
-let current='Revenue',core={},sniper={pipeline:{},money:{},topOpportunities:[],activity:[],memory:{}},squad=[],compute={providers:[],budget:{}},healthState={},adminToken='',selectedCase=null,selectedCaseId=null;
+let current='Revenue',core={},sniper={pipeline:{},money:{},topOpportunities:[],activity:[],memory:{}},caseIndex=[],squad=[],compute={providers:[],budget:{}},healthState={},adminToken='',selectedCase=null,selectedCaseId=null;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>Number(n||0).toLocaleString('es-AR');
 const empty=t=>'<div class="empty">'+esc(t)+'</div>';
@@ -52,7 +52,7 @@ function revenue(){
  '</tbody></table>':empty('No opportunities recorded yet.'));
 }
 function casesView(){
- const ops=sniper.topOpportunities||[];
+ const ops=caseIndex||[];
  if(selectedCase){
   const c=selectedCase,b=c.business||{},st=c.state||{},ev=c.evaluation||{},e=c.evidence||{},r=c.recommendation||{},com=c.commercial||{},cog=c.cognition||{},mem=c.memory||{};
   return '<div class="hero"><div><button class="action reject" id="backCases">← Cases</button><div class="eyebrow" style="margin-top:12px">Case · '+esc(c.caseId)+'</div><h1>'+esc(b.name)+'</h1><p>'+esc(b.category)+' · '+esc(b.locality)+' · owner '+esc(st.nextOwner)+'</p></div>'+badge(st.status)+'</div>'+
@@ -116,7 +116,7 @@ function system(){
 function render(){const views={Revenue:revenue(),Cases:casesView(),Live:live(),Decisions:decisions(),Learning:learning(),Squad:squadView(),Approvals:approvals(),Compute:computeView(),System:system()};app.innerHTML=views[current]||views.Revenue;if(current==='Approvals')bindApprovals();bindCaseActions()}
 function bindApprovals(){const input=document.getElementById('adminToken');if(input){input.value=adminToken;input.oninput=()=>adminToken=input.value}document.querySelectorAll('[data-id]').forEach(b=>b.onclick=async()=>{if(!adminToken)return;b.disabled=true;try{const r=await fetch('/api/approvals/'+encodeURIComponent(b.dataset.id)+'/'+b.dataset.op,{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+adminToken},body:JSON.stringify({actor:'cockpit-human'})});if(!r.ok)throw new Error((await r.json()).error||('HTTP '+r.status));await load()}finally{b.disabled=false}})}
 async function safe(url,fallback){try{const r=await fetch(url,{cache:'no-store'});return r.ok?await r.json():fallback}catch{return fallback}}
-async function load(){const [h,c,d,sq,p,b]=await Promise.all([safe('/api/health',{ok:false}),safe('/api/state',{}),safe('/api/sniper/dashboard',{pipeline:{},money:{},topOpportunities:[],activity:[],memory:{}}),safe('/api/sniper/squad',[]),safe('/api/compute/providers',[]),safe('/api/compute/budget',{})]);healthState=h;core=c;sniper=d;squad=sq;compute={providers:p,budget:b};health.textContent='health · '+(h.ok?'PASS':'DEGRADED');if(selectedCaseId)selectedCase=await safe('/api/sniper/cases/'+encodeURIComponent(selectedCaseId),selectedCase);render()}
+async function load(){const [h,c,d,ci,sq,p,b]=await Promise.all([safe('/api/health',{ok:false}),safe('/api/state',{}),safe('/api/sniper/dashboard',{pipeline:{},money:{},topOpportunities:[],activity:[],memory:{}}),safe('/api/sniper/opportunities?limit=500',[]),safe('/api/sniper/squad',[]),safe('/api/compute/providers',[]),safe('/api/compute/budget',{})]);healthState=h;core=c;sniper=d;caseIndex=ci;squad=sq;compute={providers:p,budget:b};health.textContent='health · '+(h.ok?'PASS':'DEGRADED');if(selectedCaseId)selectedCase=await safe('/api/sniper/cases/'+encodeURIComponent(selectedCaseId),selectedCase);render()}
 nav();render();load();setInterval(load,8000);
 </script>
 </body>
