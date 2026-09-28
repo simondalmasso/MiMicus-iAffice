@@ -215,13 +215,14 @@ export class SniperStore {
   async caseView(id: string): Promise<ReturnType<typeof buildCaseEvaluation> | null> {
     const opportunity = await this.get(id);
     if (!opportunity) return null;
-    const [negotiations, deliveries, payments, activity, episodes, decisions] = await Promise.all([
+    const [negotiations, deliveries, payments, activity, episodes, decisions, demos] = await Promise.all([
       this.db.prepare("SELECT state,current_offer_ars,floor_price_ars,objections_json,concessions_json,next_action,human_gate,human_gate_reasons_json,last_contact_at,updated_at FROM sniper_negotiations WHERE opportunity_id=?1 ORDER BY updated_at DESC").bind(id).all<Record<string,unknown>>(),
       this.db.prepare("SELECT service_kind,state,acceptance_json,artifact_refs_json,due_at,updated_at FROM sniper_deliveries WHERE opportunity_id=?1 ORDER BY updated_at DESC").bind(id).all<Record<string,unknown>>(),
       this.db.prepare("SELECT state,amount_ars,provider,external_reference,created_at,updated_at FROM sniper_payments WHERE opportunity_id=?1 ORDER BY updated_at DESC").bind(id).all<Record<string,unknown>>(),
       this.db.prepare("SELECT stream,actor,event_type,detail_json,created_at FROM sniper_activity WHERE opportunity_id=?1 ORDER BY created_at DESC LIMIT 300").bind(id).all<Record<string,unknown>>(),
       this.db.prepare("SELECT episode_id,agent_role,tactic_id,observation,outcome,audited,evidence_refs_json,created_at FROM sniper_memory_episodes WHERE opportunity_id=?1 ORDER BY created_at DESC LIMIT 200").bind(id).all<Record<string,unknown>>(),
-      this.db.prepare("SELECT decision_id,selected_move,selected_tactic_id,selected_score,alternatives_json,reasons_json,created_at FROM sniper_decision_trace WHERE opportunity_id=?1 ORDER BY created_at DESC LIMIT 200").bind(id).all<Record<string,unknown>>()
+      this.db.prepare("SELECT decision_id,selected_move,selected_tactic_id,selected_score,alternatives_json,reasons_json,created_at FROM sniper_decision_trace WHERE opportunity_id=?1 ORDER BY created_at DESC LIMIT 200").bind(id).all<Record<string,unknown>>(),
+      this.db.prepare("SELECT job_id,service_pack_id,executor_id,executor_class,state,requested_deliverables_json,artifact_manifest_json,audit_verdict,audit_evidence_refs_json,created_at,updated_at FROM sniper_demo_jobs WHERE case_id=?1 ORDER BY updated_at DESC LIMIT 100").bind(id).all<Record<string,unknown>>()
     ]);
     return buildCaseEvaluation({
       opportunity: {
@@ -295,6 +296,19 @@ export class SniperStore {
         reasons:parse<string[]>(x.reasons_json,[]),
         alternatives:parse<unknown[]>(x.alternatives_json,[]),
         createdAt:String(x.created_at)
+      })),
+      demos: demos.results.map(x=>({
+        jobId:String(x.job_id),
+        servicePackId:String(x.service_pack_id),
+        executorId:String(x.executor_id),
+        executorClass:String(x.executor_class),
+        state:String(x.state),
+        requestedDeliverables:parse<string[]>(x.requested_deliverables_json,[]),
+        artifactManifest:x.artifact_manifest_json?parse(x.artifact_manifest_json,{}):null,
+        auditVerdict:x.audit_verdict==null?null:String(x.audit_verdict),
+        auditEvidenceRefs:parse<string[]>(x.audit_evidence_refs_json,[]),
+        createdAt:String(x.created_at),
+        updatedAt:String(x.updated_at)
       }))
     });
   }
