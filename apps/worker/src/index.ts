@@ -12,7 +12,8 @@ import { ServiceModelGateway, ServiceModelProvider } from "../../../packages/rou
 import type { ComputeRequest } from "../../../packages/router/src/computeTypes.js";
 import { buildComputeRuntime, executeComputeRequest, probeProvider } from "./computeRuntime.js";
 import { SniperStore } from "../../../packages/sniper/src/store.js";
-import { buildAgentSquad, requiresHumanGate, type BusinessSignal, type LearningObservation } from "../../../packages/sniper/src/engine.js";\nimport type { CognitiveContext, MemoryEpisode } from "../../../packages/sniper/src/cognition.js";
+import { buildAgentSquad, requiresHumanGate, type BusinessSignal, type LearningObservation } from "../../../packages/sniper/src/engine.js";
+import type { CognitiveContext, MemoryEpisode } from "../../../packages/sniper/src/cognition.js";
 import type { Env, MessageBatch, ServiceBindingLike } from "./runtime-types.js";
 export { AriaCoordinator } from "./coordinator.js";
 export { ComputeGovernorDO } from "./computeGovernorDO.js";
@@ -73,12 +74,12 @@ async function api(request:Request,env:Env):Promise<Response|null>{const url=new
     const body=await request.json() as {id?:string;opportunityId?:string;state?:string;currentOfferArs?:number;floorPriceArs?:number;objections?:string[];concessions?:string[];nextAction?:string;meetingRequested?:boolean;nonStandardTerms?:boolean;legalCommitment?:boolean;lastContactAt?:string};
     if(!body.id||!body.opportunityId||!body.state||!body.nextAction)return json({error:"SNIPER_NEGOTIATION_SCHEMA_INVALID"},400);
     const gate=requiresHumanGate({amountArs:Number(body.currentOfferArs??0),meetingRequested:Boolean(body.meetingRequested),nonStandardTerms:Boolean(body.nonStandardTerms),legalCommitment:Boolean(body.legalCommitment)});
-    await new SniperStore(env.DB).recordNegotiation({id:body.id,opportunityId:body.opportunityId,state:body.state,...(Number.isFinite(body.currentOfferArs)?{currentOfferArs:Number(body.currentOfferArs)}:{}),...(Number.isFinite(body.floorPriceArs)?{floorPriceArs:Number(body.floorPriceArs)}:{}),objections:body.objections??[],concessions:body.concessions??[],nextAction:body.nextAction,humanGate:gate.required,humanGateReasons:gate.reasons,...(body.lastContactAt?{lastContactAt:body.lastContactAt}:{})});
+    await new SniperStore(env.DB).recordNegotiation({id:body.id,opportunityId:body.opportunityId,state:body.state,...((typeof body.currentOfferArs==="number"&&Number.isFinite(body.currentOfferArs))?{currentOfferArs:body.currentOfferArs}:{}),...((typeof body.floorPriceArs==="number"&&Number.isFinite(body.floorPriceArs))?{floorPriceArs:body.floorPriceArs}:{}),objections:body.objections??[],concessions:body.concessions??[],nextAction:body.nextAction,humanGate:gate.required,humanGateReasons:gate.reasons,...(body.lastContactAt?{lastContactAt:body.lastContactAt}:{})});
     return json({ok:true,humanGate:gate});
   }
  if(request.method==="POST"&&url.pathname==="/api/sniper/payment"){
     const body=await request.json() as {id?:string;opportunityId?:string;state?:string;amountArs?:number;provider?:string;externalReference?:string};
-    if(!body.id||!body.opportunityId||!body.state||!Number.isFinite(body.amountArs)||!body.provider)return json({error:"SNIPER_PAYMENT_SCHEMA_INVALID"},400);
+    if(!body.id||!body.opportunityId||!body.state||typeof body.amountArs!=="number"||!Number.isFinite(body.amountArs)||!body.provider)return json({error:"SNIPER_PAYMENT_SCHEMA_INVALID"},400);
     await new SniperStore(env.DB).recordPayment({id:body.id,opportunityId:body.opportunityId,state:body.state,amountArs:Number(body.amountArs),provider:body.provider,...(body.externalReference?{externalReference:body.externalReference}:{})});
     return json({ok:true});
   }
