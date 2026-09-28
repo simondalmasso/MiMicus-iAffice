@@ -42,6 +42,8 @@ async function sniperGet(url:URL,env:Env):Promise<Response|null>{
   if(url.pathname==="/api/sniper/activity")return json(await sniper.activityFeed(Number(url.searchParams.get("limit")??100)));
   if(url.pathname==="/api/sniper/squad")return json(buildAgentSquad());
   if(url.pathname==="/api/sniper/memory")return json(await sniper.memorySummary());
+  const caseMatch=url.pathname.match(/^\/api\/sniper\/cases\/([^/]+)$/);
+  if(caseMatch){const dossier=await sniper.caseView(decodeURIComponent(caseMatch[1]!));return dossier?json(dossier):json({error:"SNIPER_CASE_NOT_FOUND"},404);}
   const match=url.pathname.match(/^\/api\/sniper\/opportunities\/([^/]+)$/);
   if(match)return json(await sniper.get(decodeURIComponent(match[1]!)));
   return null;
