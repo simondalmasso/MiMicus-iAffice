@@ -10,7 +10,7 @@ import { referenceEvents } from "../../../packages/fixtures/src/reference.js";
 import { redactSecrets, WebhookIngestConnector } from "../../../packages/connectors/src/index.js";
 import { ServiceModelGateway, ServiceModelProvider } from "../../../packages/router/src/serviceModelGateway.js";
 import type { ComputeRequest } from "../../../packages/router/src/computeTypes.js";
-import { buildComputeRuntime, executeComputeRequest, probeProvider } from "./computeRuntime.js";
+import { buildComputeRuntime, executeComputeRequest, probeProvider } from "./computeRuntime.js";\nimport { SniperStore } from "../../../packages/sniper/src/store.js";\nimport { buildAgentSquad, requiresHumanGate, type BusinessSignal, type LearningObservation } from "../../../packages/sniper/src/engine.js";
 import type { Env, MessageBatch, ServiceBindingLike } from "./runtime-types.js";
 export { AriaCoordinator } from "./coordinator.js";
 export { ComputeGovernorDO } from "./computeGovernorDO.js";
@@ -26,8 +26,50 @@ async function businessPreconditionHash(state:SystemState):Promise<string>{retur
 class ServiceEffectDispatcher implements EffectDispatcher{constructor(private readonly service:ServiceBindingLike){}async execute(intent:ActionIntent,approval:ApprovalRequest,currentPreconditionHash:string,now:string):Promise<EffectDispatchResult>{const response=await this.service.fetch("https://aria-effects.internal/internal/execute-intent",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({intent,approval,currentPreconditionHash,now})});const body=await response.json() as EffectDispatchResult&{error?:string};if(!response.ok)throw new Error(body.error??`EFFECT_GATEWAY_HTTP_${response.status}`);return body;}}
 async function dispatchApprovedIntent(orchestrator:AriaOrchestrator,env:Env,intent:ActionIntent,approval:ApprovalRequest):Promise<EffectDispatchResult>{if(!env.EFFECTS)throw new Error("EFFECTS_SERVICE_BINDING_REQUIRED");const currentPreconditionHash=await businessPreconditionHash(orchestrator.state),result=await new ServiceEffectDispatcher(env.EFFECTS).execute(intent,approval,currentPreconditionHash,new Date().toISOString());if(result.receipt.status==="EXECUTED"){orchestrator.approvals.consume(approval.id,intent.actionDigest);intent.status="EXECUTED";if(!orchestrator.state.effectReceipts.some(r=>r.receiptId===result.receipt.receiptId))orchestrator.state.effectReceipts.push(result.receipt);const action=orchestrator.state.actions.find(a=>a.approvalId===approval.id);if(action)action.status="EXECUTED";}else intent.status="RETRYABLE";await orchestrator.persist();return result;}
 async function computeGet(url:URL,env:Env):Promise<Response|null>{if(!url.pathname.startsWith("/api/compute/"))return null;try{const runtime=await buildComputeRuntime(env);if(url.pathname==="/api/compute/providers")return json(runtime.registry.listProviders().map(p=>({...p,credentialBindingName:p.credentialBindingName?"[BOUND_IN_ARIA_MODELS]":null})));if(url.pathname==="/api/compute/models")return json(runtime.registry.listModels());if(url.pathname==="/api/compute/routes")return json(await runtime.store.listRoutes());if(url.pathname==="/api/compute/incidents")return json(await runtime.store.listIncidents());if(url.pathname==="/api/compute/budget"){const reservations=await runtime.governor.list();return json({costHardCapUsd:0,cumulativeMonetarySpendUsd:0,billableExecutionAttempts:0,reservations,currentReserved:reservations.filter(r=>r.status==="RESERVED").reduce((s,r)=>s+r.reservedUsageUnits,0)});}const route=url.pathname.match(/^\/api\/compute\/route\/(.+)$/);if(route)return json(await runtime.store.routeForTask(decodeURIComponent(route[1]!)));return null;}catch(error){return json({error:error instanceof Error?error.message:"COMPUTE_RUNTIME_ERROR"},503);}}
-async function api(request:Request,env:Env):Promise<Response|null>{const url=new URL(request.url);if(!url.pathname.startsWith("/api/"))return null;const store=new D1StateStore(env.DB);if(request.method==="GET"){const compute=await computeGet(url,env);if(compute)return compute;if(url.pathname==="/api/health"){const cfg=configured(env);return json({ok:cfg.ready,service:"AriaOS",worker:"aria-core",environment:env.ENVIRONMENT??"unknown",sha:env.ARIA_GIT_SHA??"unknown",canonicalMemory:"D1",effectBoundary:"SERVICE_BINDING_ONLY",modelBoundary:"SERVICE_BINDING_ONLY",agentWriteCredentials:0,modelProviderCredentials:0,costPolicy:"ZERO_SPEND_HARD_LOCK",missingBindings:cfg.missing},cfg.ready?200:503);}if(url.pathname==="/api/system/budget")return json(new BudgetGovernor().snapshot());if(url.pathname==="/api/system/policy")return json(new PolicyEngine().policyMatrix());if(url.pathname==="/api/state")return json(await store.load());}
+function validSignal(value:unknown):value is BusinessSignal{
+    if(!value||typeof value!=="object")return false;
+    const v=value as Partial<BusinessSignal>;
+    return typeof v.businessId==="string"&&typeof v.name==="string"&&typeof v.category==="string"&&typeof v.locality==="string"&&typeof v.observedAt==="string"&&Boolean(v.demand)&&Boolean(v.digital)&&Array.isArray(v.contacts)&&Array.isArray(v.evidenceRefs)&&v.evidenceRefs.length>0;
+  }
+async function sniperGet(url:URL,env:Env):Promise<Response|null>{
+  if(!url.pathname.startsWith("/api/sniper/"))return null;
+  const sniper=new SniperStore(env.DB);
+  if(url.pathname==="/api/sniper/dashboard")return json(await sniper.dashboard());
+  if(url.pathname==="/api/sniper/opportunities")return json(await sniper.list(Number(url.searchParams.get("limit")??100)));
+  if(url.pathname==="/api/sniper/activity")return json(await sniper.activityFeed(Number(url.searchParams.get("limit")??100)));
+  if(url.pathname==="/api/sniper/squad")return json(buildAgentSquad());
+  const match=url.pathname.match(/^\\/api\\/sniper\\/opportunities\\/([^/]+)$/);
+  if(match)return json(await sniper.get(decodeURIComponent(match[1]!)));
+  return null;
+}
+async function api(request:Request,env:Env):Promise<Response|null>{const url=new URL(request.url);if(!url.pathname.startsWith("/api/"))return null;const store=new D1StateStore(env.DB);if(request.method==="GET"){const compute=await computeGet(url,env);if(compute)return compute;const sniper=await sniperGet(url,env);if(sniper)return sniper;if(url.pathname==="/api/health"){const cfg=configured(env);return json({ok:cfg.ready,service:"AriaOS",worker:"aria-core",environment:env.ENVIRONMENT??"unknown",sha:env.ARIA_GIT_SHA??"unknown",canonicalMemory:"D1",effectBoundary:"SERVICE_BINDING_ONLY",modelBoundary:"SERVICE_BINDING_ONLY",agentWriteCredentials:0,modelProviderCredentials:0,costPolicy:"ZERO_SPEND_HARD_LOCK",missingBindings:cfg.missing},cfg.ready?200:503);}if(url.pathname==="/api/system/budget")return json(new BudgetGovernor().snapshot());if(url.pathname==="/api/system/policy")return json(new PolicyEngine().policyMatrix());if(url.pathname==="/api/state")return json(await store.load());}
  if(request.method!=="GET"){if(!(await withinRateLimit(env,`admin:${url.pathname}`,30)))return json({error:"RATE_LIMITED_OR_COORDINATOR_UNAVAILABLE"},429);if(!(await authorized(request,env)))return json({error:"ADMIN_AUTH_REQUIRED"},401);}
+ if(request.method==="POST"&&url.pathname==="/api/sniper/opportunities/ingest"){
+    const body=await request.json();
+    if(!validSignal(body))return json({error:"SNIPER_SIGNAL_SCHEMA_INVALID"},400);
+    const sniper=new SniperStore(env.DB),record=await sniper.ingest(body);
+    return json(record,201);
+  }
+ if(request.method==="POST"&&url.pathname==="/api/sniper/feedback"){
+    const body=await request.json() as {tacticId?:string;observation?:LearningObservation;evidenceRefs?:string[]};
+    if(!body.tacticId||!body.observation||!Array.isArray(body.evidenceRefs)||body.evidenceRefs.length===0)return json({error:"SNIPER_FEEDBACK_SCHEMA_INVALID"},400);
+    if(!["REPLIED","MEETING","WON","LOST","UNKNOWN"].includes(body.observation.outcome)||typeof body.observation.audited!=="boolean")return json({error:"SNIPER_FEEDBACK_SCHEMA_INVALID"},400);
+    const result=await new SniperStore(env.DB).learn(body.tacticId,body.observation,body.evidenceRefs);
+    return json(result);
+  }
+ if(request.method==="POST"&&url.pathname==="/api/sniper/negotiation"){
+    const body=await request.json() as {id?:string;opportunityId?:string;state?:string;currentOfferArs?:number;floorPriceArs?:number;objections?:string[];concessions?:string[];nextAction?:string;meetingRequested?:boolean;nonStandardTerms?:boolean;legalCommitment?:boolean;lastContactAt?:string};
+    if(!body.id||!body.opportunityId||!body.state||!body.nextAction)return json({error:"SNIPER_NEGOTIATION_SCHEMA_INVALID"},400);
+    const gate=requiresHumanGate({amountArs:Number(body.currentOfferArs??0),meetingRequested:Boolean(body.meetingRequested),nonStandardTerms:Boolean(body.nonStandardTerms),legalCommitment:Boolean(body.legalCommitment)});
+    await new SniperStore(env.DB).recordNegotiation({id:body.id,opportunityId:body.opportunityId,state:body.state,...(Number.isFinite(body.currentOfferArs)?{currentOfferArs:Number(body.currentOfferArs)}:{}),...(Number.isFinite(body.floorPriceArs)?{floorPriceArs:Number(body.floorPriceArs)}:{}),objections:body.objections??[],concessions:body.concessions??[],nextAction:body.nextAction,humanGate:gate.required,humanGateReasons:gate.reasons,...(body.lastContactAt?{lastContactAt:body.lastContactAt}:{})});
+    return json({ok:true,humanGate:gate});
+  }
+ if(request.method==="POST"&&url.pathname==="/api/sniper/payment"){
+    const body=await request.json() as {id?:string;opportunityId?:string;state?:string;amountArs?:number;provider?:string;externalReference?:string};
+    if(!body.id||!body.opportunityId||!body.state||!Number.isFinite(body.amountArs)||!body.provider)return json({error:"SNIPER_PAYMENT_SCHEMA_INVALID"},400);
+    await new SniperStore(env.DB).recordPayment({id:body.id,opportunityId:body.opportunityId,state:body.state,amountArs:Number(body.amountArs),provider:body.provider,...(body.externalReference?{externalReference:body.externalReference}:{})});
+    return json({ok:true});
+  }
  if(request.method==="POST"&&url.pathname.startsWith("/api/compute/probe/")){const providerId=decodeURIComponent(url.pathname.slice("/api/compute/probe/".length)),body=await request.json() as{modelId?:string};if(!body.modelId)return json({error:"MODEL_ID_REQUIRED"},400);const probe=await probeProvider(env,providerId,body.modelId);if(!probe.ok)return json(probe,409);const runtime=await buildComputeRuntime(env);await runtime.store.addEvidence(probe.evidence!);return json({ok:true,providerId,modelId:body.modelId,evidenceId:probe.evidence!.evidenceId,expiresAt:probe.evidence!.expiresAt,detail:probe.detail},200);}
  if(request.method==="POST"&&url.pathname==="/api/compute/run"){const body=await request.json() as Partial<ComputeRequest>;if(!body.taskId||!body.role||!body.tier||!body.taskClass||!body.dataClass||typeof body.pii!=="boolean"||!body.prompt||!Number.isFinite(body.requestedMaxOutputTokens)||!Array.isArray(body.requiredCapabilities)||!body.reason)return json({error:"COMPUTE_REQUEST_SCHEMA_INVALID"},400);try{const result=await executeComputeRequest(env,body as ComputeRequest);return json({text:result.text,receipt:result.receipt,route:result.route,reservation:result.reservation});}catch(error){const message=error instanceof Error?error.message:"NO_SAFE_MODEL_ROUTE";return json({error:message,deferred:!body.critical,costUsd:0},409);}}
  if(request.method==="POST"&&url.pathname.startsWith("/api/compute/disable/")){const id=decodeURIComponent(url.pathname.slice("/api/compute/disable/".length)),runtime=await buildComputeRuntime(env);if(!runtime.registry.disable(id,"EMERGENCY_OPERATOR_KILL"))return json({error:"PROVIDER_OR_MODEL_NOT_FOUND"},404);for(const p of runtime.registry.listProviders())await runtime.store.upsertProvider(p);for(const m of runtime.registry.listModels())await runtime.store.upsertModel(m);return json({disabled:id,durable:true,costUsd:0});}
