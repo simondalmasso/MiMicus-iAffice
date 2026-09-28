@@ -262,8 +262,7 @@ import {
   rankPortfolioCases,
   planGlobalFocus,
   buildGlobalTypedQuestions,
-  interpretGlobalSystemOne,
-  type GlobalCaseSignal
+  interpretGlobalSystemOne
 } from '../dist/packages/sniper/src/globalCore.js';
 
 const globalCases = [
