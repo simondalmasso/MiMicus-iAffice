@@ -20,7 +20,7 @@ table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;borde
 .progress{height:6px;background:#eceae4;border-radius:999px;overflow:hidden;margin-top:7px}.progress span{display:block;height:100%;background:#171717}.feed{display:grid;gap:8px}.feed-item{display:grid;grid-template-columns:120px 1fr auto;gap:12px;background:#fff;border:1px solid var(--line);border-radius:13px;padding:12px}.stream{font-size:10px;letter-spacing:.08em;font-weight:800}.time{font-size:10px;color:var(--muted);white-space:nowrap}.owner{font-weight:700}
 pre{white-space:pre-wrap;overflow:auto;font-size:11px;background:#f7f6f2;padding:9px;border-radius:9px;margin:7px 0 0}
 input{width:100%;padding:9px;border:1px solid #bbb;border-radius:8px;background:#fff}.case-link{border:0;background:transparent;padding:0;cursor:pointer;text-align:left}.case-link:hover{text-decoration:underline}.case-card{appearance:none;color:inherit}.case-card:hover{border-color:#a9a69f}button.action{background:#171717;color:#fff;border:0;border-radius:8px;padding:8px 10px;cursor:pointer}button.reject{background:#fff;color:#171717;border:1px solid #aaa}
-.agent{min-height:174px}.agent h3{margin:0 0 8px;font-size:15px}.agent p{margin:0 0 12px}.decision{border-left:3px solid #171717}.tiny{font-size:10px}.empty{padding:28px;text-align:center;color:var(--muted);border:1px dashed #c9c6be;border-radius:14px;background:rgba(255,255,255,.45)}
+.agent{min-height:174px}.agent h3{margin:0 0 8px;font-size:15px}.agent p{margin:0 0 12px}.decision{border-left:3px solid #171717}.tiny{font-size:10px}.empty{padding:28px;text-align:center;color:var(--muted);border:1px dashed #c9c6be;border-radius:14px;background:rgba(255,255,255,.45)}.case-toolbar{display:flex;gap:8px;align-items:center;margin:0 0 14px}.view-toggle{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 10px;cursor:pointer}.view-toggle.active{background:#171717;color:#fff}.case-board{display:grid;grid-template-columns:repeat(5,minmax(230px,1fr));gap:12px;overflow:auto;padding-bottom:8px}.case-col{min-width:230px}.case-col-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.case-stack{display:grid;gap:8px}.case-mini{display:block;width:100%;text-align:left;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;color:inherit}.case-mini:hover{border-color:#a9a69f}.case-mini h4{margin:3px 0 7px}.case-mini .score{font-size:18px}
 @media(max-width:1050px){.grid,.grid.three{grid-template-columns:repeat(2,minmax(0,1fr))}.hero{align-items:flex-start}.hero h1{font-size:34px}}
 @media(max-width:680px){main{padding:14px}.grid,.grid.three{grid-template-columns:1fr}.feed-item{grid-template-columns:1fr}.time{white-space:normal}.hero{display:block}.hero h1{font-size:31px}header .sub{display:none}table{display:block;overflow:auto}}
 </style>
@@ -31,7 +31,7 @@ input{width:100%;padding:9px;border:1px solid #bbb;border-radius:8px;background:
 <main id="app" aria-live="polite"></main>
 <script>
 const sections=['Revenue','Cases','Live','Decisions','Learning','Squad','Approvals','Compute','System'];
-let current='Revenue',core={},sniper={pipeline:{},money:{},topOpportunities:[],activity:[],memory:{}},caseIndex=[],squad=[],compute={providers:[],budget:{}},healthState={},adminToken='',selectedCase=null,selectedCaseId=null;
+let current='Revenue',core={},sniper={pipeline:{},money:{},topOpportunities:[],activity:[],memory:{}},caseIndex=[],squad=[],compute={providers:[],budget:{}},healthState={},adminToken='',selectedCase=null,selectedCaseId=null,casesViewMode='BOARD';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>Number(n||0).toLocaleString('es-AR');
 const empty=t=>'<div class="empty">'+esc(t)+'</div>';
@@ -64,11 +64,26 @@ function casesView(){
   '<div class="section"><h2>Delivery & money</h2></div><div class="grid three"><div class="card"><h3>Deliveries</h3><pre>'+esc(JSON.stringify(com.deliveries||[],null,2))+'</pre></div><div class="card"><h3>Payments</h3><pre>'+esc(JSON.stringify(com.payments||[],null,2))+'</pre></div><div class="card"><h3>Scenario</h3><pre>'+esc(JSON.stringify(e.quantifiedScenario||null,null,2))+'</pre></div></div>'+
   '<div class="section"><h2>Case timeline</h2></div>'+(c.timeline?.length?'<div class="feed">'+c.timeline.map(x=>'<div class="feed-item"><div><div class="stream">'+esc(x.stream)+'</div><div class="muted">'+esc(x.actor)+'</div></div><div><strong>'+esc(x.eventType)+'</strong><pre>'+esc(JSON.stringify(x.detail||{},null,2))+'</pre></div><div class="time">'+esc(x.createdAt)+'</div></div>').join('')+'</div>':empty('No case activity yet.'));
  }
+ const groups=[
+   ['DISCOVERY',['DISCOVERED','DEFERRED']],
+   ['QUALIFIED',['QUALIFIED','DEMO_READY']],
+   ['CONTACT',['CONTACTED','ENGAGED']],
+   ['DEAL',['NEGOTIATING','WON']],
+   ['DELIVERY',['DELIVERING','DELIVERED','LOST']]
+ ];
+ const board='<div class="case-board">'+groups.map(([label,statuses])=>{
+   const items=ops.filter(x=>statuses.includes(x.status));
+   return '<section class="case-col"><div class="case-col-head"><strong>'+label+'</strong><span class="badge">'+items.length+'</span></div><div class="case-stack">'+
+   (items.length?items.map(x=>'<button class="case-mini" data-case="'+esc(x.id)+'"><div class="eyebrow">'+esc(x.category)+' · '+esc(x.locality)+'</div><h4>'+esc(x.businessName)+'</h4><div class="score">'+esc(x.score)+'</div><div>'+badge(x.status)+'</div><div class="muted">'+esc((x.reasons||[]).slice(0,2).join(' · '))+'</div><div style="margin-top:8px"><span class="owner">'+esc(x.nextOwner)+'</span><div class="muted">'+esc(x.nextAction)+'</div></div></button>').join(''):empty('No cases'))+
+   '</div></section>';
+ }).join('')+'</div>';
+ const list='<div class="grid three">'+ops.map(x=>'<button class="card case-card" data-case="'+esc(x.id)+'" style="text-align:left;cursor:pointer"><div class="eyebrow">'+esc(x.category)+' · '+esc(x.locality)+'</div><h3>'+esc(x.businessName)+'</h3><div class="score">'+esc(x.score)+'</div><div>'+badge(x.status)+'</div><p class="muted">'+esc((x.reasons||[]).slice(0,3).join(' · '))+'</p><div class="owner">'+esc(x.nextOwner)+'</div><div class="muted">'+esc(x.nextAction)+'</div></button>').join('')+'</div>';
  return '<div class="hero"><div><div class="eyebrow">One business = one case</div><h1>Cases</h1><p>Each business has an independent dossier with evidence, evaluation, decisions, negotiation, delivery, money and learning.</p></div></div>'+
- (ops.length?'<div class="grid three">'+ops.map(x=>'<button class="card case-card" data-case="'+esc(x.id)+'" style="text-align:left;cursor:pointer"><div class="eyebrow">'+esc(x.category)+' · '+esc(x.locality)+'</div><h3>'+esc(x.businessName)+'</h3><div class="score">'+esc(x.score)+'</div><div>'+badge(x.status)+'</div><p class="muted">'+esc((x.reasons||[]).slice(0,3).join(' · '))+'</p><div class="owner">'+esc(x.nextOwner)+'</div><div class="muted">'+esc(x.nextAction)+'</div></button>').join('')+'</div>':empty('No cases yet.'));
+ '<div class="case-toolbar"><button class="view-toggle '+(casesViewMode==='BOARD'?'active':'')+'" data-case-view="BOARD">Board</button><button class="view-toggle '+(casesViewMode==='LIST'?'active':'')+'" data-case-view="LIST">Cards</button><span class="muted">'+ops.length+' total cases</span></div>'+
+ (ops.length?(casesViewMode==='BOARD'?board:list):empty('No cases yet.'));
 }
 async function openCase(id){selectedCaseId=id;selectedCase=await safe('/api/sniper/cases/'+encodeURIComponent(id),null);current='Cases';nav();render()}
-function bindCaseActions(){document.querySelectorAll('[data-case]').forEach(b=>b.onclick=()=>openCase(b.dataset.case));const back=document.getElementById('backCases');if(back)back.onclick=()=>{selectedCase=null;selectedCaseId=null;render()}}
+function bindCaseActions(){document.querySelectorAll('[data-case]').forEach(b=>b.onclick=()=>openCase(b.dataset.case));document.querySelectorAll('[data-case-view]').forEach(b=>b.onclick=()=>{casesViewMode=b.dataset.caseView;render()});const back=document.getElementById('backCases');if(back)back.onclick=()=>{selectedCase=null;selectedCaseId=null;render()}}
 function live(){
  const a=sniper.activity||[];
  return '<div class="hero"><div><div class="eyebrow">Operational feed</div><h1>Live work</h1><p>Every important negotiation, decision, delivery, payment and learning event is written to durable state.</p></div></div>'+
