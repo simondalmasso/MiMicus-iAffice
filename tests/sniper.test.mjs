@@ -395,3 +395,131 @@ test('agency operations snapshot groups cases by operational workstream', () => 
   assert.equal(snapshot.DELIVER.length,1);
   assert.equal(snapshot.COLLECT.length,1);
 });
+
+import {
+  evaluateCommercialPolicy,
+  DEFAULT_COMMERCIAL_CONTACT_LIMITS
+} from '../dist/packages/sniper/src/commercialPolicy.js';
+
+test('commercial policy permits evidence-backed targeted outreach', () => {
+  const result=evaluateCommercialPolicy({
+    action:'SEND_OUTREACH',
+    explicitRefusal:false,
+    optOut:false,
+    autonomousContactsInWindow:0,
+    hoursSinceLastContact:999,
+    contactProvenance:'PUBLIC_BUSINESS_LISTING',
+    claimsSupported:true,
+    falseUrgency:false,
+    humanImpersonation:false,
+    bulkBlast:false,
+    acceptedOffer:false,
+    customerApproval:false,
+    paymentVerified:false
+  });
+  assert.equal(result.decision,'ALLOW');
+});
+
+test('commercial policy permanently stops autonomous outreach after explicit refusal or opt-out', () => {
+  for(const key of ['explicitRefusal','optOut']){
+    const input={
+      action:'SEND_OUTREACH',
+      explicitRefusal:false,
+      optOut:false,
+      autonomousContactsInWindow:0,
+      hoursSinceLastContact:999,
+      contactProvenance:'PUBLIC_BUSINESS_LISTING',
+      claimsSupported:true,
+      falseUrgency:false,
+      humanImpersonation:false,
+      bulkBlast:false,
+      acceptedOffer:false,
+      customerApproval:false,
+      paymentVerified:false
+    };
+    input[key]=true;
+    const result=evaluateCommercialPolicy(input);
+    assert.equal(result.decision,'DENY');
+    assert.ok(result.reasons.includes('DO_NOT_CONTACT'));
+  }
+});
+
+test('commercial policy rejects blast outreach and coercive or fabricated claims', () => {
+  const unsafe=[
+    {bulkBlast:true},
+    {falseUrgency:true},
+    {claimsSupported:false},
+    {humanImpersonation:true}
+  ];
+  for(const patch of unsafe){
+    const result=evaluateCommercialPolicy({
+      action:'SEND_OUTREACH',
+      explicitRefusal:false,
+      optOut:false,
+      autonomousContactsInWindow:0,
+      hoursSinceLastContact:999,
+      contactProvenance:'PUBLIC_BUSINESS_LISTING',
+      claimsSupported:true,
+      falseUrgency:false,
+      humanImpersonation:false,
+      bulkBlast:false,
+      acceptedOffer:false,
+      customerApproval:false,
+      paymentVerified:false,
+      ...patch
+    });
+    assert.equal(result.decision,'DENY');
+  }
+});
+
+test('commercial policy enforces autonomous contact fatigue limits', () => {
+  const result=evaluateCommercialPolicy({
+    action:'SEND_OUTREACH',
+    explicitRefusal:false,
+    optOut:false,
+    autonomousContactsInWindow:DEFAULT_COMMERCIAL_CONTACT_LIMITS.maxAutonomousContacts,
+    hoursSinceLastContact:DEFAULT_COMMERCIAL_CONTACT_LIMITS.minHoursBetweenContacts,
+    contactProvenance:'PUBLIC_BUSINESS_LISTING',
+    claimsSupported:true,
+    falseUrgency:false,
+    humanImpersonation:false,
+    bulkBlast:false,
+    acceptedOffer:false,
+    customerApproval:false,
+    paymentVerified:false
+  });
+  assert.equal(result.decision,'DENY');
+  assert.ok(result.reasons.includes('CONTACT_FATIGUE_LIMIT'));
+});
+
+test('commercial policy requires explicit commercial acceptance before payment request', () => {
+  const denied=evaluateCommercialPolicy({
+    action:'CREATE_PAYMENT_REQUEST',
+    explicitRefusal:false,optOut:false,autonomousContactsInWindow:0,hoursSinceLastContact:999,
+    contactProvenance:'OWNER_PROVIDED',claimsSupported:true,falseUrgency:false,humanImpersonation:false,bulkBlast:false,
+    acceptedOffer:false,customerApproval:false,paymentVerified:false
+  });
+  assert.equal(denied.decision,'DENY');
+  const allowed=evaluateCommercialPolicy({
+    action:'CREATE_PAYMENT_REQUEST',
+    explicitRefusal:false,optOut:false,autonomousContactsInWindow:0,hoursSinceLastContact:999,
+    contactProvenance:'OWNER_PROVIDED',claimsSupported:true,falseUrgency:false,humanImpersonation:false,bulkBlast:false,
+    acceptedOffer:true,customerApproval:false,paymentVerified:false
+  });
+  assert.equal(allowed.decision,'ALLOW');
+});
+
+test('commercial policy requires customer approval for deploy and verified payment for invoice', () => {
+  assert.equal(evaluateCommercialPolicy({
+    action:'DEPLOY_CUSTOMER_WORK',
+    explicitRefusal:false,optOut:false,autonomousContactsInWindow:0,hoursSinceLastContact:999,
+    contactProvenance:'OWNER_PROVIDED',claimsSupported:true,falseUrgency:false,humanImpersonation:false,bulkBlast:false,
+    acceptedOffer:true,customerApproval:false,paymentVerified:false
+  }).decision,'DENY');
+  assert.equal(evaluateCommercialPolicy({
+    action:'ISSUE_INVOICE',
+    explicitRefusal:false,optOut:false,autonomousContactsInWindow:0,hoursSinceLastContact:999,
+    contactProvenance:'OWNER_PROVIDED',claimsSupported:true,falseUrgency:false,humanImpersonation:false,bulkBlast:false,
+    acceptedOffer:true,customerApproval:true,paymentVerified:false
+  }).decision,'DENY');
+});
