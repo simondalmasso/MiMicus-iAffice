@@ -13,6 +13,7 @@ import {
 import { chooseNextMove, promoteEpisode, type CognitiveContext, type MemoryEpisode } from "./cognition.js";
 import { buildCaseEvaluation } from "./case.js";
 import { planGlobalFocus, rankPortfolioCases, type GlobalCaseSignal, type GlobalPolicy } from "./globalCore.js";
+import { OBSERVABILITY_REFERENCES, buildTraceTree, normalizeTelemetrySpan, summarizeTelemetry, type TelemetrySpan, type TelemetrySpanInput } from "./telemetry.js";
 
 export type OpportunityStatus =
   | "DISCOVERED"
@@ -185,6 +186,7 @@ export class SniperStore {
       "INSERT OR IGNORE INTO sniper_decision_trace (decision_id,opportunity_id,context_json,selected_move,selected_tactic_id,selected_score,alternatives_json,reasons_json,created_at) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)"
     ).bind(decisionId,context.opportunityId,JSON.stringify(context),decision.move,decision.tacticId,decision.score,JSON.stringify(decision.alternatives),JSON.stringify(decision.reasons),now).run();
     await this.activity(context.opportunityId,"DECISION","ORCHESTRATOR","NEXT_MOVE_SELECTED",{decisionId,move:decision.move,tacticId:decision.tacticId,score:decision.score,reasons:decision.reasons},now);
+    await this.recordTelemetrySpan({traceId:decisionId,spanId:decisionId,parentSpanId:null,caseId:context.opportunityId,agentRole:"ORCHESTRATOR",stage:"PROSPECT",kind:"DECISION",operation:"NEXT_MOVE_SELECTED",status:"OK",startedAt:now,endedAt:now,provider:null,model:null,inputTokens:0,outputTokens:0,actualCostUsd:0,errorCode:null,inputDigest:null,outputDigest:null,attributes:{move:decision.move,tacticId:decision.tacticId,score:decision.score,reasons:decision.reasons}} ,now);
     return {...decision,decisionId};
   }
 
@@ -348,6 +350,7 @@ export class SniperStore {
       ).bind(allocationId,decisionId,item.caseId,item.ownerRole,item.nextObjective,item.globalScore,now).run();
     }
     await this.activity(null,"GLOBAL","GLOBAL_CORE","PORTFOLIO_PLAN_UPDATED",{decisionId,portfolioHash,policy,reasons,active:plan.active.map(x=>({caseId:x.caseId,ownerRole:x.ownerRole,nextObjective:x.nextObjective,globalScore:x.globalScore})),humanAttention:plan.humanAttention.map(x=>x.caseId)},now);
+    await this.recordTelemetrySpan({traceId:decisionId,spanId:decisionId,parentSpanId:null,caseId:null,agentRole:"GLOBAL_CORE",stage:"GLOBAL",kind:"DECISION",operation:"PORTFOLIO_PLAN",status:"OK",startedAt:now,endedAt:now,provider:null,model:null,inputTokens:0,outputTokens:0,actualCostUsd:0,errorCode:null,inputDigest:portfolioHash,outputDigest:null,attributes:{policy,reasons,activeCases:plan.active.map(x=>x.caseId),humanAttention:plan.humanAttention.map(x=>x.caseId)}} ,now);
     return {decisionId,portfolioHash,policy,ranked,...plan,reasons,system1:{provider:"LAYA_COMPATIBLE",state:"NOT_CONNECTED"}};
   }
 
@@ -384,6 +387,47 @@ export class SniperStore {
     };
   }
 
+
+  async recordTelemetrySpan(input: TelemetrySpanInput, createdAt = new Date().toISOString()): Promise<TelemetrySpan> {
+    const span=normalizeTelemetrySpan(input);
+    await this.db.prepare(
+      "INSERT OR REPLACE INTO sniper_telemetry_spans (trace_id,span_id,parent_span_id,case_id,agent_role,stage,kind,operation,status,started_at,ended_at,latency_ms,provider,model,input_tokens,output_tokens,actual_cost_usd,error_code,input_digest,output_digest,attributes_json,content_policy,created_at) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23)"
+    ).bind(
+      span.traceId,span.spanId,span.parentSpanId,span.caseId,span.agentRole,span.stage,span.kind,span.operation,span.status,
+      span.startedAt,span.endedAt,span.latencyMs,span.provider,span.model,span.inputTokens,span.outputTokens,span.actualCostUsd,
+      span.errorCode,span.inputDigest,span.outputDigest,JSON.stringify(span.attributes),span.contentPolicy,createdAt
+    ).run();
+    return span;
+  }
+
+  async telemetrySpans(limit = 500, caseId?: string): Promise<TelemetrySpan[]> {
+    const safe=Math.max(1,Math.min(2000,Math.trunc(limit)));
+    const result=caseId
+      ? await this.db.prepare("SELECT * FROM sniper_telemetry_spans WHERE case_id=?1 ORDER BY started_at DESC LIMIT ?2").bind(caseId,safe).all<Record<string,unknown>>()
+      : await this.db.prepare("SELECT * FROM sniper_telemetry_spans ORDER BY started_at DESC LIMIT ?1").bind(safe).all<Record<string,unknown>>();
+    return result.results.map(row=>this.mapTelemetryRow(row));
+  }
+
+  async telemetryTrace(traceId: string): Promise<{traceId:string;spans:TelemetrySpan[];tree:ReturnType<typeof buildTraceTree>;summary:ReturnType<typeof summarizeTelemetry>}> {
+    const result=await this.db.prepare("SELECT * FROM sniper_telemetry_spans WHERE trace_id=?1 ORDER BY started_at ASC").bind(traceId).all<Record<string,unknown>>();
+    const spans=result.results.map(row=>this.mapTelemetryRow(row));
+    return {traceId,spans,tree:buildTraceTree(spans),summary:summarizeTelemetry(spans)};
+  }
+
+  async telemetryOverview(limit = 500): Promise<Record<string,unknown>> {
+    const spans=await this.telemetrySpans(limit);
+    const traceIds=[...new Set(spans.map(x=>x.traceId))].slice(0,50);
+    return {
+      authority:"ARIA_TELEMETRY_FABRIC",
+      standards:["OTEL_COMPATIBLE","OPENINFERENCE_COMPATIBLE"],
+      contentPolicy:"METADATA_ONLY",
+      summary:summarizeTelemetry(spans),
+      recentSpans:spans.slice(0,100),
+      recentTraceIds:traceIds,
+      adapters:OBSERVABILITY_REFERENCES.map(x=>({id:x.id,source:x.source,license:x.license,adoption:x.adoption,standards:x.standards,notes:x.notes}))
+    };
+  }
+
   async activity(opportunityId: string | null, stream: string, actor: string, eventType: string, detail: Record<string, unknown>, now = new Date().toISOString()): Promise<string> {
     const id = await stableId("sniper-activity", { opportunityId, stream, actor, eventType, detail, now });
     await this.db.prepare("INSERT OR IGNORE INTO sniper_activity (id,opportunity_id,stream,actor,event_type,detail_json,created_at) VALUES (?1,?2,?3,?4,?5,?6,?7)")
@@ -411,6 +455,34 @@ export class SniperStore {
       learnings: learnings.results.map(x => ({ tacticId: x.tactic_id, score: Number(x.score) }))
     });
     return { ...snapshot, topOpportunities: opportunities.slice(0, 15), activity: await this.activityFeed(50), memory: await this.memorySummary() };
+  }
+
+
+  private mapTelemetryRow(row: Record<string, unknown>): TelemetrySpan {
+    return {
+      traceId:String(row.trace_id),
+      spanId:String(row.span_id),
+      parentSpanId:row.parent_span_id==null?null:String(row.parent_span_id),
+      caseId:row.case_id==null?null:String(row.case_id),
+      agentRole:row.agent_role==null?null:String(row.agent_role),
+      stage:row.stage==null?null:String(row.stage) as TelemetrySpan["stage"],
+      kind:String(row.kind) as TelemetrySpan["kind"],
+      operation:String(row.operation),
+      status:String(row.status) as TelemetrySpan["status"],
+      startedAt:String(row.started_at),
+      endedAt:String(row.ended_at),
+      latencyMs:Number(row.latency_ms),
+      provider:row.provider==null?null:String(row.provider),
+      model:row.model==null?null:String(row.model),
+      inputTokens:Number(row.input_tokens),
+      outputTokens:Number(row.output_tokens),
+      actualCostUsd:Number(row.actual_cost_usd),
+      errorCode:row.error_code==null?null:String(row.error_code),
+      inputDigest:row.input_digest==null?null:String(row.input_digest),
+      outputDigest:row.output_digest==null?null:String(row.output_digest),
+      attributes:parse<Record<string,unknown>>(row.attributes_json,{}),
+      contentPolicy:"METADATA_ONLY"
+    };
   }
 
   private mapOpportunity(row: Record<string, unknown>): OpportunityRecord {
