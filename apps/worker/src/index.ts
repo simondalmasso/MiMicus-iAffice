@@ -12,7 +12,7 @@ import { ServiceModelGateway, ServiceModelProvider } from "../../../packages/rou
 import type { ComputeRequest } from "../../../packages/router/src/computeTypes.js";
 import { buildComputeRuntime, executeComputeRequest, probeProvider } from "./computeRuntime.js";
 import { SniperStore } from "../../../packages/sniper/src/store.js";
-import { buildAgentSquad, requiresHumanGate, type BusinessSignal, type LearningObservation } from "../../../packages/sniper/src/engine.js";
+import { buildAgentSquad, requiresHumanGate, type BusinessSignal, type LearningObservation } from "../../../packages/sniper/src/engine.js";\nimport type { CognitiveContext, MemoryEpisode } from "../../../packages/sniper/src/cognition.js";
 import type { Env, MessageBatch, ServiceBindingLike } from "./runtime-types.js";
 export { AriaCoordinator } from "./coordinator.js";
 export { ComputeGovernorDO } from "./computeGovernorDO.js";
@@ -39,7 +39,7 @@ async function sniperGet(url:URL,env:Env):Promise<Response|null>{
   if(url.pathname==="/api/sniper/dashboard")return json(await sniper.dashboard());
   if(url.pathname==="/api/sniper/opportunities")return json(await sniper.list(Number(url.searchParams.get("limit")??100)));
   if(url.pathname==="/api/sniper/activity")return json(await sniper.activityFeed(Number(url.searchParams.get("limit")??100)));
-  if(url.pathname==="/api/sniper/squad")return json(buildAgentSquad());
+  if(url.pathname==="/api/sniper/squad")return json(buildAgentSquad());\n  if(url.pathname==="/api/sniper/memory")return json(await sniper.memorySummary());
   const match=url.pathname.match(/^\/api\/sniper\/opportunities\/([^/]+)$/);
   if(match)return json(await sniper.get(decodeURIComponent(match[1]!)));
   return null;
@@ -51,6 +51,16 @@ async function api(request:Request,env:Env):Promise<Response|null>{const url=new
     if(!validSignal(body))return json({error:"SNIPER_SIGNAL_SCHEMA_INVALID"},400);
     const sniper=new SniperStore(env.DB),record=await sniper.ingest(body);
     return json(record,201);
+  }
+ if(request.method==="POST"&&url.pathname==="/api/sniper/decision"){
+    const body=await request.json() as Partial<CognitiveContext>;
+    if(!body.opportunityId||!body.stage||typeof body.contactsAvailable!=="boolean"||typeof body.demoReady!=="boolean"||!body.replyState||typeof body.attempts!=="number"||typeof body.daysSinceLastTouch!=="number"||!body.humanGate||!Array.isArray(body.tacticStats))return json({error:"SNIPER_DECISION_SCHEMA_INVALID"},400);
+    try{return json(await new SniperStore(env.DB).decide(body as CognitiveContext),201);}catch(error){return json({error:error instanceof Error?error.message:"SNIPER_DECISION_FAILED"},400);}
+  }
+ if(request.method==="POST"&&url.pathname==="/api/sniper/episode"){
+    const body=await request.json() as Partial<MemoryEpisode>;
+    if(!body.episodeId||!body.opportunityId||!body.agentRole||!body.tacticId||!body.observation||!body.outcome||typeof body.audited!=="boolean"||!Array.isArray(body.evidenceRefs)||!body.createdAt)return json({error:"SNIPER_EPISODE_SCHEMA_INVALID"},400);
+    try{return json(await new SniperStore(env.DB).recordEpisode(body as MemoryEpisode),201);}catch(error){return json({error:error instanceof Error?error.message:"SNIPER_EPISODE_FAILED"},400);}
   }
  if(request.method==="POST"&&url.pathname==="/api/sniper/feedback"){
     const body=await request.json() as {tacticId?:string;observation?:LearningObservation;evidenceRefs?:string[]};
