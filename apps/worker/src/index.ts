@@ -40,7 +40,8 @@ async function sniperGet(url:URL,env:Env):Promise<Response|null>{
   if(url.pathname==="/api/sniper/dashboard")return json(await sniper.dashboard());
   if(url.pathname==="/api/sniper/opportunities")return json(await sniper.list(Number(url.searchParams.get("limit")??100)));
   if(url.pathname==="/api/sniper/activity")return json(await sniper.activityFeed(Number(url.searchParams.get("limit")??100)));
-  if(url.pathname==="/api/sniper/squad")return json(buildAgentSquad());\n  if(url.pathname==="/api/sniper/memory")return json(await sniper.memorySummary());
+  if(url.pathname==="/api/sniper/squad")return json(buildAgentSquad());
+  if(url.pathname==="/api/sniper/memory")return json(await sniper.memorySummary());
   const match=url.pathname.match(/^\/api\/sniper\/opportunities\/([^/]+)$/);
   if(match)return json(await sniper.get(decodeURIComponent(match[1]!)));
   return null;
