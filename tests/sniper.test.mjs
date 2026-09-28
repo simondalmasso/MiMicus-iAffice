@@ -257,3 +257,61 @@ test('case dossier keeps observed evidence separate from inferred commercial rec
   assert.deepEqual(dossier.recommendation.primary,['CRM']);
   assert.equal(dossier.recommendation.isInference,true);
 });
+
+import {
+  rankPortfolioCases,
+  planGlobalFocus,
+  buildGlobalTypedQuestions,
+  interpretGlobalSystemOne,
+  type GlobalCaseSignal
+} from '../dist/packages/sniper/src/globalCore.js';
+
+const globalCases = [
+  {caseId:'a',status:'QUALIFIED',score:91,evidenceCount:7,contactable:true,demoReady:false,humanGate:false,daysIdle:1,strategicTags:['retail'],auditedWinRate:.55},
+  {caseId:'b',status:'NEGOTIATING',score:78,evidenceCount:9,contactable:true,demoReady:true,humanGate:false,daysIdle:2,strategicTags:['services'],auditedWinRate:.72},
+  {caseId:'c',status:'DEFERRED',score:96,evidenceCount:1,contactable:false,demoReady:false,humanGate:false,daysIdle:9,strategicTags:['retail'],auditedWinRate:.10}
+];
+
+test('global core ranks whole portfolio, not one case in isolation', () => {
+  const ranked = rankPortfolioCases(globalCases, {preferredTags:['retail'],maxConcurrentCases:2,minEvidenceCount:2});
+  assert.equal(ranked.length,3);
+  assert.equal(ranked[0].caseId,'a');
+  assert.ok(ranked[0].globalScore > ranked[2].globalScore);
+  assert.ok(ranked[2].reasons.includes('INSUFFICIENT_EVIDENCE'));
+});
+
+test('global core allocates limited attention across cases deterministically', () => {
+  const plan = planGlobalFocus(globalCases,{preferredTags:[],maxConcurrentCases:2,minEvidenceCount:2});
+  assert.equal(plan.active.length,2);
+  assert.equal(plan.deferred.length,1);
+  assert.equal(new Set(plan.active.map(x=>x.caseId)).size,2);
+  assert.ok(plan.active.every(x=>x.ownerRole && x.nextObjective));
+});
+
+test('global core emits typed System-1 questions suitable for Laya-like decision engines', () => {
+  const questions=buildGlobalTypedQuestions(globalCases[0]);
+  assert.equal(questions.priority.type,'score');
+  assert.equal(questions.route.type,'choice');
+  assert.equal(questions.human_attention.type,'noul');
+  assert.ok(Object.keys(questions.route.criteria).includes('DEMO'));
+});
+
+test('global core respects calibrated abstention from System-1 layer', () => {
+  const result=interpretGlobalSystemOne({
+    answers:{
+      route:{choice:'OUTREACH',probabilities:{OUTREACH:.31,DEMO:.30,RESEARCH:.22,NEGOTIATE:.17},answer_confidence:.31},
+      priority:{score:2.2,answer_confidence:.88},
+      human_attention:{noul:.12,answer_confidence:.91}
+    }
+  },.60);
+  assert.equal(result.route,null);
+  assert.equal(result.abstained,true);
+  assert.ok(result.reasons.includes('LOW_CONFIDENCE_ROUTE'));
+});
+
+test('global planning never activates a case with material human gate for autonomous execution', () => {
+  const cases=[...globalCases,{caseId:'d',status:'NEGOTIATING',score:99,evidenceCount:10,contactable:true,demoReady:true,humanGate:true,daysIdle:0,strategicTags:['retail'],auditedWinRate:.9}];
+  const plan=planGlobalFocus(cases,{preferredTags:['retail'],maxConcurrentCases:3,minEvidenceCount:2});
+  assert.equal(plan.active.some(x=>x.caseId==='d'),false);
+  assert.equal(plan.humanAttention.some(x=>x.caseId==='d'),true);
+});
