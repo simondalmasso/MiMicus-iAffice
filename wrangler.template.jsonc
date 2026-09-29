@@ -1,5 +1,5 @@
 {
-  "name": "aria-core",
+  "name": "agent-os",
   "main": "apps/worker/src/index.ts",
   "compatibility_date": "2026-08-19",
   "workers_dev": true,
