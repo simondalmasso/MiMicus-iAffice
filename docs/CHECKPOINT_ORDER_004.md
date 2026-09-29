@@ -1078,3 +1078,26 @@ Do not claim real Santa Fe market scanning is live until an admitted source adap
 5. Instrument discovery/demo execution with canonical telemetry.
 6. Only then connect one admitted discovery adapter.
 7. Continue to preserve no-PC and zero-spend invariants.
+
+## Public deploy target
+
+User-provisioned public Cloudflare Worker target:
+- name: `agent-os`
+- URL: `https://agent-os.simondalmasso44.workers.dev/`
+- externally observed: HTTP 200, ~51 ms, currently plain-text placeholder rather than AriaOS cockpit/API.
+
+Repository alignment:
+- `wrangler.core.template.jsonc` public Worker name = `agent-os`
+- `wrangler.template.jsonc` public Worker name = `agent-os`
+- internal effect service remains `aria-effects`
+- internal model service remains `aria-models`
+
+Deploy order remains:
+1. D1 migrations
+2. `aria-effects`
+3. `aria-models`
+4. queues / Durable Objects / Workflow resources
+5. `agent-os` public core + cockpit assets
+6. live `/api/health` + UI smoke + reference gates
+
+Do not treat the placeholder HTTP 200 as an application deploy PASS.
