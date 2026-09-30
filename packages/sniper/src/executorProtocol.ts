@@ -56,6 +56,12 @@ export interface ExecutorResult {
   errorCode: string | null;
 }
 
+export interface SignedExecutorResult {
+  result: ExecutorResult;
+  signature: string;
+  algorithm: "HMAC-SHA256";
+}
+
 const ARTIFACT_KINDS = new Set(["WEB_PREVIEW","IMAGE","VIDEO","THREE_D","DOCUMENT","CODE"]);
 
 function isExecutorJobKind(value: unknown): value is ExecutorJobKind {
@@ -188,4 +194,52 @@ export function validateExecutorResult(value:unknown):{ok:boolean;reasons:string
     reasons:[...new Set(reasons)],
     result:reasons.length===0?v as unknown as ExecutorResult:null
   };
+}
+
+function ipv4Parts(hostname:string):number[]|null{
+  const m=hostname.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if(!m)return null;
+  const parts=m.slice(1).map(Number);
+  return parts.every(x=>x>=0&&x<=255)?parts:null;
+}
+
+export function validateExecutorEndpoint(endpoint:string|null):{ok:boolean;reasons:string[]}{
+  const reasons:string[]=[];
+  if(!endpoint)return {ok:false,reasons:["ENDPOINT_REQUIRED"]};
+  try{
+    const u=new URL(endpoint);
+    if(u.protocol!=="https:")reasons.push("HTTPS_REQUIRED");
+    const host=u.hostname.toLowerCase();
+    if(host==="localhost"||host.endsWith(".localhost")||host==="[::1]"||host==="::1")reasons.push("LOCAL_ENDPOINT_FORBIDDEN");
+    const ip=ipv4Parts(host);
+    if(ip){
+      const [a,b]=ip;
+      if(a===10||a===127||a===0||(a===169&&b===254)||(a===192&&b===168)||(a===172&&b!==undefined&&b>=16&&b<=31))reasons.push("PRIVATE_ENDPOINT_FORBIDDEN");
+    }
+    if(u.username||u.password)reasons.push("ENDPOINT_CREDENTIALS_FORBIDDEN");
+    if(u.search||u.hash)reasons.push("ENDPOINT_QUERY_FRAGMENT_FORBIDDEN");
+  }catch{
+    reasons.push("ENDPOINT_URL_INVALID");
+  }
+  return {ok:reasons.length===0,reasons:[...new Set(reasons)]};
+}
+
+export async function signExecutorResult(result:ExecutorResult,secret:string):Promise<SignedExecutorResult>{
+  const validation=validateExecutorResult(result);
+  if(!validation.ok||!validation.result)throw new Error("EXECUTOR_RESULT_INVALID:"+validation.reasons.join(","));
+  const key=await hmacKey(secret,["sign"]);
+  const signature=toHex(await crypto.subtle.sign("HMAC",key,new TextEncoder().encode(canonical(validation.result))));
+  return {result:validation.result,signature,algorithm:"HMAC-SHA256"};
+}
+
+export async function verifySignedExecutorResult(envelope:SignedExecutorResult,secret:string):Promise<boolean>{
+  try{
+    if(envelope.algorithm!=="HMAC-SHA256")return false;
+    const validation=validateExecutorResult(envelope.result);
+    if(!validation.ok||!validation.result)return false;
+    if(!/^[0-9a-f]{64}$/i.test(envelope.signature))return false;
+    const sig=new Uint8Array(envelope.signature.match(/../g)!.map(x=>parseInt(x,16)));
+    const key=await hmacKey(secret,["verify"]);
+    return crypto.subtle.verify("HMAC",key,sig,new TextEncoder().encode(canonical(validation.result)));
+  }catch{return false}
 }
