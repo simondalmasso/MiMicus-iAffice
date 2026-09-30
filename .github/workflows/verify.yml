@@ -14,15 +14,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: order-004-sniper-autonomous-revenue-engine-v1
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
       - name: Exact head
+        shell: bash
         run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = "order-004-sniper-autonomous-revenue-engine-v1"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           echo "ARIA_HEAD_SHA=$GITHUB_SHA" >> "$GITHUB_ENV"
-          git rev-parse HEAD
       - run: bash scripts/bootstrap_verify_tools.sh
       - run: npm ci --offline --ignore-scripts
       - run: npm run typecheck
@@ -36,4 +40,4 @@ jobs:
       - run: npm run security
       - run: python3 scripts/oracle_executor_selftest.py
       - run: npm run doctor:004
-      - run: python scripts/ui_smoke_order004.py
+      - run: python3 scripts/ui_smoke_order004.py
