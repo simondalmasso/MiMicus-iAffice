@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   exact-head:
-    runs-on: self-hosted
+    runs-on: [self-hosted, linux, oracle-free, iaffice]
     permissions:
       contents: read
     steps:
