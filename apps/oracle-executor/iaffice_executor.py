@@ -12,7 +12,9 @@ import shutil
 import sqlite3
 import subprocess
 import sys
+import threading
 import time
+import resource
 import urllib.request
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -197,10 +199,20 @@ def db() -> sqlite3.Connection:
         request_digest TEXT NOT NULL,
         state TEXT NOT NULL,
         result_json TEXT,
+        callback_state TEXT NOT NULL DEFAULT 'NONE',
+        callback_attempts INTEGER NOT NULL DEFAULT 0,
+        callback_error TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       )
     """)
+    columns={row[1] for row in conn.execute("PRAGMA table_info(runs)").fetchall()}
+    if "callback_state" not in columns:
+        conn.execute("ALTER TABLE runs ADD COLUMN callback_state TEXT NOT NULL DEFAULT 'NONE'")
+    if "callback_attempts" not in columns:
+        conn.execute("ALTER TABLE runs ADD COLUMN callback_attempts INTEGER NOT NULL DEFAULT 0")
+    if "callback_error" not in columns:
+        conn.execute("ALTER TABLE runs ADD COLUMN callback_error TEXT")
     conn.commit()
     return conn
 
@@ -364,7 +376,7 @@ def result_for(body: dict[str, Any], state: str, artifacts: list[dict[str, str]]
             "startedAt": datetime.fromtimestamp(started_wall, timezone.utc).isoformat().replace("+00:00","Z"),
             "endedAt": datetime.fromtimestamp(ended, timezone.utc).isoformat().replace("+00:00","Z"),
             "cpuMs": max(0, int((time.process_time() - started_cpu) * 1000)),
-            "memoryPeakMb": 0,
+            "memoryPeakMb": max(0, int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024)),
         },
         "resultDigest": sha256_text(canonical(digest_basis)),
         "errorCode": error,
@@ -375,56 +387,107 @@ def signed_result(result: dict[str, Any]) -> dict[str, Any]:
     return {"result": result, "signature": sign(result), "algorithm": "HMAC-SHA256"}
 
 
-def callback(payload: dict[str, Any]) -> None:
+def callback_once(payload: dict[str, Any]) -> None:
     if not CALLBACK_URL.startswith("https://"):
         raise RuntimeError("CORE_CALLBACK_HTTPS_REQUIRED")
     data = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-    last: Exception | None = None
-    for delay in (0, 1, 3):
+    req = urllib.request.Request(
+        CALLBACK_URL, data=data, method="POST",
+        headers={"content-type": "application/json", "user-agent": "iaffice-oracle-executor/1.0"},
+    )
+    with urllib.request.urlopen(req, timeout=15) as res:
+        if res.status not in (200, 201, 202):
+            raise RuntimeError(f"CALLBACK_HTTP_{res.status}")
+
+
+def callback_status(run_id: str, state: str, error: str | None = None) -> None:
+    now = datetime.now(timezone.utc).isoformat().replace("+00:00","Z")
+    with db() as conn:
+        conn.execute(
+            "UPDATE runs SET callback_state=?,callback_attempts=callback_attempts+1,callback_error=?,updated_at=? WHERE run_id=?",
+            (state, error, now, run_id),
+        )
+        conn.commit()
+
+
+def deliver_callback(run_id: str, signed: dict[str, Any]) -> None:
+    last_error = None
+    for delay in (0, 1, 3, 10, 30, 60, 120, 300):
         if delay:
             time.sleep(delay)
         try:
-            req = urllib.request.Request(
-                CALLBACK_URL, data=data, method="POST",
-                headers={"content-type": "application/json", "user-agent": "iaffice-oracle-executor/1.0"},
-            )
-            with urllib.request.urlopen(req, timeout=15) as res:
-                if res.status not in (200, 201, 202):
-                    raise RuntimeError(f"CALLBACK_HTTP_{res.status}")
-                return
+            callback_once(signed)
+            callback_status(run_id, "DELIVERED", None)
+            log("callback_delivered", runId=run_id)
+            return
         except Exception as exc:
-            last = exc
-    raise RuntimeError(f"CALLBACK_FAILED:{type(last).__name__ if last else 'UNKNOWN'}")
+            last_error = f"{type(exc).__name__}:{str(exc)[:180]}"
+            callback_status(run_id, "PENDING", last_error)
+    log("callback_pending", runId=run_id, error=last_error or "UNKNOWN")
 
 
-def persist_new(body: dict[str, Any]) -> tuple[str, dict[str, Any] | None]:
+def persist_new(body: dict[str, Any]) -> tuple[str, dict[str, Any] | None, str, bool]:
     request_digest = sha256_text(canonical(body))
     now = datetime.now(timezone.utc).isoformat().replace("+00:00","Z")
     with db() as conn:
-        row = conn.execute("SELECT request_digest,state,result_json FROM runs WHERE run_id=?", (body["runId"],)).fetchone()
+        row = conn.execute(
+            "SELECT request_digest,state,result_json,callback_state FROM runs WHERE run_id=?",
+            (body["runId"],)
+        ).fetchone()
         if row:
             if row[0] != request_digest:
                 raise RuntimeError("RUN_REPLAY_CONFLICT")
-            return row[1], json.loads(row[2]) if row[2] else None
+            return row[1], json.loads(row[2]) if row[2] else None, row[3], False
         try:
             conn.execute(
-                "INSERT INTO runs(run_id,nonce,request_digest,state,result_json,created_at,updated_at) VALUES(?,?,?,'RUNNING',NULL,?,?)",
+                "INSERT INTO runs(run_id,nonce,request_digest,state,result_json,callback_state,created_at,updated_at) VALUES(?,?,?,'RUNNING',NULL,'NONE',?,?)",
                 (body["runId"], body["nonce"], request_digest, now, now),
             )
             conn.commit()
         except sqlite3.IntegrityError as exc:
             raise RuntimeError("NONCE_REPLAY_REJECTED") from exc
-    return "RUNNING", None
+    return "RUNNING", None, "NONE", True
 
 
 def persist_result(run_id: str, signed: dict[str, Any]) -> None:
     now = datetime.now(timezone.utc).isoformat().replace("+00:00","Z")
     with db() as conn:
         conn.execute(
-            "UPDATE runs SET state=?,result_json=?,updated_at=? WHERE run_id=?",
+            "UPDATE runs SET state=?,result_json=?,callback_state='PENDING',callback_error=NULL,updated_at=? WHERE run_id=?",
             (signed["result"]["state"], json.dumps(signed, ensure_ascii=False, separators=(",", ":")), now, run_id),
         )
         conn.commit()
+
+
+def process_job(body: dict[str, Any]) -> None:
+    started_wall, started_cpu = time.time(), time.process_time()
+    try:
+        artifacts = execute(body)
+        result = result_for(body, "SUCCEEDED", artifacts, started_wall, started_cpu, None)
+    except Exception as exc:
+        code = str(exc).split(":", 1)[0][:96] or "EXECUTOR_JOB_FAILED"
+        result = result_for(body, "FAILED", [], started_wall, started_cpu, code)
+    signed = signed_result(result)
+    persist_result(body["runId"], signed)
+    log("job_complete", runId=body["runId"], jobKind=body["jobKind"], state=result["state"], artifactCount=len(result["artifacts"]))
+    deliver_callback(body["runId"], signed)
+
+
+def recover_pending_callbacks() -> None:
+    while True:
+        try:
+            with db() as conn:
+                rows = conn.execute(
+                    "SELECT run_id,result_json FROM runs WHERE result_json IS NOT NULL AND callback_state!='DELIVERED' ORDER BY updated_at LIMIT 20"
+                ).fetchall()
+            for run_id, raw in rows:
+                try:
+                    deliver_callback(run_id, json.loads(raw))
+                except Exception as exc:
+                    log("callback_recovery_error", runId=run_id, error=type(exc).__name__)
+        except Exception as exc:
+            log("callback_recovery_scan_error", error=type(exc).__name__)
+        time.sleep(300)
 
 
 def log(event: str, **detail: Any) -> None:
@@ -505,24 +568,18 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(401, {"error": reason})
                 return
             body = envelope["body"]
-            state, previous = persist_new(body)
+            state, previous, callback_state, created = persist_new(body)
             if previous is not None:
-                callback(previous)
-                self._json(200, {"accepted": True, "runId": body["runId"], "replayed": True, "state": state})
+                if callback_state != "DELIVERED":
+                    threading.Thread(target=deliver_callback, args=(body["runId"], previous), daemon=True).start()
+                self._json(200, {"accepted": True, "runId": body["runId"], "replayed": True, "state": state, "callbackState": callback_state})
+                return
+            if not created:
+                self._json(202, {"accepted": True, "runId": body["runId"], "replayed": True, "state": state})
                 return
 
-            started_wall, started_cpu = time.time(), time.process_time()
-            try:
-                artifacts = execute(body)
-                result = result_for(body, "SUCCEEDED", artifacts, started_wall, started_cpu, None)
-            except Exception as exc:
-                code = str(exc).split(":", 1)[0][:96] or "EXECUTOR_JOB_FAILED"
-                result = result_for(body, "FAILED", [], started_wall, started_cpu, code)
-            signed = signed_result(result)
-            persist_result(body["runId"], signed)
-            callback(signed)
-            log("job_complete", runId=body["runId"], jobKind=body["jobKind"], state=result["state"], artifactCount=len(result["artifacts"]))
-            self._json(202, {"accepted": True, "runId": body["runId"], "state": result["state"]})
+            threading.Thread(target=process_job, args=(body,), daemon=True).start()
+            self._json(202, {"accepted": True, "runId": body["runId"], "state": "RUNNING"})
         except Exception as exc:
             log("request_error", error=type(exc).__name__, detail=str(exc)[:256])
             self._json(409, {"error": str(exc).split(":", 1)[0][:128]})
@@ -594,8 +651,9 @@ def main() -> int:
     ROOT.mkdir(parents=True, exist_ok=True)
     with db():
         pass
+    threading.Thread(target=recover_pending_callbacks, daemon=True).start()
     server = ThreadingHTTPServer((BIND, PORT), Handler)
-    log("executor_start", bind=BIND, port=PORT, executorId=EXECUTOR_ID, root=str(ROOT), arbitraryShell=False)
+    log("executor_start", bind=BIND, port=PORT, executorId=EXECUTOR_ID, root=str(ROOT), arbitraryShell=False, asyncJobs=True, durableCallbackRetry=True)
     server.serve_forever()
     return 0
 
