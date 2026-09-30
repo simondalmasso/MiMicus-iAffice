@@ -836,7 +836,7 @@ import {
 test('executor protocol only exposes typed job kinds and a fixed request path', async () => {
   const env=await createExecutorEnvelope({
     runId:'run-1',executorId:'ORACLE_FREE_EXECUTOR',jobKind:'DEMO_WEB_BUILD',
-    jobId:'demo-1',caseId:'case-1',payload:{servicePackId:'OPENINGS_COMMERCE',requestedDeliverables:['VISUAL_CONFIGURATOR'],evidenceRefs:['evidence:audit:1']},
+    jobId:'demo-1',caseId:'case-1',payload:{businessName:'Demo Aberturas',category:'aberturas',locality:'Santa Fe',servicePackId:'OPENINGS_COMMERCE',requestedDeliverables:['VISUAL_CONFIGURATOR'],evidenceRefs:['evidence:audit:1'],observedFacts:['catalog is hard to scan on mobile'],demoBrief:'Show a private visual configurator proof.'},
     artifactInputRefs:['evidence:audit:1'],issuedAt:'2026-09-30T10:00:00.000Z',
     expiresAt:'2026-09-30T10:10:00.000Z',nonce:'nonce-12345678'
   },'test-secret');
@@ -913,7 +913,7 @@ test('executor payload rejects command-like or unknown fields', async () => {
   await assert.rejects(()=>createExecutorEnvelope({
     runId:'run-p',executorId:'ORACLE_FREE_EXECUTOR',jobKind:'DEMO_WEB_BUILD',
     jobId:'demo-p',caseId:'case-p',
-    payload:{servicePackId:'LOCAL_COMMERCE_DIGITAL',requestedDeliverables:['HIGH_CONVERSION_WEBSITE'],evidenceRefs:['audit:1'],command:'rm -rf /'},
+    payload:{businessName:'Demo Comercio',category:'retail',locality:'Santa Fe',servicePackId:'LOCAL_COMMERCE_DIGITAL',requestedDeliverables:['HIGH_CONVERSION_WEBSITE'],evidenceRefs:['audit:1'],observedFacts:['mobile CTA is difficult to find'],demoBrief:'Show a private mobile conversion proof.',command:'rm -rf /'},
     artifactInputRefs:['audit:1'],issuedAt:'2026-09-30T10:00:00.000Z',
     expiresAt:'2026-09-30T10:10:00.000Z',nonce:'nonce-payload-1'
   },'test-secret'),/EXECUTOR_PAYLOAD_INVALID/);
