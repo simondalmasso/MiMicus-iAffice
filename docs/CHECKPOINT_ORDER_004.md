@@ -19,7 +19,7 @@ observe → collect evidence → diagnose → rank opportunity → choose what t
 ## Canonical Git state
 
 Repository:
-`simondalmasso/AriaOS`
+`simondalmasso/the-iAffice`
 
 ORDER:
 GitHub issue #7
@@ -1101,3 +1101,401 @@ Deploy order remains:
 6. live `/api/health` + UI smoke + reference gates
 
 Do not treat the placeholder HTTP 200 as an application deploy PASS.
+
+## CHECKPOINT REFRESH — 2026-09-30
+
+Status remains:
+`ACTIVE / IMPLEMENTED PARTIAL / UNVERIFIED_CLOUD_RUNNER / NOT MERGE-READY`
+
+Reference HEAD immediately before this checkpoint refresh:
+`bb4099c875cc3e00ae3906fe7995ad950cceb193`
+
+Always fetch the live branch HEAD before continuing.
+
+### Repository identity
+
+Canonical repository is now:
+`simondalmasso/the-iAffice`
+
+Implementation branch:
+`order-004-sniper-autonomous-revenue-engine-v1`
+
+PR:
+`#8 — DRAFT ORDER-004 — Autonomous Revenue Engine v1`
+
+Stacked base remains:
+`order-003-zero-cost-compute-market-v1@204ae12a74dd451561dc801631d671d35e65dd56`
+
+Public product/package identity is moving to `iAffice`.
+Internal capability boundaries intentionally remain `aria-models` and `aria-effects`.
+
+### Public Cloudflare target
+
+Public Worker:
+`agent-os.simondalmasso44.workers.dev`
+
+Repository config:
+- public worker name = `agent-os`;
+- cockpit assets = `apps/cockpit`;
+- `aria-models` remains internal;
+- `aria-effects` remains internal.
+
+The public hostname was externally observed alive but serving the previous tiny placeholder.
+Do NOT claim application deploy PASS until exact-head code is deployed and `/api/health` plus UI/API smoke pass.
+
+### Cockpit repair
+
+A real corruption was detected in `apps/cockpit/index.html` from cumulative remote edits:
+- duplicated JavaScript after `</html>`;
+- broken Telemetry function;
+- malformed tail.
+
+The file was rebuilt via Git Data in commit:
+`d767460b5c749cafc973ca9a3698a6dfa372e61b`
+
+Post-repair structural sanity:
+- exactly one `<script>`;
+- exactly one `</script>`;
+- exactly one `</html>`;
+- no content after `</html>`;
+- one `renderTraceNodes`;
+- one `demosView`;
+- known corruption marker absent.
+
+Current cockpit sections:
+- Revenue
+- Global Core
+- Operations
+- Discovery
+- Demos
+- Cases
+- Live
+- Decisions
+- Learning
+- Telemetry
+- Skills
+- Squad
+- Approvals
+- Compute
+- System
+
+Current branding in cockpit:
+`iAffice · autonomous revenue operations`
+
+### Demo Jobs are now durable and CASE-bound
+
+Implemented:
+- `packages/sniper/src/demoJobs.ts`
+- `migrations/0009_sniper_demo_jobs.sql`
+- store create/build/artifact/AUD lifecycle
+- demos inside CASE dossier
+- GET `/api/sniper/demos`
+- protected POST `/api/sniper/demos`
+- protected POST `/api/sniper/demos/artifacts`
+- protected POST `/api/sniper/demos/audit`
+- dashboard `Demos`
+
+Flow:
+`CASE → service pack → private demo job → cloud executor → artifact manifest → AUD → DEMO_READY`
+
+Hard rules:
+- demo is private;
+- demo is never a production deploy;
+- evidence is mandatory;
+- executor must be verified zero-cost;
+- AUD PASS is required before `DEMO_READY`.
+
+### Cloud Executor Registry
+
+Implemented:
+- `packages/sniper/src/executorRegistry.ts`
+- `migrations/0010_sniper_executor_registry.sql`
+- durable executor verification
+- GET `/api/sniper/executors`
+- protected POST `/api/sniper/executors/verify`
+- Demos dashboard shows executor admission.
+
+Canonical candidates:
+
+`CLOUDFLARE_CONTROL`
+- CONTROL_PLANE only;
+- owns canonical D1/control state;
+- NOT a generic browser/filesystem/GPU sandbox.
+
+`ORACLE_FREE_EXECUTOR`
+- JOB_EXECUTOR candidate;
+- capabilities: WEB_BUILD / BROWSER_3D / HEAVY_3D;
+- user reports Oracle Free Tier is available;
+- current state remains QUARANTINED because no enrolled/reachable executor endpoint has been verified from this environment.
+
+SentinelX check at this checkpoint:
+- no connected hosts;
+- user Windows host is offline;
+- Oracle is not enrolled/visible;
+- user PC MUST NOT be used.
+
+### Signed Executor Protocol
+
+Implemented:
+- `packages/sniper/src/executorProtocol.ts`
+- `migrations/0011_sniper_executor_protocol.sql`
+
+Allowed job kinds only:
+- DISCOVERY_WEB_AUDIT
+- DEMO_WEB_BUILD
+- DEMO_BROWSER_3D
+- DEMO_HEAVY_3D
+
+There is NO arbitrary shell job kind.
+
+Protocol properties:
+- HMAC-SHA256 request envelope;
+- protocol version `iaffice-executor-v1`;
+- typed job kind;
+- run id;
+- job id;
+- CASE id;
+- SHA-256 payload digest;
+- bounded artifact input refs;
+- expected cost = 0;
+- issued/expires timestamps;
+- max TTL 15 minutes;
+- nonce;
+- safe HTTPS executor endpoint validation;
+- localhost/private literal IP targets denied;
+- credentials/query/fragment in executor endpoint denied;
+- executor result validation;
+- actual result cost MUST equal 0;
+- artifact kinds are allowlisted;
+- result telemetry is mandatory;
+- executor results are HMAC-signed;
+- final run can only be accepted once.
+
+Durable run state:
+`sniper_executor_runs`
+now stores nonce, signed request envelope, expiry and result signature.
+
+### Queue-driven executor dispatch
+
+Implemented in `apps/worker/src/index.ts`.
+
+When a demo is created and allowed:
+1. it enters `QUEUED`;
+2. core emits `{kind:"demo-dispatch", jobId}` to EVENTS_QUEUE;
+3. Queue calls `prepareDemoExecutorRun()`;
+4. store resolves the executor from durable registry;
+5. caller-provided cost claims are ignored;
+6. executor must be `ENABLED` and capability-compatible;
+7. Core creates/reuses an idempotent signed run envelope;
+8. Worker POSTs only to the registry-controlled HTTPS endpoint + fixed typed path;
+9. accepted dispatch becomes `DISPATCHED`;
+10. executor posts signed result to `/api/sniper/executor/result`;
+11. signed callback bypasses admin-token auth but is authenticated by the dedicated HMAC secret;
+12. successful result becomes demo artifacts → `AUDIT_REQUIRED`;
+13. failed result becomes `FAILED`;
+14. successful artifacts never become production automatically.
+
+Runtime secret name:
+`EXECUTOR_SIGNING_KEY`
+
+It is documented in `.env.example` and must be installed as a secret/binding, never committed.
+
+### Contextual relearning is connected to Global Core
+
+Implemented:
+`packages/sniper/src/learning.ts`
+
+The previous fixed `auditedWinRate: 0` is removed.
+
+Current behavior:
+- audited WON/LOST episodes update procedural tactic statistics;
+- audited WON/LOST episodes also update semantic patterns;
+- patterns are scoped by category and by category+locality;
+- semantic support and contradictions accumulate;
+- unaudited observations do not mutate durable semantic memory;
+- repeated support can promote CANDIDATE → VERIFIED;
+- contradictions can demote to DISPUTED;
+- smoothed outcome rates prevent one-shot overfitting;
+- Global Core consumes category/locality historical outcome rate;
+- no history = neutral prior 0.5;
+- local context is used when support is sufficient, otherwise category prior is used.
+
+This means:
+**results/negotiations/audits now feed future company-level prioritization instead of remaining passive logs.**
+
+### Current migrations
+
+The migration chain is now:
+
+- 0001_initial.sql
+- 0002_compute_market.sql
+- 0003_sniper_revenue_engine.sql
+- 0004_sniper_cognitive_memory.sql
+- 0005_sniper_global_core.sql
+- 0006_sniper_observability.sql
+- 0007_sniper_skill_registry.sql
+- 0008_sniper_discovery.sql
+- 0009_sniper_demo_jobs.sql
+- 0010_sniper_executor_registry.sql
+- 0011_sniper_executor_protocol.sql
+
+### ORDER-004 doctor and UI smoke
+
+`scripts/doctor.mjs` was rewritten for ORDER-004.
+
+It now checks:
+- Node >=22;
+- lockfile;
+- all migrations on an empty SQLite DB;
+- current key tables;
+- strict typecheck;
+- cockpit structural integrity;
+- current 15 cockpit sections;
+- public worker target `agent-os`;
+- private `aria-models` / `aria-effects` boundary;
+- cron count;
+- self-hosted CI cost guard;
+- zero-spend source guards.
+
+`scripts/ui_smoke_order004.py` now exists and checks desktop + mobile:
+- iAffice branding;
+- all 15 current sections;
+- Demos;
+- Oracle executor visibility;
+- Telemetry;
+- Compute $0 surface;
+- navigation/accessibility basics.
+
+These tests are PREPARED but NOT yet executed on a verified cloud runner.
+
+### CI branch alignment
+
+`.github/workflows/verify.yml` now targets:
+- push: `order-004-sniper-autonomous-revenue-engine-v1`
+- PR base: `order-003-zero-cost-compute-market-v1`
+
+Runner remains:
+`self-hosted`
+
+This is deliberate. Do NOT silently switch to a potentially billable hosted runner.
+
+Current missing piece:
+a connected zero-cost cloud self-hosted runner, preferably the user's Oracle Free Tier.
+
+### Deploy preparation
+
+Added:
+`scripts/render-deploy-config.mjs`
+
+It renders generated Wrangler configs from templates using:
+- `CLOUDFLARE_D1_DATABASE_ID`
+- `ARIA_HEAD_SHA`
+
+It does not persist or print secret values.
+
+Generated target filenames:
+- `.generated/wrangler.agent-os.jsonc`
+- `.generated/wrangler.effects.jsonc`
+- `.generated/wrangler.models.jsonc`
+
+Package metadata now uses:
+`name = iaffice`
+
+`package-lock.json` is aligned to `iaffice`.
+
+### Current verification truth
+
+DO NOT claim PASS for:
+- typecheck;
+- npm test;
+- coverage;
+- security;
+- architecture;
+- ORDER-004 doctor;
+- ORDER-004 Playwright smoke;
+- Cloudflare exact-head deploy;
+- live D1 migration;
+- live service binding;
+- live Oracle executor.
+
+Reason:
+there is still no connected zero-cost cloud runner / Cloudflare deployment credential path available through current tools.
+
+This is a blocker, not a failure.
+
+### Exact continuation for a fresh GPT
+
+A fresh GPT must:
+
+1. Read issue #7.
+2. Read PR #8.
+3. Read this entire checkpoint.
+4. Fetch current branch HEAD; never trust the reference SHA above as current.
+5. Compare ORDER-004 against ORDER-003 base and record drift.
+6. Inspect:
+   - `packages/sniper/src/engine.ts`
+   - `packages/sniper/src/cognition.ts`
+   - `packages/sniper/src/globalCore.ts`
+   - `packages/sniper/src/learning.ts`
+   - `packages/sniper/src/operatingModel.ts`
+   - `packages/sniper/src/commercialPolicy.ts`
+   - `packages/sniper/src/telemetry.ts`
+   - `packages/sniper/src/skillRegistry.ts`
+   - `packages/sniper/src/discovery.ts`
+   - `packages/sniper/src/discoverySources.ts`
+   - `packages/sniper/src/demoJobs.ts`
+   - `packages/sniper/src/executorRegistry.ts`
+   - `packages/sniper/src/executorProtocol.ts`
+   - `packages/sniper/src/store.ts`
+   - `apps/worker/src/index.ts`
+   - `apps/cockpit/index.html`
+   - migrations 0001..0011
+   - `scripts/doctor.mjs`
+   - `scripts/ui_smoke_order004.py`
+7. Do NOT use Simon's PC.
+8. First attempt to connect/enroll Oracle Free Tier as the zero-cost cloud runner/executor.
+9. Once Oracle is reachable:
+   - health-check it;
+   - expose it through HTTPS;
+   - verify actual zero-cost state/evidence;
+   - persist executor verification;
+   - set `EXECUTOR_SIGNING_KEY` securely on both ends;
+   - keep Oracle stateless relative to canonical D1;
+   - optionally register it as the GitHub self-hosted runner.
+10. Run exact-head CI:
+    - npm ci --offline --ignore-scripts
+    - npm run typecheck
+    - npm test
+    - npm run test:coverage
+    - npm run e2e
+    - npm run e2e:compute
+    - npm run benchmark
+    - npm run benchmark:compute
+    - npm run chaos:compute
+    - npm run security
+    - npm run doctor:004
+    - python scripts/ui_smoke_order004.py
+11. Fix every observed failure. Do not claim PASS from static inspection.
+12. Only after deterministic cloud verification, prepare Cloudflare:
+    - D1;
+    - migrations 0001..0011;
+    - queues/DLQ;
+    - Durable Objects;
+    - Workflow;
+    - internal `aria-effects`;
+    - internal `aria-models`;
+    - public `agent-os` + cockpit assets;
+    - secrets/bindings.
+13. Deploy exact HEAD.
+14. Verify:
+    - `/api/health`
+    - `/api/sniper/global`
+    - `/api/sniper/operations`
+    - `/api/sniper/discovery/*`
+    - `/api/sniper/demos`
+    - `/api/sniper/executors`
+    - `/api/sniper/telemetry`
+    - desktop/mobile cockpit.
+15. Only after deploy gates pass, enable ONE real discovery adapter.
+16. Keep real outreach/payment/deploy effects behind A1 policy/effect gateway.
+17. Update this checkpoint in present tense before ending substantial work.
