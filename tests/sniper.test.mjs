@@ -941,3 +941,78 @@ test('private artifact request signatures are path-bound and time-bound', async 
   assert.equal(await verifyArtifactRequest('/v1/artifacts/executor-run_abc/other.html',ts,sig,'test-secret',ts+60),false);
   assert.equal(await verifyArtifactRequest(path,ts,sig,'test-secret',ts+301),false);
 });
+
+import {
+  contactProvenanceForTarget,
+  acceptedCommercialState,
+  approvedDeliveryState,
+  verifiedPaymentState,
+  commercialActionDigest,
+  isExternalOperation
+} from '../dist/packages/sniper/src/commercialGuard.js';
+
+test('commercial guard resolves only exact public business contact provenance', () => {
+  const contacts=[
+    {kind:'EMAIL',value:'ventas@example.test',provenance:'BUSINESS_WEBSITE'},
+    {kind:'WHATSAPP',value:'+54 342 555-0101',provenance:'PUBLIC_BUSINESS_LISTING'}
+  ];
+  assert.equal(contactProvenanceForTarget(contacts,'ventas@example.test'),'BUSINESS_WEBSITE');
+  assert.equal(contactProvenanceForTarget(contacts,'+543425550101'),'PUBLIC_BUSINESS_LISTING');
+  assert.equal(contactProvenanceForTarget(contacts,'private@example.test'),'UNKNOWN');
+});
+
+test('commercial guard derives acceptance approval and payment conservatively', () => {
+  assert.equal(acceptedCommercialState('WON',null),true);
+  assert.equal(acceptedCommercialState('NEGOTIATING','AGREED'),true);
+  assert.equal(acceptedCommercialState('NEGOTIATING','ACTIVE'),false);
+  assert.equal(approvedDeliveryState('IN_PROGRESS',{customerApproved:true}),true);
+  assert.equal(approvedDeliveryState('IN_PROGRESS',{}),false);
+  assert.equal(verifiedPaymentState('COLLECTED'),true);
+  assert.equal(verifiedPaymentState('PENDING'),false);
+});
+
+test('commercial action digest is bound to case operation target and exact payload', async () => {
+  const base={caseId:'case-1',operation:'SEND_OUTREACH',target:'ventas@example.test',payload:{subject:'A',body:'B'}};
+  const a=await commercialActionDigest(base);
+  const b=await commercialActionDigest({...base,payload:{subject:'A',body:'C'}});
+  const d=await commercialActionDigest({...base,target:'otro@example.test'});
+  assert.match(a,/^[a-f0-9]{64}$/);
+  assert.notEqual(a,b);
+  assert.notEqual(a,d);
+});
+
+test('commercial operation allowlist rejects arbitrary effect operation strings', () => {
+  assert.equal(isExternalOperation('SEND_OUTREACH'),true);
+  assert.equal(isExternalOperation('CREATE_PAYMENT_REQUEST'),true);
+  assert.equal(isExternalOperation('ARBITRARY_SEND'),false);
+});
+
+test('marketing opt-out does not suppress a verified transactional receipt', () => {
+  const result=evaluateCommercialPolicy({
+    action:'SEND_RECEIPT',
+    explicitRefusal:true,
+    optOut:true,
+    autonomousContactsInWindow:99,
+    hoursSinceLastContact:0,
+    contactProvenance:'OWNER_PROVIDED',
+    claimsSupported:false,
+    falseUrgency:true,
+    humanImpersonation:true,
+    bulkBlast:true,
+    acceptedOffer:true,
+    customerApproval:true,
+    paymentVerified:true
+  });
+  assert.equal(result.decision,'ALLOW');
+});
+
+test('transactional receipt still requires verified payment', () => {
+  const result=evaluateCommercialPolicy({
+    action:'SEND_RECEIPT',
+    explicitRefusal:false,optOut:false,autonomousContactsInWindow:0,hoursSinceLastContact:999,
+    contactProvenance:'OWNER_PROVIDED',claimsSupported:true,falseUrgency:false,humanImpersonation:false,bulkBlast:false,
+    acceptedOffer:true,customerApproval:true,paymentVerified:false
+  });
+  assert.equal(result.decision,'DENY');
+  assert.ok(result.reasons.includes('PAYMENT_VERIFICATION_REQUIRED'));
+});
