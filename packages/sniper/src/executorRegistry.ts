@@ -1,4 +1,5 @@
 import type { DemoExecutorClass } from "./demoJobs.js";
+import { validateExecutorEndpoint } from "./executorProtocol.js";
 
 export type ExecutorRole = "CONTROL_PLANE" | "JOB_EXECUTOR";
 export type ExecutorCostClass = "FREE_VERIFIED" | "FREE_USER_CONFIRMED" | "UNKNOWN" | "PAID";
@@ -69,7 +70,10 @@ export function evaluateExecutorAdmission(candidate: ExecutorCandidate | undefin
 
   if(rejected.length) return {state:"REJECTED",reasons:rejected};
 
-  if(candidate.role==="JOB_EXECUTOR" && !candidate.endpoint) quarantined.push("ENDPOINT_REQUIRED");
+  if(candidate.role==="JOB_EXECUTOR"){
+    const endpoint=validateExecutorEndpoint(candidate.endpoint);
+    if(!endpoint.ok)quarantined.push(...endpoint.reasons);
+  }
   if(!candidate.zeroCostVerified) quarantined.push("ZERO_COST_NOT_VERIFIED");
   if(candidate.costClass==="UNKNOWN") quarantined.push("COST_UNKNOWN");
   if(candidate.health!=="HEALTHY") quarantined.push("HEALTH_NOT_VERIFIED");
