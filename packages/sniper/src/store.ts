@@ -180,11 +180,32 @@ export class SniperStore {
   }
 
 
-  async recordEpisode(episode: MemoryEpisode): Promise<{ promotion: ReturnType<typeof promoteEpisode>; tactic?: TacticStats }> {
+  async recordEpisode(episode: MemoryEpisode): Promise<{ promotion: ReturnType<typeof promoteEpisode>; tactic?: TacticStats; idempotent?: boolean }> {
     if (!episode.episodeId || !episode.opportunityId || !episode.agentRole || !episode.tacticId || !episode.observation || !episode.createdAt) throw new Error("SNIPER_EPISODE_SCHEMA_INVALID");
+
+    const existing=await this.db.prepare(
+      "SELECT opportunity_id,agent_role,tactic_id,observation,outcome,audited,evidence_refs_json,created_at FROM sniper_memory_episodes WHERE episode_id=?1"
+    ).bind(episode.episodeId).first<Record<string,unknown>>();
+
+    const normalizedEvidence=[...episode.evidenceRefs].sort();
+    if(existing){
+      const same=
+        String(existing.opportunity_id)===episode.opportunityId &&
+        String(existing.agent_role)===episode.agentRole &&
+        String(existing.tactic_id)===episode.tacticId &&
+        String(existing.observation)===episode.observation &&
+        String(existing.outcome)===episode.outcome &&
+        Number(existing.audited)===(episode.audited?1:0) &&
+        JSON.stringify(parse<string[]>(existing.evidence_refs_json,[]).sort())===JSON.stringify(normalizedEvidence) &&
+        String(existing.created_at)===episode.createdAt;
+      if(!same)throw new Error("SNIPER_EPISODE_REPLAY_CONFLICT");
+      return {promotion:promoteEpisode(episode),idempotent:true};
+    }
+
     await this.db.prepare(
-      "INSERT OR IGNORE INTO sniper_memory_episodes (episode_id,opportunity_id,agent_role,tactic_id,observation,outcome,audited,evidence_refs_json,created_at) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)"
-    ).bind(episode.episodeId,episode.opportunityId,episode.agentRole,episode.tacticId,episode.observation,episode.outcome,episode.audited?1:0,JSON.stringify(episode.evidenceRefs),episode.createdAt).run();
+      "INSERT INTO sniper_memory_episodes (episode_id,opportunity_id,agent_role,tactic_id,observation,outcome,audited,evidence_refs_json,created_at) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)"
+    ).bind(episode.episodeId,episode.opportunityId,episode.agentRole,episode.tacticId,episode.observation,episode.outcome,episode.audited?1:0,JSON.stringify(normalizedEvidence),episode.createdAt).run();
+
     const promotion=promoteEpisode(episode);
     let tactic:TacticStats|undefined;
     if(promotion.promoted){
@@ -200,7 +221,7 @@ export class SniperStore {
       }
     }
     await this.activity(episode.opportunityId,"MEMORY",episode.agentRole,"EPISODE_RECORDED",{tacticId:episode.tacticId,outcome:episode.outcome,audited:episode.audited,promoted:promotion.promoted},episode.createdAt);
-    return {promotion,...(tactic?{tactic}:{})};
+    return {promotion,...(tactic?{tactic}:{}),idempotent:false};
   }
 
   async decide(context: CognitiveContext, now = new Date().toISOString()): Promise<ReturnType<typeof chooseNextMove> & { decisionId:string }> {
