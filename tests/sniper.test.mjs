@@ -1016,3 +1016,98 @@ test('transactional receipt still requires verified payment', () => {
   assert.equal(result.decision,'DENY');
   assert.ok(result.reasons.includes('PAYMENT_VERIFICATION_REQUIRED'));
 });
+
+import fs from 'node:fs';
+import path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
+import { CommercialGuard } from '../dist/packages/sniper/src/commercialGuard.js';
+
+class SqlitePreparedAdapter {
+  constructor(db,sql){this.db=db;this.sql=sql;this.values=[]}
+  bind(...values){this.values=values;return this}
+  async first(){return this.db.prepare(this.sql).get(...this.values)??null}
+  async all(){return {results:this.db.prepare(this.sql).all(...this.values)}}
+  async run(){return this.db.prepare(this.sql).run(...this.values)}
+}
+class SqliteD1Adapter {
+  constructor(db){this.db=db}
+  prepare(sql){return new SqlitePreparedAdapter(this.db,sql)}
+  async batch(statements){const out=[];for(const stmt of statements)out.push(await stmt.run());return out}
+}
+function commercialTestDb(){
+  const raw=new DatabaseSync(':memory:');
+  for(const file of fs.readdirSync('migrations').filter(x=>/^\d{4}_.+\.sql$/.test(x)).sort()){
+    raw.exec(fs.readFileSync(path.join('migrations',file),'utf8'));
+  }
+  const db=new SqliteD1Adapter(raw);
+  return {raw,db,guard:new CommercialGuard(db)};
+}
+function seedCommercialCase(raw,{id='case-commercial',status='DEMO_READY'}={}){
+  const now='2026-09-30T12:00:00.000Z';
+  const contacts=[
+    {kind:'EMAIL',value:'ventas@example.test',provenance:'BUSINESS_WEBSITE'},
+    {kind:'WHATSAPP',value:'+543425550101',provenance:'PUBLIC_BUSINESS_LISTING'}
+  ];
+  raw.prepare("INSERT INTO sniper_opportunities (id,business_id,business_name,category,locality,status,score,signal_json,reasons_json,offer_json,persuasion_json,contacts_json,evidence_refs_json,next_owner,next_action,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+    .run(id,'biz-'+id,'Comercio Test','retail','Santa Fe',status,80,'{}','[]','{"primary":["WEBSITE"],"secondary":[],"why":[]}','{"observedFacts":["CTA difficult to find"],"demoBrief":"private demo","quantifiedClaim":null,"rules":[]}',JSON.stringify(contacts),'["evidence:site"]','SALES','OUTREACH',now,now);
+}
+
+test('durable commercial guard allows only exact AUD-passed outreach then stops on opt-out', async () => {
+  const {raw,guard}=commercialTestDb();
+  seedCommercialCase(raw);
+  const payload={subject:'Diagnóstico privado',body:'Adjunto una mejora basada en el sitio observado.'};
+  const audit=await guard.recordCommercialAudit({
+    caseId:'case-commercial',operation:'SEND_OUTREACH',target:'ventas@example.test',payload,
+    verdict:'PASS',reason:'claims grounded; no false urgency; no human impersonation',evidenceRefs:['evidence:site']
+  },'2026-09-30T12:05:00.000Z');
+  const allowed=await guard.evaluate({
+    caseId:'case-commercial',operation:'SEND_OUTREACH',target:'ventas@example.test',payload,auditId:audit.auditId
+  },'2026-09-30T12:06:00.000Z');
+  assert.equal(allowed.decision,'ALLOW');
+  await guard.setContactControl({
+    caseId:'case-commercial',doNotContact:true,explicitRefusal:false,reason:'recipient opted out',evidenceRefs:['reply:optout']
+  },'2026-09-30T12:07:00.000Z');
+  const denied=await guard.evaluate({
+    caseId:'case-commercial',operation:'SEND_OUTREACH',target:'ventas@example.test',payload,auditId:audit.auditId
+  },'2026-09-30T12:08:00.000Z');
+  assert.equal(denied.decision,'DENY');
+  assert.ok(denied.reasons.includes('DO_NOT_CONTACT'));
+  raw.close();
+});
+
+test('durable commercial guard enforces cooldown from executed effects', async () => {
+  const {raw,guard}=commercialTestDb();
+  seedCommercialCase(raw,{id:'case-cooldown'});
+  const payload={subject:'A',body:'B'};
+  const audit=await guard.recordCommercialAudit({
+    caseId:'case-cooldown',operation:'SEND_OUTREACH',target:'ventas@example.test',payload,
+    verdict:'PASS',reason:'audited',evidenceRefs:['evidence:site']
+  },'2026-09-30T10:00:00.000Z');
+  await guard.recordExecuted({
+    caseId:'case-cooldown',operation:'SEND_OUTREACH',target:'ventas@example.test',intentId:'intent-1',receiptId:'receipt-1'
+  },'2026-09-30T10:30:00.000Z');
+  const result=await guard.evaluate({
+    caseId:'case-cooldown',operation:'SEND_OUTREACH',target:'ventas@example.test',payload,auditId:audit.auditId
+  },'2026-09-30T11:00:00.000Z');
+  assert.equal(result.decision,'DENY');
+  assert.ok(result.reasons.includes('CONTACT_COOLDOWN'));
+  raw.close();
+});
+
+test('durable commercial guard escalates proposal when current negotiation has HUMAN_GATE', async () => {
+  const {raw,guard}=commercialTestDb();
+  seedCommercialCase(raw,{id:'case-human'});
+  raw.prepare("INSERT INTO sniper_negotiations (id,opportunity_id,state,current_offer_ars,floor_price_ars,objections_json,concessions_json,next_action,human_gate,human_gate_reasons_json,last_contact_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)")
+    .run('neg-1','case-human','ACTIVE',1500000,900000,'[]','[]','SIMON_MEETING',1,'["LARGE_DEAL"]',null,'2026-09-30T12:00:00.000Z');
+  const payload={subject:'Propuesta',body:'Propuesta basada en el alcance conversado.'};
+  const audit=await guard.recordCommercialAudit({
+    caseId:'case-human',operation:'SEND_PROPOSAL',target:'ventas@example.test',payload,
+    verdict:'PASS',reason:'audited',evidenceRefs:['evidence:proposal']
+  },'2026-09-30T12:01:00.000Z');
+  const result=await guard.evaluate({
+    caseId:'case-human',operation:'SEND_PROPOSAL',target:'ventas@example.test',payload,auditId:audit.auditId
+  },'2026-09-30T12:02:00.000Z');
+  assert.equal(result.decision,'HUMAN_GATE');
+  assert.ok(result.reasons.includes('HUMAN_GATE_REQUIRED'));
+  raw.close();
+});
