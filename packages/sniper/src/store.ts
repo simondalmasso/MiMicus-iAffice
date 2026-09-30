@@ -19,6 +19,7 @@ import { SKILL_SOURCE_CANDIDATES, evaluateSkillAdmission, type SkillHealth } fro
 import { evaluateDiscoveryJob, findingToBusinessSignal, type DigitalAuditEvidence, type DiscoveryJobRequest, type RawBusinessFinding } from "./discovery.js";
 import { DISCOVERY_SOURCE_CANDIDATES, evaluateDiscoverySourceAdmission, type DiscoverySourceHealth } from "./discoverySources.js";
 import { buildDemoArtifactManifest, evaluateDemoJob, type DemoArtifactRef, type DemoJobRequest } from "./demoJobs.js";
+import { EXECUTOR_CANDIDATES, evaluateExecutorAdmission, type ExecutorCandidate, type ExecutorHealth } from "./executorRegistry.js";
 
 export type OpportunityStatus =
   | "DISCOVERED"
@@ -679,16 +680,106 @@ export class SniperStore {
   }
 
 
+
+  async executorRegistryOverview(): Promise<Record<string,unknown>> {
+    const rows=await this.db.prepare(
+      "SELECT executor_id,endpoint,cost_class,zero_cost_verified,health,admission_state,admission_reasons_json,evidence_refs_json,last_health_at,verified_at,updated_at FROM sniper_executor_registry ORDER BY executor_id"
+    ).all<Record<string,unknown>>();
+    const persisted=new Map(rows.results.map(row=>[String(row.executor_id),row]));
+    const executors=EXECUTOR_CANDIDATES.map(base=>{
+      const row=persisted.get(base.id);
+      const effective:ExecutorCandidate=row?{
+        ...base,
+        endpoint:row.endpoint==null?null:String(row.endpoint),
+        costClass:String(row.cost_class) as ExecutorCandidate["costClass"],
+        zeroCostVerified:Number(row.zero_cost_verified)===1,
+        health:String(row.health) as ExecutorHealth
+      }:base;
+      const admission=evaluateExecutorAdmission(effective);
+      return {
+        ...effective,
+        admission,
+        evidenceRefs:row?parse<string[]>(row.evidence_refs_json,[]):[],
+        lastHealthAt:row?.last_health_at==null?null:String(row.last_health_at),
+        verifiedAt:row?String(row.verified_at):null,
+        updatedAt:row?String(row.updated_at):null
+      };
+    });
+    return {
+      policy:{
+        canonicalState:"D1_CLOUDFLARE_ONLY",
+        jobExecutorMustBeEnabled:true,
+        zeroCostRequired:true,
+        healthRequired:true,
+        arbitraryEndpointDenied:true
+      },
+      totals:{
+        executors:executors.length,
+        enabled:executors.filter(x=>x.admission.state==="ENABLED").length,
+        quarantined:executors.filter(x=>x.admission.state==="QUARANTINED").length,
+        rejected:executors.filter(x=>x.admission.state==="REJECTED").length
+      },
+      executors
+    };
+  }
+
+  async verifyExecutor(input:{
+    executorId:string;
+    endpoint:string|null;
+    costClass:ExecutorCandidate["costClass"];
+    zeroCostVerified:boolean;
+    health:ExecutorHealth;
+    evidenceRefs:string[];
+    lastHealthAt?:string|null;
+    verifiedAt?:string;
+  }, now=new Date().toISOString()):Promise<Record<string,unknown>> {
+    const base=EXECUTOR_CANDIDATES.find(x=>x.id===input.executorId);
+    if(!base) throw new Error("EXECUTOR_NOT_FOUND");
+    if(input.evidenceRefs.length===0) throw new Error("EXECUTOR_EVIDENCE_REQUIRED");
+    if(!["FREE_VERIFIED","FREE_USER_CONFIRMED","UNKNOWN","PAID"].includes(input.costClass)) throw new Error("EXECUTOR_COST_CLASS_INVALID");
+    if(!["HEALTHY","UNKNOWN","DEGRADED"].includes(input.health)) throw new Error("EXECUTOR_HEALTH_INVALID");
+    const effective:ExecutorCandidate={...base,endpoint:input.endpoint,costClass:input.costClass,zeroCostVerified:input.zeroCostVerified,health:input.health};
+    const admission=evaluateExecutorAdmission(effective);
+    const verifiedAt=input.verifiedAt??now;
+    await this.db.prepare(
+      "INSERT INTO sniper_executor_registry (executor_id,endpoint,cost_class,zero_cost_verified,health,admission_state,admission_reasons_json,evidence_refs_json,last_health_at,verified_at,updated_at) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11) ON CONFLICT(executor_id) DO UPDATE SET endpoint=excluded.endpoint,cost_class=excluded.cost_class,zero_cost_verified=excluded.zero_cost_verified,health=excluded.health,admission_state=excluded.admission_state,admission_reasons_json=excluded.admission_reasons_json,evidence_refs_json=excluded.evidence_refs_json,last_health_at=excluded.last_health_at,verified_at=excluded.verified_at,updated_at=excluded.updated_at"
+    ).bind(base.id,input.endpoint,input.costClass,input.zeroCostVerified?1:0,input.health,admission.state,JSON.stringify(admission.reasons),JSON.stringify(input.evidenceRefs),input.lastHealthAt??null,verifiedAt,now).run();
+    await this.activity(null,"EXECUTOR","AUD","EXECUTOR_VERIFIED",{executorId:base.id,endpoint:input.endpoint,costClass:input.costClass,zeroCostVerified:input.zeroCostVerified,health:input.health,admission,evidenceRefs:input.evidenceRefs},now);
+    return {...effective,admission,evidenceRefs:input.evidenceRefs,lastHealthAt:input.lastHealthAt??null,verifiedAt,updatedAt:now};
+  }
+
+  private async resolvedExecutor(executorId:string):Promise<ExecutorCandidate|null>{
+    const base=EXECUTOR_CANDIDATES.find(x=>x.id===executorId);
+    if(!base)return null;
+    const row=await this.db.prepare(
+      "SELECT endpoint,cost_class,zero_cost_verified,health FROM sniper_executor_registry WHERE executor_id=?1"
+    ).bind(executorId).first<Record<string,unknown>>();
+    if(!row)return base;
+    return {
+      ...base,
+      endpoint:row.endpoint==null?null:String(row.endpoint),
+      costClass:String(row.cost_class) as ExecutorCandidate["costClass"],
+      zeroCostVerified:Number(row.zero_cost_verified)===1,
+      health:String(row.health) as ExecutorHealth
+    };
+  }
+
   async createDemoJob(request:DemoJobRequest, now=new Date().toISOString()):Promise<Record<string,unknown>> {
     const opportunity=await this.get(request.caseId);
     if(!opportunity) throw new Error("DEMO_CASE_NOT_FOUND");
-    const decision=evaluateDemoJob(request);
+    const executor=await this.resolvedExecutor(request.executorId);
+    const executorAdmission=evaluateExecutorAdmission(executor??undefined);
+    const trustedRequest:DemoJobRequest={...request,executorCostVerifiedZero:Boolean(executor?.zeroCostVerified)};
+    const decision=evaluateDemoJob(trustedRequest);
+    if(!executor||executorAdmission.state!=="ENABLED")decision.reasons.push("EXECUTOR_NOT_ENABLED");
+    else if(!executor.capabilities.includes(decision.executorClass))decision.reasons.push("EXECUTOR_CAPABILITY_MISMATCH");
+    decision.allowed=decision.allowed&&executorAdmission.state==="ENABLED"&&Boolean(executor?.capabilities.includes(decision.executorClass));
     const state=decision.allowed?"QUEUED":"BLOCKED";
     await this.db.prepare(
       "INSERT INTO sniper_demo_jobs (job_id,case_id,service_pack_id,evidence_refs_json,requested_deliverables_json,executor_id,executor_class,zero_cost_verified,state,decision_reasons_json,created_at,updated_at) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?11)"
-    ).bind(request.jobId,request.caseId,request.servicePackId,JSON.stringify(request.evidenceRefs),JSON.stringify(request.requestedDeliverables),request.executorId,decision.executorClass,request.executorCostVerifiedZero?1:0,state,JSON.stringify(decision.reasons),now).run();
+    ).bind(request.jobId,request.caseId,request.servicePackId,JSON.stringify(request.evidenceRefs),JSON.stringify(request.requestedDeliverables),request.executorId,decision.executorClass,(executor?.zeroCostVerified?1:0),state,JSON.stringify(decision.reasons),now).run();
     await this.activity(request.caseId,"DEMO","DEMO","DEMO_JOB_CREATED",{jobId:request.jobId,servicePackId:request.servicePackId,executorId:request.executorId,executorClass:decision.executorClass,state,reasons:decision.reasons},now);
-    return {...request,executorClass:decision.executorClass,state,decision};
+    return {...trustedRequest,executorClass:decision.executorClass,state,decision,executorAdmission};
   }
 
   async recordDemoArtifacts(input:{jobId:string;artifacts:DemoArtifactRef[]}, now=new Date().toISOString()):Promise<Record<string,unknown>> {
