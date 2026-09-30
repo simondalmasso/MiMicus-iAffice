@@ -32,7 +32,7 @@ sections=['Revenue','Global Core','Operations','Discovery','Demos','Cases','Live
 results=[]
 
 with sync_playwright() as p:
- browser=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox','--allow-file-access-from-files'])
+ browser=p.chromium.launch(headless=True,args=['--no-sandbox','--allow-file-access-from-files'])
  for name,vp in [('desktop',{'width':1440,'height':900}),('mobile',{'width':390,'height':844})]:
   page=browser.new_page(viewport=vp)
   page.set_default_timeout(4000)
