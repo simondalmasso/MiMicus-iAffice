@@ -39,5 +39,6 @@ jobs:
       - run: npm run benchmark:compute
       - run: npm run chaos:compute
       - run: npm run security
+      - run: python3 scripts/oracle_executor_selftest.py
       - run: npm run doctor:004
       - run: python scripts/ui_smoke_order004.py
