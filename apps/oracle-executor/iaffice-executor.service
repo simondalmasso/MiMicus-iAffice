@@ -1,0 +1,38 @@
+[Unit]
+Description=iAffice Oracle Free Tier Executor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=iaffice
+Group=iaffice
+WorkingDirectory=/opt/iaffice
+EnvironmentFile=/etc/iaffice/executor.env
+ExecStart=/usr/bin/python3 /opt/iaffice/apps/oracle-executor/iaffice_executor.py
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=30
+TimeoutStopSec=20
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictRealtime=true
+RemoveIPC=true
+UMask=0077
+ReadWritePaths=/var/lib/iaffice-executor
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target
