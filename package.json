@@ -26,7 +26,12 @@
     "ui:smoke:003": "python scripts/ui_smoke_order003.py",
     "architecture": "npm run build && node scripts/architecture-guard.mjs",
     "deploy:config": "node scripts/render-deploy-config.mjs",
-    "doctor:004": "npm run build && node scripts/doctor.mjs"
+    "doctor:004": "npm run build && node scripts/doctor.mjs",
+    "ui:smoke:004": "python3 scripts/ui_smoke_order004.py",
+    "oracle:selftest": "python3 scripts/oracle_executor_selftest.py",
+    "deploy:preflight": "node scripts/cloudflare-preflight.mjs",
+    "deploy:cloudflare": "bash scripts/deploy-cloudflare.sh",
+    "verify:004": "npm run typecheck && npm test && npm run test:coverage && npm run e2e && npm run e2e:compute && npm run benchmark && npm run benchmark:compute && npm run chaos:compute && npm run security && npm run oracle:selftest && npm run doctor:004 && npm run ui:smoke:004"
   },
   "bin": {
     "aria": "scripts/aria.mjs"
