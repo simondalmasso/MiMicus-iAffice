@@ -1,5 +1,5 @@
 import type { D1Like } from "../../memory/src/store.js";
-import { stableId } from "../../core/src/hash.js";
+import { sha256, stableId } from "../../core/src/hash.js";
 import {
   applyLearningFeedback,
   buildDashboardSnapshot,
@@ -21,6 +21,7 @@ import { DISCOVERY_SOURCE_CANDIDATES, evaluateDiscoverySourceAdmission, type Dis
 import { buildDemoArtifactManifest, evaluateDemoJob, type DemoArtifactRef, type DemoJobRequest } from "./demoJobs.js";
 import { EXECUTOR_CANDIDATES, evaluateExecutorAdmission, type ExecutorCandidate, type ExecutorHealth } from "./executorRegistry.js";
 import { applySemanticObservation, smoothedOutcomeRate, type SemanticPatternState } from "./learning.js";
+import { createExecutorEnvelope, executorRequestPath, verifySignedExecutorResult, type ExecutorJobKind, type SignedExecutorEnvelope, type SignedExecutorResult } from "./executorProtocol.js";
 
 export type OpportunityStatus =
   | "DISCOVERED"
@@ -53,6 +54,13 @@ export interface OpportunityRecord {
   nextAction: string;
   createdAt: string;
   updatedAt: string;
+}
+
+function demoJobKind(executorClass:string):ExecutorJobKind{
+  if(executorClass==="WEB_BUILD")return "DEMO_WEB_BUILD";
+  if(executorClass==="BROWSER_3D")return "DEMO_BROWSER_3D";
+  if(executorClass==="HEAVY_3D")return "DEMO_HEAVY_3D";
+  throw new Error("DEMO_EXECUTOR_CLASS_INVALID");
 }
 
 function parse<T>(value: unknown, fallback: T): T {
@@ -857,6 +865,105 @@ export class SniperStore {
     ).bind(request.jobId,request.caseId,request.servicePackId,JSON.stringify(request.evidenceRefs),JSON.stringify(request.requestedDeliverables),request.executorId,decision.executorClass,(executor?.zeroCostVerified?1:0),state,JSON.stringify(decision.reasons),now).run();
     await this.activity(request.caseId,"DEMO","DEMO","DEMO_JOB_CREATED",{jobId:request.jobId,servicePackId:request.servicePackId,executorId:request.executorId,executorClass:decision.executorClass,state,reasons:decision.reasons},now);
     return {...trustedRequest,executorClass:decision.executorClass,state,decision,executorAdmission};
+  }
+
+
+  async prepareDemoExecutorRun(jobId:string, signingSecret:string, now=new Date().toISOString()):Promise<{
+    runId:string;
+    endpoint:string;
+    path:string;
+    envelope:SignedExecutorEnvelope;
+    reused:boolean;
+  }> {
+    const job=await this.db.prepare(
+      "SELECT job_id,case_id,service_pack_id,evidence_refs_json,requested_deliverables_json,executor_id,executor_class,state FROM sniper_demo_jobs WHERE job_id=?1"
+    ).bind(jobId).first<Record<string,unknown>>();
+    if(!job)throw new Error("DEMO_JOB_NOT_FOUND");
+    if(!["QUEUED","BUILDING"].includes(String(job.state)))throw new Error("DEMO_JOB_NOT_DISPATCHABLE");
+
+    const executor=await this.resolvedExecutor(String(job.executor_id));
+    const admission=evaluateExecutorAdmission(executor??undefined);
+    if(!executor||admission.state!=="ENABLED"||!executor.endpoint)throw new Error("EXECUTOR_NOT_ENABLED");
+    const jobKind=demoJobKind(String(job.executor_class));
+    if(!executor.capabilities.includes(String(job.executor_class) as ExecutorCandidate["capabilities"][number]))throw new Error("EXECUTOR_CAPABILITY_MISMATCH");
+
+    const previous=await this.db.prepare(
+      "SELECT run_id,state,request_envelope_json,expires_at FROM sniper_executor_runs WHERE job_kind=?1 AND job_id=?2 ORDER BY created_at DESC LIMIT 1"
+    ).bind(jobKind,jobId).first<Record<string,unknown>>();
+    if(previous&&["DISPATCH_READY","DISPATCHED"].includes(String(previous.state))&&previous.request_envelope_json&&previous.expires_at&&Date.parse(String(previous.expires_at))>Date.parse(now)){
+      const envelope=parse<SignedExecutorEnvelope>(previous.request_envelope_json,{} as SignedExecutorEnvelope);
+      return {runId:String(previous.run_id),endpoint:executor.endpoint,path:executorRequestPath(jobKind),envelope,reused:true};
+    }
+
+    const count=await this.db.prepare(
+      "SELECT COUNT(*) AS n FROM sniper_executor_runs WHERE job_kind=?1 AND job_id=?2"
+    ).bind(jobKind,jobId).first<{n:number}>();
+    const attempt=Number(count?.n??0)+1;
+    const evidenceRefs=parse<string[]>(job.evidence_refs_json,[]);
+    const requestedDeliverables=parse<string[]>(job.requested_deliverables_json,[]);
+    const payload={
+      caseId:String(job.case_id),
+      servicePackId:String(job.service_pack_id),
+      requestedDeliverables,
+      evidenceRefs
+    };
+    const payloadDigest="sha256:"+await sha256(payload);
+    const runId=await stableId("executor-run",{executorId:executor.id,jobKind,jobId,attempt});
+    const nonce=await stableId("executor-nonce",{runId,payloadDigest,now});
+    const expiresAt=new Date(Date.parse(now)+10*60*1000).toISOString();
+    const envelope=await createExecutorEnvelope({
+      runId,executorId:executor.id,jobKind,jobId,caseId:String(job.case_id),payloadDigest,
+      artifactInputRefs:evidenceRefs,issuedAt:now,expiresAt,nonce
+    },signingSecret);
+    const requestDigest="sha256:"+await sha256(envelope.body);
+    await this.db.prepare(
+      "INSERT INTO sniper_executor_runs (run_id,executor_id,job_kind,job_id,case_id,state,request_digest,created_at,updated_at,nonce,request_envelope_json,expires_at) VALUES (?1,?2,?3,?4,?5,'DISPATCH_READY',?6,?7,?7,?8,?9,?10)"
+    ).bind(runId,executor.id,jobKind,jobId,String(job.case_id),requestDigest,now,nonce,JSON.stringify(envelope),expiresAt).run();
+    await this.db.prepare(
+      "UPDATE sniper_demo_jobs SET state='BUILDING',started_at=COALESCE(started_at,?2),updated_at=?2 WHERE job_id=?1"
+    ).bind(jobId,now).run();
+    await this.activity(String(job.case_id),"EXECUTOR","DEMO","EXECUTOR_RUN_PREPARED",{runId,jobId,executorId:executor.id,jobKind,attempt,expiresAt},now);
+    return {runId,endpoint:executor.endpoint,path:executorRequestPath(jobKind),envelope,reused:false};
+  }
+
+  async markExecutorDispatched(runId:string, now=new Date().toISOString()):Promise<void>{
+    const row=await this.db.prepare("SELECT state,case_id,job_id,executor_id FROM sniper_executor_runs WHERE run_id=?1").bind(runId).first<Record<string,unknown>>();
+    if(!row)throw new Error("EXECUTOR_RUN_NOT_FOUND");
+    if(!["DISPATCH_READY","DISPATCHED"].includes(String(row.state)))throw new Error("EXECUTOR_RUN_STATE_INVALID");
+    await this.db.prepare("UPDATE sniper_executor_runs SET state='DISPATCHED',started_at=COALESCE(started_at,?2),updated_at=?2 WHERE run_id=?1").bind(runId,now).run();
+    await this.activity(row.case_id==null?null:String(row.case_id),"EXECUTOR","DEMO","EXECUTOR_RUN_DISPATCHED",{runId,jobId:String(row.job_id),executorId:String(row.executor_id)},now);
+  }
+
+  async completeExecutorRun(signed:SignedExecutorResult, signingSecret:string, now=new Date().toISOString()):Promise<Record<string,unknown>>{
+    if(!(await verifySignedExecutorResult(signed,signingSecret)))throw new Error("EXECUTOR_RESULT_SIGNATURE_INVALID");
+    const result=signed.result;
+    const row=await this.db.prepare(
+      "SELECT run_id,executor_id,job_kind,job_id,case_id,state FROM sniper_executor_runs WHERE run_id=?1"
+    ).bind(result.runId).first<Record<string,unknown>>();
+    if(!row)throw new Error("EXECUTOR_RUN_NOT_FOUND");
+    if(["SUCCEEDED","FAILED"].includes(String(row.state)))throw new Error("EXECUTOR_RESULT_ALREADY_FINAL");
+    if(!["DISPATCH_READY","DISPATCHED"].includes(String(row.state)))throw new Error("EXECUTOR_RUN_STATE_INVALID");
+    if(String(row.executor_id)!==result.executorId||String(row.job_kind)!==result.jobKind||String(row.job_id)!==result.jobId||(row.case_id==null?null:String(row.case_id))!==result.caseId)throw new Error("EXECUTOR_RESULT_IDENTITY_MISMATCH");
+
+    await this.db.prepare(
+      "UPDATE sniper_executor_runs SET state=?2,result_digest=?3,response_signature=?4,completed_at=?5,error_code=?6,updated_at=?5 WHERE run_id=?1"
+    ).bind(result.runId,result.state,result.resultDigest,signed.signature,now,result.errorCode).run();
+
+    if(result.state==="SUCCEEDED"){
+      await this.recordDemoArtifacts({jobId:result.jobId,artifacts:result.artifacts},now);
+    }else{
+      await this.db.prepare(
+        "UPDATE sniper_demo_jobs SET state='FAILED',error_code=?2,completed_at=?3,updated_at=?3 WHERE job_id=?1"
+      ).bind(result.jobId,result.errorCode??"EXECUTOR_FAILED",now).run();
+    }
+    await this.recordTelemetrySpan({
+      traceId:result.runId,spanId:result.runId,parentSpanId:null,caseId:result.caseId,agentRole:"DEMO",stage:"EXECUTE",kind:"JOB",
+      operation:result.jobKind,status:result.state==="SUCCEEDED"?"OK":"ERROR",startedAt:result.telemetry.startedAt,endedAt:result.telemetry.endedAt,
+      provider:result.executorId,model:null,inputTokens:0,outputTokens:0,actualCostUsd:result.actualCostUsd,errorCode:result.errorCode,
+      inputDigest:null,outputDigest:result.resultDigest,attributes:{cpuMs:result.telemetry.cpuMs,memoryPeakMb:result.telemetry.memoryPeakMb,artifactCount:result.artifacts.length}
+    },now);
+    await this.activity(result.caseId,"EXECUTOR","DEMO","EXECUTOR_RUN_COMPLETED",{runId:result.runId,jobId:result.jobId,state:result.state,resultDigest:result.resultDigest,errorCode:result.errorCode},now);
+    return {runId:result.runId,jobId:result.jobId,state:result.state,artifactCount:result.artifacts.length,costUsd:0};
   }
 
   async recordDemoArtifacts(input:{jobId:string;artifacts:DemoArtifactRef[]}, now=new Date().toISOString()):Promise<Record<string,unknown>> {
