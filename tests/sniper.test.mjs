@@ -878,3 +878,33 @@ test('executor protocol rejects arbitrary job kinds', async () => {
     issuedAt:'2026-09-30T10:00:00.000Z',expiresAt:'2026-09-30T10:10:00.000Z',nonce:'nonce-12345678'
   },'test-secret'),/EXECUTOR_JOB_KIND_INVALID/);
 });
+
+import {
+  validateExecutorEndpoint,
+  signExecutorResult,
+  verifySignedExecutorResult
+} from '../dist/packages/sniper/src/executorProtocol.js';
+
+test('executor endpoint must be public https and cannot target localhost/private literal IPs', () => {
+  assert.equal(validateExecutorEndpoint('https://executor.example.com').ok,true);
+  assert.equal(validateExecutorEndpoint('http://executor.example.com').ok,false);
+  assert.equal(validateExecutorEndpoint('https://localhost:8080').ok,false);
+  assert.equal(validateExecutorEndpoint('https://127.0.0.1').ok,false);
+  assert.equal(validateExecutorEndpoint('https://10.0.0.10').ok,false);
+  assert.equal(validateExecutorEndpoint('https://192.168.1.2').ok,false);
+  assert.equal(validateExecutorEndpoint('https://172.16.4.2').ok,false);
+});
+
+test('executor results are signed and signature verification fails after tampering', async () => {
+  const result={
+    protocolVersion:'iaffice-executor-v1',runId:'run-4',executorId:'ORACLE_FREE_EXECUTOR',
+    jobKind:'DEMO_WEB_BUILD',jobId:'demo-4',caseId:'case-4',state:'SUCCEEDED',
+    actualCostUsd:0,artifacts:[{kind:'WEB_PREVIEW',ref:'artifact:web:4',digest:'sha256:ok'}],
+    telemetry:{startedAt:'2026-09-30T10:00:00.000Z',endedAt:'2026-09-30T10:01:00.000Z',cpuMs:1000,memoryPeakMb:512},
+    resultDigest:'sha256:result',errorCode:null
+  };
+  const signed=await signExecutorResult(result,'test-secret');
+  assert.equal(await verifySignedExecutorResult(signed,'test-secret'),true);
+  signed.result.resultDigest='sha256:tampered';
+  assert.equal(await verifySignedExecutorResult(signed,'test-secret'),false);
+});
