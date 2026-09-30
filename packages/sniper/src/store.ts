@@ -20,6 +20,7 @@ import { evaluateDiscoveryJob, findingToBusinessSignal, type DigitalAuditEvidenc
 import { DISCOVERY_SOURCE_CANDIDATES, evaluateDiscoverySourceAdmission, type DiscoverySourceHealth } from "./discoverySources.js";
 import { buildDemoArtifactManifest, evaluateDemoJob, type DemoArtifactRef, type DemoJobRequest } from "./demoJobs.js";
 import { EXECUTOR_CANDIDATES, evaluateExecutorAdmission, type ExecutorCandidate, type ExecutorHealth } from "./executorRegistry.js";
+import { applySemanticObservation, smoothedOutcomeRate, type SemanticPatternState } from "./learning.js";
 
 export type OpportunityStatus =
   | "DISCOVERED"
@@ -180,6 +181,15 @@ export class SniperStore {
     let tactic:TacticStats|undefined;
     if(promotion.promoted){
       tactic=await this.learn(episode.tacticId,{outcome:episode.outcome,audited:true},episode.evidenceRefs,episode.createdAt);
+      if(episode.outcome==="WON"||episode.outcome==="LOST"){
+        const opportunity=await this.get(episode.opportunityId);
+        if(opportunity){
+          const statement="tactic:"+episode.tacticId+":commercial_outcome";
+          const supports=episode.outcome==="WON";
+          await this.recordSemanticObservation({scopeKey:"category:"+opportunity.category.toLowerCase(),statement,supports,audited:true,evidenceRefs:episode.evidenceRefs},episode.createdAt);
+          await this.recordSemanticObservation({scopeKey:"category:"+opportunity.category.toLowerCase()+"|locality:"+opportunity.locality.toLowerCase(),statement,supports,audited:true,evidenceRefs:episode.evidenceRefs},episode.createdAt);
+        }
+      }
     }
     await this.activity(episode.opportunityId,"MEMORY",episode.agentRole,"EPISODE_RECORDED",{tacticId:episode.tacticId,outcome:episode.outcome,audited:episode.audited,promoted:promotion.promoted},episode.createdAt);
     return {promotion,...(tactic?{tactic}:{})};
@@ -194,6 +204,67 @@ export class SniperStore {
     await this.activity(context.opportunityId,"DECISION","ORCHESTRATOR","NEXT_MOVE_SELECTED",{decisionId,move:decision.move,tacticId:decision.tacticId,score:decision.score,reasons:decision.reasons},now);
     await this.recordTelemetrySpan({traceId:decisionId,spanId:decisionId,parentSpanId:null,caseId:context.opportunityId,agentRole:"ORCHESTRATOR",stage:"PROSPECT",kind:"DECISION",operation:"NEXT_MOVE_SELECTED",status:"OK",startedAt:now,endedAt:now,provider:null,model:null,inputTokens:0,outputTokens:0,actualCostUsd:0,errorCode:null,inputDigest:null,outputDigest:null,attributes:{move:decision.move,tacticId:decision.tacticId,score:decision.score,reasons:decision.reasons}} ,now);
     return {...decision,decisionId};
+  }
+
+
+  async recordSemanticObservation(input:{
+    scopeKey:string;
+    statement:string;
+    supports:boolean;
+    audited:boolean;
+    evidenceRefs:string[];
+  }, now=new Date().toISOString()):Promise<SemanticPatternState & {evidenceRefs:string[]}> {
+    if(!input.scopeKey||!input.statement)throw new Error("SEMANTIC_PATTERN_SCHEMA_INVALID");
+    if(input.evidenceRefs.length===0)throw new Error("SEMANTIC_EVIDENCE_REQUIRED");
+    const patternId=await stableId("sniper-semantic-pattern",{scopeKey:input.scopeKey,statement:input.statement});
+    const row=await this.db.prepare(
+      "SELECT pattern_id,scope_key,statement,confidence,evidence_refs_json,support_count,contradiction_count,status FROM sniper_semantic_patterns WHERE pattern_id=?1"
+    ).bind(patternId).first<Record<string,unknown>>();
+    const base:SemanticPatternState=row?{
+      patternId:String(row.pattern_id),
+      scopeKey:String(row.scope_key),
+      statement:String(row.statement),
+      confidence:Number(row.confidence),
+      supportCount:Number(row.support_count),
+      contradictionCount:Number(row.contradiction_count),
+      status:String(row.status) as SemanticPatternState["status"]
+    }:{
+      patternId,scopeKey:input.scopeKey,statement:input.statement,confidence:0.5,supportCount:0,contradictionCount:0,status:"CANDIDATE"
+    };
+    const next=applySemanticObservation(base,{supports:input.supports,audited:input.audited});
+    const previousEvidence=row?parse<string[]>(row.evidence_refs_json,[]):[];
+    const evidenceRefs=[...new Set([...previousEvidence,...input.evidenceRefs])];
+    if(input.audited){
+      await this.db.prepare(
+        "INSERT INTO sniper_semantic_patterns (pattern_id,scope_key,statement,confidence,evidence_refs_json,support_count,contradiction_count,status,updated_at) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9) ON CONFLICT(pattern_id) DO UPDATE SET confidence=excluded.confidence,evidence_refs_json=excluded.evidence_refs_json,support_count=excluded.support_count,contradiction_count=excluded.contradiction_count,status=excluded.status,updated_at=excluded.updated_at"
+      ).bind(patternId,input.scopeKey,input.statement,next.confidence,JSON.stringify(evidenceRefs),next.supportCount,next.contradictionCount,next.status,now).run();
+      await this.activity(null,"LEARNING","MEMORY","SEMANTIC_PATTERN_UPDATED",{patternId,scopeKey:input.scopeKey,statement:input.statement,supports:input.supports,confidence:next.confidence,status:next.status,evidenceRefs},now);
+    }
+    return {...next,evidenceRefs};
+  }
+
+  async contextualOutcomeRates():Promise<Map<string,{wins:number;losses:number;rate:number;support:number}>>{
+    const rows=await this.db.prepare(
+      "SELECT o.category,o.locality,e.outcome FROM sniper_memory_episodes e JOIN sniper_opportunities o ON o.id=e.opportunity_id WHERE e.audited=1 AND e.outcome IN ('WON','LOST')"
+    ).all<Record<string,unknown>>();
+    const counts=new Map<string,{wins:number;losses:number}>();
+    const add=(key:string,outcome:string)=>{
+      const row=counts.get(key)??{wins:0,losses:0};
+      if(outcome==="WON")row.wins+=1;else row.losses+=1;
+      counts.set(key,row);
+    };
+    for(const row of rows.results){
+      const category=String(row.category).toLowerCase();
+      const locality=String(row.locality).toLowerCase();
+      const outcome=String(row.outcome);
+      add("category:"+category,outcome);
+      add("category:"+category+"|locality:"+locality,outcome);
+    }
+    const rates=new Map<string,{wins:number;losses:number;rate:number;support:number}>();
+    for(const [key,count] of counts){
+      rates.set(key,{...count,rate:smoothedOutcomeRate(count.wins,count.losses),support:count.wins+count.losses});
+    }
+    return rates;
   }
 
   async memorySummary(): Promise<Record<string,unknown>> {
@@ -317,6 +388,7 @@ export class SniperStore {
 
   async globalSignals(now = new Date().toISOString()): Promise<GlobalCaseSignal[]> {
     const opportunities=await this.list(500);
+    const outcomeRates=await this.contextualOutcomeRates();
     const negotiationRows=await this.db.prepare(
       "SELECT opportunity_id,human_gate,updated_at FROM sniper_negotiations ORDER BY updated_at DESC"
     ).all<Record<string,unknown>>();
@@ -330,6 +402,11 @@ export class SniperStore {
       const updated=Date.parse(o.updatedAt);
       const daysIdle=Number.isFinite(nowMs)&&Number.isFinite(updated)?Math.max(0,Math.floor((nowMs-updated)/86400000)):0;
       const demoReady=["DEMO_READY","CONTACTED","ENGAGED","NEGOTIATING","WON","DELIVERING","DELIVERED"].includes(o.status);
+      const localKey="category:"+o.category.toLowerCase()+"|locality:"+o.locality.toLowerCase();
+      const categoryKey="category:"+o.category.toLowerCase();
+      const localRate=outcomeRates.get(localKey);
+      const categoryRate=outcomeRates.get(categoryKey);
+      const learnedRate=localRate&&localRate.support>=2?localRate.rate:(categoryRate?.rate??0.5);
       return {
         caseId:o.id,
         status:o.status,
@@ -340,7 +417,7 @@ export class SniperStore {
         humanGate:latestGate.get(o.id)??false,
         daysIdle,
         strategicTags:[o.category,o.locality],
-        auditedWinRate:0
+        auditedWinRate:learnedRate
       };
     });
   }
