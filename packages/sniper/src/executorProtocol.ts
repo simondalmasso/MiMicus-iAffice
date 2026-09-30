@@ -13,6 +13,19 @@ export const EXECUTOR_JOB_KINDS: readonly ExecutorJobKind[] = [
   "DEMO_HEAVY_3D"
 ] as const;
 
+export interface DiscoveryExecutorPayload {
+  targetUrl: string;
+  auditProfile: "PUBLIC_BUSINESS_WEB";
+}
+
+export interface DemoExecutorPayload {
+  servicePackId: string;
+  requestedDeliverables: string[];
+  evidenceRefs: string[];
+}
+
+export type ExecutorJobPayload = DiscoveryExecutorPayload | DemoExecutorPayload;
+
 export interface ExecutorEnvelopeBody {
   protocolVersion: "iaffice-executor-v1";
   runId: string;
@@ -20,6 +33,7 @@ export interface ExecutorEnvelopeBody {
   jobKind: ExecutorJobKind;
   jobId: string;
   caseId: string | null;
+  payload: ExecutorJobPayload;
   payloadDigest: string;
   artifactInputRefs: string[];
   expectedCostUsd: 0;
@@ -72,11 +86,16 @@ function canonical(value: unknown): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
   if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]";
   const obj=value as Record<string,unknown>;
-  return "{" + Object.keys(obj).sort().map(k=>JSON.stringify(k)+":"+canonical(obj[k])).join(",") + "}";
+  return "{" + Object.keys(obj).filter(k=>obj[k]!==undefined).sort().map(k=>JSON.stringify(k)+":"+canonical(obj[k])).join(",") + "}";
 }
 
 function toHex(bytes: ArrayBuffer): string {
   return [...new Uint8Array(bytes)].map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+
+async function sha256Canonical(value:unknown):Promise<string>{
+  const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(canonical(value)));
+  return "sha256:"+toHex(digest);
 }
 
 async function hmacKey(secret:string,usage:KeyUsage[]):Promise<CryptoKey>{
@@ -90,6 +109,38 @@ function validateTimes(issuedAt:string,expiresAt:string):void{
   if(expires-issued>15*60*1000)throw new Error("EXECUTOR_ENVELOPE_TTL_TOO_LONG");
 }
 
+function objectWithExactKeys(value:unknown,allowed:string[]):value is Record<string,unknown>{
+  if(!value||typeof value!=="object"||Array.isArray(value))return false;
+  const keys=Object.keys(value as Record<string,unknown>).sort();
+  return keys.length===allowed.length&&keys.every((k,i)=>k===allowed.slice().sort()[i]);
+}
+
+function isPublicWebTarget(raw:string):boolean{
+  try{
+    const u=new URL(raw);
+    if(!["http:","https:"].includes(u.protocol))return false;
+    const host=u.hostname.toLowerCase();
+    if(host==="localhost"||host.endsWith(".localhost")||host==="[::1]"||host==="::1")return false;
+    const ip=ipv4Parts(host);
+    if(ip){
+      const [a,b]=ip;
+      if(a===10||a===127||a===0||(a===169&&b===254)||(a===192&&b===168)||(a===172&&b!==undefined&&b>=16&&b<=31))return false;
+    }
+    return !u.username&&!u.password;
+  }catch{return false}
+}
+
+function validatePayload(kind:ExecutorJobKind,payload:unknown):payload is ExecutorJobPayload{
+  if(kind==="DISCOVERY_WEB_AUDIT"){
+    if(!objectWithExactKeys(payload,["auditProfile","targetUrl"]))return false;
+    return payload.auditProfile==="PUBLIC_BUSINESS_WEB"&&typeof payload.targetUrl==="string"&&isPublicWebTarget(payload.targetUrl);
+  }
+  if(!objectWithExactKeys(payload,["evidenceRefs","requestedDeliverables","servicePackId"]))return false;
+  return typeof payload.servicePackId==="string"&&payload.servicePackId.length>0
+    &&Array.isArray(payload.requestedDeliverables)&&payload.requestedDeliverables.length>0&&payload.requestedDeliverables.every(x=>typeof x==="string"&&x.length>0)
+    &&Array.isArray(payload.evidenceRefs)&&payload.evidenceRefs.length>0&&payload.evidenceRefs.every(x=>typeof x==="string"&&x.length>0);
+}
+
 export async function createExecutorEnvelope(
   input:{
     runId:string;
@@ -97,7 +148,7 @@ export async function createExecutorEnvelope(
     jobKind:ExecutorJobKind | string;
     jobId:string;
     caseId:string|null;
-    payloadDigest:string;
+    payload:unknown;
     artifactInputRefs:string[];
     issuedAt:string;
     expiresAt:string;
@@ -107,10 +158,11 @@ export async function createExecutorEnvelope(
 ):Promise<SignedExecutorEnvelope>{
   if(!input.runId||!input.executorId||!input.jobId)throw new Error("EXECUTOR_ENVELOPE_IDENTITY_REQUIRED");
   if(!isExecutorJobKind(input.jobKind))throw new Error("EXECUTOR_JOB_KIND_INVALID");
-  if(!input.payloadDigest.startsWith("sha256:"))throw new Error("EXECUTOR_PAYLOAD_DIGEST_REQUIRED");
-  if(!Array.isArray(input.artifactInputRefs))throw new Error("EXECUTOR_INPUT_REFS_INVALID");
+  if(!validatePayload(input.jobKind,input.payload))throw new Error("EXECUTOR_PAYLOAD_INVALID");
+  if(!Array.isArray(input.artifactInputRefs)||!input.artifactInputRefs.every(x=>typeof x==="string"&&x.length>0))throw new Error("EXECUTOR_INPUT_REFS_INVALID");
   if(!input.nonce||input.nonce.length<8)throw new Error("EXECUTOR_NONCE_INVALID");
   validateTimes(input.issuedAt,input.expiresAt);
+  const payload=structuredClone(input.payload) as ExecutorJobPayload;
   const body:ExecutorEnvelopeBody={
     protocolVersion:"iaffice-executor-v1",
     runId:input.runId,
@@ -118,7 +170,8 @@ export async function createExecutorEnvelope(
     jobKind:input.jobKind,
     jobId:input.jobId,
     caseId:input.caseId,
-    payloadDigest:input.payloadDigest,
+    payload,
+    payloadDigest:await sha256Canonical(payload),
     artifactInputRefs:[...input.artifactInputRefs],
     expectedCostUsd:0,
     issuedAt:input.issuedAt,
@@ -139,6 +192,8 @@ export async function verifyExecutorEnvelope(
     if(envelope.algorithm!=="HMAC-SHA256")return false;
     if(envelope.body.protocolVersion!=="iaffice-executor-v1")return false;
     if(!isExecutorJobKind(envelope.body.jobKind))return false;
+    if(!validatePayload(envelope.body.jobKind,envelope.body.payload))return false;
+    if(envelope.body.payloadDigest!==await sha256Canonical(envelope.body.payload))return false;
     if(envelope.body.expectedCostUsd!==0)return false;
     validateTimes(envelope.body.issuedAt,envelope.body.expiresAt);
     const now=Date.parse(nowIso);
@@ -173,10 +228,13 @@ export function validateExecutorResult(value:unknown):{ok:boolean;reasons:string
   if(!["SUCCEEDED","FAILED"].includes(String(v.state)))reasons.push("STATE_INVALID");
   if(typeof v.actualCostUsd!=="number"||!Number.isFinite(v.actualCostUsd)||v.actualCostUsd!==0)reasons.push("ZERO_COST_RESULT_REQUIRED");
   if(!Array.isArray(v.artifacts))reasons.push("ARTIFACTS_INVALID");
-  else for(const artifact of v.artifacts){
-    if(!artifact||typeof artifact!=="object"){reasons.push("ARTIFACT_INVALID");continue}
-    const a=artifact as Record<string,unknown>;
-    if(!ARTIFACT_KINDS.has(String(a.kind))||typeof a.ref!=="string"||!a.ref||typeof a.digest!=="string"||!a.digest.startsWith("sha256:"))reasons.push("ARTIFACT_INVALID");
+  else{
+    if(v.state==="SUCCEEDED"&&v.artifacts.length===0)reasons.push("SUCCEEDED_ARTIFACT_REQUIRED");
+    for(const artifact of v.artifacts){
+      if(!artifact||typeof artifact!=="object"){reasons.push("ARTIFACT_INVALID");continue}
+      const a=artifact as Record<string,unknown>;
+      if(!ARTIFACT_KINDS.has(String(a.kind))||typeof a.ref!=="string"||!a.ref||typeof a.digest!=="string"||!a.digest.startsWith("sha256:"))reasons.push("ARTIFACT_INVALID");
+    }
   }
   const telemetry=v.telemetry;
   if(!telemetry||typeof telemetry!=="object")reasons.push("TELEMETRY_REQUIRED");
@@ -189,6 +247,7 @@ export function validateExecutorResult(value:unknown):{ok:boolean;reasons:string
   }
   if(typeof v.resultDigest!=="string"||!v.resultDigest.startsWith("sha256:"))reasons.push("RESULT_DIGEST_REQUIRED");
   if(v.errorCode!==null&&typeof v.errorCode!=="string")reasons.push("ERROR_CODE_INVALID");
+  if(v.state==="FAILED"&&(typeof v.errorCode!=="string"||!v.errorCode))reasons.push("FAILED_ERROR_CODE_REQUIRED");
   return {
     ok:reasons.length===0,
     reasons:[...new Set(reasons)],
@@ -218,6 +277,7 @@ export function validateExecutorEndpoint(endpoint:string|null):{ok:boolean;reaso
     }
     if(u.username||u.password)reasons.push("ENDPOINT_CREDENTIALS_FORBIDDEN");
     if(u.search||u.hash)reasons.push("ENDPOINT_QUERY_FRAGMENT_FORBIDDEN");
+    if(u.pathname!=="/"&&u.pathname!=="")reasons.push("ENDPOINT_BASE_PATH_FORBIDDEN");
   }catch{
     reasons.push("ENDPOINT_URL_INVALID");
   }
