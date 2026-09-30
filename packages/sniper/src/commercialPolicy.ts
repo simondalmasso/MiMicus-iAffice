@@ -2,7 +2,8 @@ import type { ExternalOperation } from "./operatingModel.js";
 
 export const DEFAULT_COMMERCIAL_CONTACT_LIMITS = {
   maxAutonomousContacts: 3,
-  minHoursBetweenContacts: 48
+  minHoursBetweenContacts: 48,
+  rollingWindowHours: 30 * 24
 } as const;
 
 export type CommercialPolicyDecision = "ALLOW" | "DENY" | "HUMAN_GATE";
@@ -36,8 +37,12 @@ export interface CommercialPolicyResult {
   reasons: string[];
 }
 
-function isOutreach(action: ExternalOperation): boolean {
-  return ["SEND_OUTREACH","SCHEDULE_EXTERNAL_MEETING","SEND_PROPOSAL","SEND_DELIVERY_NOTICE","SEND_RECEIPT"].includes(action);
+function isPersuasiveOutreach(action: ExternalOperation): boolean {
+  return ["SEND_OUTREACH","SCHEDULE_EXTERNAL_MEETING","SEND_PROPOSAL"].includes(action);
+}
+
+function isOutboundMessage(action: ExternalOperation): boolean {
+  return isPersuasiveOutreach(action) || ["SEND_DELIVERY_NOTICE","SEND_RECEIPT"].includes(action);
 }
 
 function allowedContactProvenance(provenance: ContactProvenance): boolean {
@@ -47,9 +52,12 @@ function allowedContactProvenance(provenance: ContactProvenance): boolean {
 export function evaluateCommercialPolicy(input: CommercialPolicyInput): CommercialPolicyResult {
   const reasons: string[] = [];
 
-  if (isOutreach(input.action)) {
+  if (isOutboundMessage(input.action) && !allowedContactProvenance(input.contactProvenance)) {
+    reasons.push("CONTACT_PROVENANCE_UNVERIFIED");
+  }
+
+  if (isPersuasiveOutreach(input.action)) {
     if (input.explicitRefusal || input.optOut) reasons.push("DO_NOT_CONTACT");
-    if (!allowedContactProvenance(input.contactProvenance)) reasons.push("CONTACT_PROVENANCE_UNVERIFIED");
     if (input.bulkBlast) reasons.push("BULK_BLAST_DENIED");
     if (!input.claimsSupported) reasons.push("UNSUPPORTED_CLAIM");
     if (input.falseUrgency) reasons.push("FALSE_URGENCY_DENIED");
@@ -69,7 +77,7 @@ export function evaluateCommercialPolicy(input: CommercialPolicyInput): Commerci
     reasons.push("CUSTOMER_APPROVAL_REQUIRED");
   }
 
-  if (input.action === "ISSUE_INVOICE" && !input.paymentVerified) {
+  if ((input.action === "ISSUE_INVOICE" || input.action === "SEND_RECEIPT") && !input.paymentVerified) {
     reasons.push("PAYMENT_VERIFICATION_REQUIRED");
   }
 
