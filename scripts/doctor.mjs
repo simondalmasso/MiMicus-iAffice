@@ -20,7 +20,7 @@ check('locked-install',()=>{
 check('all-migrations-empty-db',()=>{
   const db=new DatabaseSync(':memory:');
   const migrationFiles=fs.readdirSync('migrations').filter(x=>/^\d{4}_.+\.sql$/.test(x)).sort();
-  if(migrationFiles.length<11)throw new Error('expected >=11 migrations; found '+migrationFiles.length);
+  if(migrationFiles.length<12)throw new Error('expected >=12 migrations; found '+migrationFiles.length);
   for(const file of migrationFiles)db.exec(fs.readFileSync(path.join('migrations',file),'utf8'));
   const rows=db.prepare("select name from sqlite_master where type='table'").all();
   const names=new Set(rows.map(r=>r.name));
@@ -33,7 +33,9 @@ check('all-migrations-empty-db',()=>{
     'sniper_skill_registry',
     'sniper_discovery_jobs',
     'sniper_demo_jobs',
-    'sniper_executor_registry'
+    'sniper_executor_registry',
+    'sniper_contact_controls',
+    'sniper_commercial_effects'
   ];
   for(const table of required)if(!names.has(table))throw new Error('missing '+table);
   db.close();
@@ -107,6 +109,26 @@ check('zero-cost-ci-guard',()=>{
   const y=fs.readFileSync('.github/workflows/verify.yml','utf8');
   if(!y.includes('workflow_dispatch')||!y.includes('[self-hosted, linux, oracle-free, iaffice]'))throw new Error('CI Oracle-only cost/host guard');
   return 'workflow_dispatch+oracle-free-linux-iaffice';
+});
+
+check('commercial-double-gate',()=>{
+  const core=fs.readFileSync('apps/worker/src/index.ts','utf8');
+  const effects=fs.readFileSync('apps/effects-worker/src/index.ts','utf8');
+  const guard=fs.readFileSync('packages/sniper/src/commercialGuard.ts','utf8');
+  const policy=fs.readFileSync('packages/sniper/src/commercialPolicy.ts','utf8');
+  for(const required of ['CommercialGuard','/api/sniper/commercial/action','CASE_EXTERNAL_ACTION_REQUIRES_COMMERCIAL_GATE']){
+    if(!core.includes(required))throw new Error('core commercial gate missing: '+required);
+  }
+  for(const required of ['CommercialGuard','COMMERCIAL_POLICY_REVALIDATION_DENIED','COMMERCIAL_PAYLOAD_DIGEST_MISMATCH','recordExecuted']){
+    if(!effects.includes(required))throw new Error('effects commercial revalidation missing: '+required);
+  }
+  for(const required of ['COMMERCIAL_COPY_GUARD','sniper_commercial_effects','sniper_contact_controls']){
+    if(!guard.includes(required))throw new Error('durable commercial guard missing: '+required);
+  }
+  for(const required of ['DO_NOT_CONTACT','BULK_BLAST_DENIED','HUMAN_IMPERSONATION_DENIED','CONTACT_COOLDOWN']){
+    if(!policy.includes(required))throw new Error('commercial policy rule missing: '+required);
+  }
+  return 'core+effects+D1+AUD commercial guard';
 });
 
 check('zero-spend-source-guards',()=>{
