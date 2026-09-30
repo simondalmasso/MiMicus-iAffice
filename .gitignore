@@ -14,3 +14,9 @@ wrangler.generated.jsonc
 wrangler.core.generated.jsonc
 wrangler.effects.generated.jsonc
 wrangler.models.generated.jsonc
+# generated deployment configuration
+.generated/
+
+# local executor state/artifacts
+executor.sqlite3
+apps/oracle-executor/artifacts/
