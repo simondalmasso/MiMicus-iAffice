@@ -790,3 +790,38 @@ test('verified oracle executor may handle web browser and heavy 3d classes', () 
   assert.equal(selectExecutor([oracle],'BROWSER_3D')?.id,'ORACLE_FREE_EXECUTOR');
   assert.equal(selectExecutor([oracle],'HEAVY_3D')?.id,'ORACLE_FREE_EXECUTOR');
 });
+
+import {
+  smoothedOutcomeRate,
+  applySemanticObservation
+} from '../dist/packages/sniper/src/learning.js';
+
+test('contextual audited outcome rate is neutral with no evidence and resists one-shot overfitting', () => {
+  assert.equal(smoothedOutcomeRate(0,0),0.5);
+  assert.equal(smoothedOutcomeRate(1,0),2/3);
+  assert.equal(smoothedOutcomeRate(0,1),1/3);
+  assert.ok(smoothedOutcomeRate(8,2)>smoothedOutcomeRate(2,2));
+});
+
+test('semantic memory requires repeated audited support before verification', () => {
+  let p={patternId:'p1',scopeKey:'category:retail',statement:'demo-first performs well',supportCount:0,contradictionCount:0,confidence:.5,status:'CANDIDATE'};
+  p=applySemanticObservation(p,{supports:true,audited:true});
+  assert.equal(p.status,'CANDIDATE');
+  p=applySemanticObservation(p,{supports:true,audited:true});
+  p=applySemanticObservation(p,{supports:true,audited:true});
+  assert.equal(p.status,'VERIFIED');
+  assert.ok(p.confidence>=.7);
+});
+
+test('unaudited semantic observation cannot alter durable pattern', () => {
+  const p={patternId:'p1',scopeKey:'category:retail',statement:'demo-first performs well',supportCount:3,contradictionCount:0,confidence:.8,status:'VERIFIED'};
+  assert.deepEqual(applySemanticObservation(p,{supports:false,audited:false}),p);
+});
+
+test('contradictions can demote a previously verified semantic pattern', () => {
+  let p={patternId:'p1',scopeKey:'category:retail',statement:'demo-first performs well',supportCount:3,contradictionCount:0,confidence:.8,status:'VERIFIED'};
+  p=applySemanticObservation(p,{supports:false,audited:true});
+  p=applySemanticObservation(p,{supports:false,audited:true});
+  p=applySemanticObservation(p,{supports:false,audited:true});
+  assert.notEqual(p.status,'VERIFIED');
+});
