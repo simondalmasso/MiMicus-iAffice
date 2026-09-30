@@ -118,3 +118,21 @@ See:
 - `docs/ORACLE_EXECUTOR_RUNBOOK.md` — Oracle executor/runner
 - `docs/ARCHITECTURE.md`
 - `docs/MEMORY_MODEL.md`
+
+## Commercial safety
+
+CASE-linked external commercial actions use a dedicated durable gate before ActionIntent creation and are revalidated again inside `aria-effects`.
+
+Current rules include:
+- public-business contact provenance only;
+- durable opt-out / explicit refusal;
+- max 3 autonomous persuasive contacts per rolling 30-day window;
+- minimum 48-hour cooldown;
+- exact-payload `COMMERCIAL_COPY_GUARD` AUD PASS for outreach/proposals/meeting messages;
+- no bulk blast, false urgency, unsupported claims or human impersonation;
+- current HUMAN_GATE revalidation;
+- accepted offer required before payment-request paths;
+- customer approval required before customer deployment/credential handoff;
+- verified payment required before invoice/receipt paths.
+
+Only currently implemented safe outbound adapters are exposed. Missing payment/deploy/publish adapters fail closed rather than creating dead approvals.
