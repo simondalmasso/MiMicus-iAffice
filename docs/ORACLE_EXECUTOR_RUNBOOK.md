@@ -276,7 +276,7 @@ ARIA_HEAD_SHA="$(git rev-parse HEAD)" \
 npm run deploy:config
 ```
 
-2. Apply D1 migrations `0001..0011`.
+2. Apply D1 migrations `0001..0012`.
 
 3. Verify/create Queue + DLQ.
 
@@ -342,3 +342,12 @@ Stop and mark BLOCKED instead of weakening controls if:
 - exact-head tests fail;
 - Cloudflare credentials/bindings are unavailable;
 - any path would require Simon's PC.
+
+## Commercial action gate remains in Cloudflare
+
+Oracle builds private demo artifacts only. It does not send prospect messages, create payment requests, deploy customer work or own contact policy.
+
+All CASE-linked external commercial actions remain:
+`agent-os commercial guard → ActionIntent → action-bound approval → aria-effects commercial revalidation → adapter`.
+
+The Oracle executor receives no business-write credentials.
