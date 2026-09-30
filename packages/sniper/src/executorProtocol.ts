@@ -19,9 +19,14 @@ export interface DiscoveryExecutorPayload {
 }
 
 export interface DemoExecutorPayload {
+  businessName: string;
+  category: string;
+  locality: string;
   servicePackId: string;
   requestedDeliverables: string[];
   evidenceRefs: string[];
+  observedFacts: string[];
+  demoBrief: string;
 }
 
 export type ExecutorJobPayload = DiscoveryExecutorPayload | DemoExecutorPayload;
@@ -135,8 +140,13 @@ function validatePayload(kind:ExecutorJobKind,payload:unknown):payload is Execut
     if(!objectWithExactKeys(payload,["auditProfile","targetUrl"]))return false;
     return payload.auditProfile==="PUBLIC_BUSINESS_WEB"&&typeof payload.targetUrl==="string"&&isPublicWebTarget(payload.targetUrl);
   }
-  if(!objectWithExactKeys(payload,["evidenceRefs","requestedDeliverables","servicePackId"]))return false;
-  return typeof payload.servicePackId==="string"&&payload.servicePackId.length>0
+  if(!objectWithExactKeys(payload,["businessName","category","demoBrief","evidenceRefs","locality","observedFacts","requestedDeliverables","servicePackId"]))return false;
+  return typeof payload.businessName==="string"&&payload.businessName.length>0
+    &&typeof payload.category==="string"&&payload.category.length>0
+    &&typeof payload.locality==="string"&&payload.locality.length>0
+    &&typeof payload.servicePackId==="string"&&payload.servicePackId.length>0
+    &&typeof payload.demoBrief==="string"&&payload.demoBrief.length>0
+    &&Array.isArray(payload.observedFacts)&&payload.observedFacts.length>0&&payload.observedFacts.every(x=>typeof x==="string"&&x.length>0)
     &&Array.isArray(payload.requestedDeliverables)&&payload.requestedDeliverables.length>0&&payload.requestedDeliverables.every(x=>typeof x==="string"&&x.length>0)
     &&Array.isArray(payload.evidenceRefs)&&payload.evidenceRefs.length>0&&payload.evidenceRefs.every(x=>typeof x==="string"&&x.length>0);
 }
