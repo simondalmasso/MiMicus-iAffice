@@ -313,3 +313,32 @@ export async function verifySignedExecutorResult(envelope:SignedExecutorResult,s
     return crypto.subtle.verify("HMAC",key,sig,new TextEncoder().encode(canonical(validation.result)));
   }catch{return false}
 }
+
+export async function signArtifactRequest(path:string,timestamp:number,secret:string):Promise<string>{
+  if(!path.startsWith("/v1/artifacts/"))throw new Error("ARTIFACT_PATH_INVALID");
+  if(!Number.isInteger(timestamp)||timestamp<=0)throw new Error("ARTIFACT_TIMESTAMP_INVALID");
+  const key=await hmacKey(secret,["sign"]);
+  return toHex(await crypto.subtle.sign("HMAC",key,new TextEncoder().encode("GET\n"+path+"\n"+timestamp)));
+}
+
+export async function verifyArtifactRequest(
+  path:string,
+  timestamp:number,
+  signature:string,
+  secret:string,
+  nowEpochSeconds=Math.floor(Date.now()/1000)
+):Promise<boolean>{
+  try{
+    if(!path.startsWith("/v1/artifacts/"))return false;
+    if(!Number.isInteger(timestamp)||timestamp<=0)return false;
+    if(Math.abs(nowEpochSeconds-timestamp)>300)return false;
+    if(!/^[0-9a-f]{64}$/i.test(signature))return false;
+    const expected=await signArtifactRequest(path,timestamp,secret);
+    const a=new Uint8Array(expected.match(/../g)!.map(x=>parseInt(x,16)));
+    const b=new Uint8Array(signature.match(/../g)!.map(x=>parseInt(x,16)));
+    if(a.length!==b.length)return false;
+    let diff=0;
+    for(let i=0;i<a.length;i++)diff|=a[i]!^b[i]!;
+    return diff===0;
+  }catch{return false}
+}
