@@ -5,6 +5,7 @@ import hashlib
 import hmac
 import html
 import json
+import mimetypes
 import os
 import re
 import shutil
@@ -114,6 +115,20 @@ def validate_discovery_payload(payload: Any) -> bool:
         and isinstance(payload.get("targetUrl"), str)
         and payload["targetUrl"].startswith(("https://", "http://"))
     )
+
+
+def verify_artifact_request(path: str, timestamp_raw: str | None, signature: str | None) -> bool:
+    try:
+        if not timestamp_raw or not signature or not re.fullmatch(r"[0-9a-fA-F]{64}", signature):
+            return False
+        timestamp = int(timestamp_raw)
+        if abs(int(time.time()) - timestamp) > 300:
+            return False
+        message = f"GET\n{path}\n{timestamp}"
+        expected = hmac.new(SIGNING_KEY.encode("utf-8"), message.encode("utf-8"), hashlib.sha256).hexdigest()
+        return hmac.compare_digest(signature.lower(), expected.lower())
+    except Exception:
+        return False
 
 
 def validate_envelope(envelope: Any, request_path: str) -> tuple[bool, str]:
@@ -442,7 +457,33 @@ class Handler(BaseHTTPRequestHandler):
                 "signingKeyConfigured": len(SIGNING_KEY) >= 8,
                 "heavy3dToolchain": bool(shutil.which("blender")),
                 "discoveryAdapter": "DISABLED_FAIL_CLOSED",
+                "artifactAccess": "HMAC_TIME_BOUND",
             })
+            return
+        match = re.fullmatch(r"/v1/artifacts/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)", self.path)
+        if match:
+            if not verify_artifact_request(
+                self.path,
+                self.headers.get("x-iaffice-artifact-ts"),
+                self.headers.get("x-iaffice-artifact-signature"),
+            ):
+                self._json(401, {"error": "ARTIFACT_AUTH_REQUIRED"})
+                return
+            run_id, name = match.groups()
+            target = ROOT / "artifacts" / run_id / name
+            if not target.is_file():
+                self._json(404, {"error": "ARTIFACT_NOT_FOUND"})
+                return
+            data = target.read_bytes()
+            content_type = mimetypes.guess_type(name)[0] or "application/octet-stream"
+            self.send_response(200)
+            self.send_header("content-type", content_type)
+            self.send_header("content-length", str(len(data)))
+            self.send_header("cache-control", "no-store")
+            self.send_header("x-content-type-options", "nosniff")
+            self.send_header("content-security-policy", "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; frame-ancestors 'self'")
+            self.end_headers()
+            self.wfile.write(data)
             return
         self._json(404, {"error": "NOT_FOUND"})
 
