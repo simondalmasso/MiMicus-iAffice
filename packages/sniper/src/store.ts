@@ -912,7 +912,7 @@ export class SniperStore {
     const nonce=await stableId("executor-nonce",{runId,payloadDigest,now});
     const expiresAt=new Date(Date.parse(now)+10*60*1000).toISOString();
     const envelope=await createExecutorEnvelope({
-      runId,executorId:executor.id,jobKind,jobId,caseId:String(job.case_id),payloadDigest,
+      runId,executorId:executor.id,jobKind,jobId,caseId:String(job.case_id),payload,
       artifactInputRefs:evidenceRefs,issuedAt:now,expiresAt,nonce
     },signingSecret);
     const requestDigest="sha256:"+await sha256(envelope.body);
@@ -938,24 +938,44 @@ export class SniperStore {
     if(!(await verifySignedExecutorResult(signed,signingSecret)))throw new Error("EXECUTOR_RESULT_SIGNATURE_INVALID");
     const result=signed.result;
     const row=await this.db.prepare(
-      "SELECT run_id,executor_id,job_kind,job_id,case_id,state FROM sniper_executor_runs WHERE run_id=?1"
+      "SELECT run_id,executor_id,job_kind,job_id,case_id,state,result_digest FROM sniper_executor_runs WHERE run_id=?1"
     ).bind(result.runId).first<Record<string,unknown>>();
     if(!row)throw new Error("EXECUTOR_RUN_NOT_FOUND");
-    if(["SUCCEEDED","FAILED"].includes(String(row.state)))throw new Error("EXECUTOR_RESULT_ALREADY_FINAL");
+    if(["SUCCEEDED","FAILED"].includes(String(row.state))){
+      if(String(row.result_digest??"")===result.resultDigest){
+        return {runId:result.runId,jobId:result.jobId,state:result.state,artifactCount:result.artifacts.length,costUsd:0,idempotent:true};
+      }
+      throw new Error("EXECUTOR_RESULT_FINAL_CONFLICT");
+    }
     if(!["DISPATCH_READY","DISPATCHED"].includes(String(row.state)))throw new Error("EXECUTOR_RUN_STATE_INVALID");
     if(String(row.executor_id)!==result.executorId||String(row.job_kind)!==result.jobKind||String(row.job_id)!==result.jobId||(row.case_id==null?null:String(row.case_id))!==result.caseId)throw new Error("EXECUTOR_RESULT_IDENTITY_MISMATCH");
+
+    if(result.state==="SUCCEEDED"){
+      const demo=await this.db.prepare(
+        "SELECT state,artifact_manifest_json FROM sniper_demo_jobs WHERE job_id=?1"
+      ).bind(result.jobId).first<Record<string,unknown>>();
+      if(!demo)throw new Error("DEMO_JOB_NOT_FOUND");
+      const demoState=String(demo.state);
+      if(["QUEUED","BUILDING"].includes(demoState)){
+        await this.recordDemoArtifacts({jobId:result.jobId,artifacts:result.artifacts},now);
+      }else if(["AUDIT_REQUIRED","READY"].includes(demoState)){
+        const manifest=demo.artifact_manifest_json?parse<{artifacts?:DemoArtifactRef[]}>(demo.artifact_manifest_json,{}):{};
+        const existingDigest=await sha256(manifest.artifacts??[]);
+        const incomingDigest=await sha256(result.artifacts);
+        if(existingDigest!==incomingDigest)throw new Error("EXECUTOR_ARTIFACT_REPLAY_CONFLICT");
+      }else{
+        throw new Error("DEMO_JOB_RESULT_STATE_INVALID");
+      }
+    }else{
+      await this.db.prepare(
+        "UPDATE sniper_demo_jobs SET state='FAILED',error_code=?2,completed_at=COALESCE(completed_at,?3),updated_at=?3 WHERE job_id=?1 AND state NOT IN ('READY','FAILED')"
+      ).bind(result.jobId,result.errorCode??"EXECUTOR_FAILED",now).run();
+    }
 
     await this.db.prepare(
       "UPDATE sniper_executor_runs SET state=?2,result_digest=?3,response_signature=?4,completed_at=?5,error_code=?6,updated_at=?5 WHERE run_id=?1"
     ).bind(result.runId,result.state,result.resultDigest,signed.signature,now,result.errorCode).run();
 
-    if(result.state==="SUCCEEDED"){
-      await this.recordDemoArtifacts({jobId:result.jobId,artifacts:result.artifacts},now);
-    }else{
-      await this.db.prepare(
-        "UPDATE sniper_demo_jobs SET state='FAILED',error_code=?2,completed_at=?3,updated_at=?3 WHERE job_id=?1"
-      ).bind(result.jobId,result.errorCode??"EXECUTOR_FAILED",now).run();
-    }
     await this.recordTelemetrySpan({
       traceId:result.runId,spanId:result.runId,parentSpanId:null,caseId:result.caseId,agentRole:"DEMO",stage:"EXECUTE",kind:"JOB",
       operation:result.jobKind,status:result.state==="SUCCEEDED"?"OK":"ERROR",startedAt:result.telemetry.startedAt,endedAt:result.telemetry.endedAt,
@@ -963,7 +983,7 @@ export class SniperStore {
       inputDigest:null,outputDigest:result.resultDigest,attributes:{cpuMs:result.telemetry.cpuMs,memoryPeakMb:result.telemetry.memoryPeakMb,artifactCount:result.artifacts.length}
     },now);
     await this.activity(result.caseId,"EXECUTOR","DEMO","EXECUTOR_RUN_COMPLETED",{runId:result.runId,jobId:result.jobId,state:result.state,resultDigest:result.resultDigest,errorCode:result.errorCode},now);
-    return {runId:result.runId,jobId:result.jobId,state:result.state,artifactCount:result.artifacts.length,costUsd:0};
+    return {runId:result.runId,jobId:result.jobId,state:result.state,artifactCount:result.artifacts.length,costUsd:0,idempotent:false};
   }
 
   async recordDemoArtifacts(input:{jobId:string;artifacts:DemoArtifactRef[]}, now=new Date().toISOString()):Promise<Record<string,unknown>> {
