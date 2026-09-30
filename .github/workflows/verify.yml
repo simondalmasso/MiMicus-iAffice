@@ -23,6 +23,7 @@ jobs:
         run: |
           echo "ARIA_HEAD_SHA=$GITHUB_SHA" >> "$GITHUB_ENV"
           git rev-parse HEAD
+      - run: bash scripts/bootstrap_verify_tools.sh
       - run: npm ci --offline --ignore-scripts
       - run: npm run typecheck
       - run: npm test
