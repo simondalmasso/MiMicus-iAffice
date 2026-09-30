@@ -27,6 +27,8 @@ export interface CommercialGuardSnapshot {
   acceptedOffer: boolean;
   customerApproval: boolean;
   paymentVerified: boolean;
+  humanGate: boolean;
+  humanGateReasons: string[];
   commercialAuditPass: boolean;
   commercialAuditId: string | null;
   commercialPayloadDigest: string;
@@ -107,8 +109,8 @@ export class CommercialGuard {
     ).bind(draft.caseId).first<{created_at:string}>();
 
     const negotiation=await this.db.prepare(
-      "SELECT state FROM sniper_negotiations WHERE opportunity_id=?1 ORDER BY updated_at DESC LIMIT 1"
-    ).bind(draft.caseId).first<{state:string}>();
+      "SELECT state,human_gate,human_gate_reasons_json FROM sniper_negotiations WHERE opportunity_id=?1 ORDER BY updated_at DESC LIMIT 1"
+    ).bind(draft.caseId).first<Record<string,unknown>>();
 
     const delivery=await this.db.prepare(
       "SELECT state,acceptance_json FROM sniper_deliveries WHERE opportunity_id=?1 ORDER BY updated_at DESC LIMIT 1"
@@ -133,7 +135,9 @@ export class CommercialGuard {
     const nowMs=Date.parse(now);
     const lastMs=latest?Date.parse(latest.created_at):NaN;
     const hoursSinceLastContact=Number.isFinite(nowMs)&&Number.isFinite(lastMs)?Math.max(0,(nowMs-lastMs)/3600_000):Number.MAX_SAFE_INTEGER;
-    const acceptedOffer=acceptedCommercialState(String(opportunity.status),negotiation?.state??null);
+    const acceptedOffer=acceptedCommercialState(String(opportunity.status),negotiation?.state==null?null:String(negotiation.state));
+    const humanGate=Number(negotiation?.human_gate??0)===1;
+    const humanGateReasons=negotiation?parse<string[]>(negotiation.human_gate_reasons_json,[]):[];
     const customerApproval=approvedDeliveryState(delivery?.state==null?null:String(delivery.state),delivery?parse(delivery.acceptance_json,{}):{});
     const paymentVerified=verifiedPaymentState(payment?.state??null);
 
@@ -154,6 +158,7 @@ export class CommercialGuard {
     });
     const reasons=[...result.reasons];
     if(PERSUASIVE.has(draft.operation)&&!auditPass)reasons.push("COMMERCIAL_AUDIT_PASS_REQUIRED");
+    if(humanGate&&["SEND_PROPOSAL","SCHEDULE_EXTERNAL_MEETING","CREATE_PAYMENT_REQUEST"].includes(draft.operation))reasons.push("HUMAN_GATE_REQUIRED");
 
     const snapshot:CommercialGuardSnapshot={
       caseId:draft.caseId,
@@ -167,11 +172,14 @@ export class CommercialGuard {
       acceptedOffer,
       customerApproval,
       paymentVerified,
+      humanGate,
+      humanGateReasons,
       commercialAuditPass:auditPass,
       commercialAuditId:resolvedAuditId,
       commercialPayloadDigest:digest
     };
-    return {decision:reasons.length?"DENY":"ALLOW",reasons:[...new Set(reasons)],snapshot};
+    const decision:CommercialPolicyResult["decision"]=reasons.includes("HUMAN_GATE_REQUIRED")?"HUMAN_GATE":reasons.length?"DENY":"ALLOW";
+    return {decision,reasons:[...new Set(reasons)],snapshot};
   }
 
   async setContactControl(input:{caseId:string;doNotContact:boolean;explicitRefusal:boolean;reason?:string|null;evidenceRefs:string[]},now=new Date().toISOString()):Promise<void>{
