@@ -882,7 +882,9 @@ test('executor protocol rejects arbitrary job kinds', async () => {
 import {
   validateExecutorEndpoint,
   signExecutorResult,
-  verifySignedExecutorResult
+  verifySignedExecutorResult,
+  signArtifactRequest,
+  verifyArtifactRequest
 } from '../dist/packages/sniper/src/executorProtocol.js';
 
 test('executor endpoint must be public https and cannot target localhost/private literal IPs', () => {
@@ -929,4 +931,13 @@ test('successful executor result requires at least one artifact', () => {
   });
   assert.equal(result.ok,false);
   assert.ok(result.reasons.includes('SUCCEEDED_ARTIFACT_REQUIRED'));
+});
+
+test('private artifact request signatures are path-bound and time-bound', async () => {
+  const path='/v1/artifacts/executor-run_abc/index.html';
+  const ts=1790762400;
+  const sig=await signArtifactRequest(path,ts,'test-secret');
+  assert.equal(await verifyArtifactRequest(path,ts,sig,'test-secret',ts+60),true);
+  assert.equal(await verifyArtifactRequest('/v1/artifacts/executor-run_abc/other.html',ts,sig,'test-secret',ts+60),false);
+  assert.equal(await verifyArtifactRequest(path,ts,sig,'test-secret',ts+301),false);
 });
