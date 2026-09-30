@@ -756,3 +756,37 @@ test('demo artifact manifest remains private and auditable', () => {
   assert.deepEqual(manifest.evidenceRefs,['photo:1','audit:2']);
   assert.equal(manifest.auditRequired,true);
 });
+
+import {
+  EXECUTOR_CANDIDATES,
+  evaluateExecutorAdmission,
+  selectExecutor
+} from '../dist/packages/sniper/src/executorRegistry.js';
+
+test('cloudflare control plane is not treated as heavy build executor', () => {
+  const cf=EXECUTOR_CANDIDATES.find(x=>x.id==='CLOUDFLARE_CONTROL');
+  assert.equal(cf?.capabilities.includes('HEAVY_3D'),false);
+  assert.equal(cf?.role,'CONTROL_PLANE');
+});
+
+test('oracle free executor remains quarantined until endpoint and health are verified', () => {
+  const oracle=EXECUTOR_CANDIDATES.find(x=>x.id==='ORACLE_FREE_EXECUTOR');
+  const admission=evaluateExecutorAdmission(oracle);
+  assert.equal(admission.state,'QUARANTINED');
+  assert.ok(admission.reasons.includes('ENDPOINT_REQUIRED'));
+  assert.ok(admission.reasons.includes('HEALTH_NOT_VERIFIED'));
+});
+
+test('executor admission rejects billable runtime', () => {
+  const oracle=EXECUTOR_CANDIDATES.find(x=>x.id==='ORACLE_FREE_EXECUTOR');
+  const admission=evaluateExecutorAdmission({...oracle,costClass:'PAID',endpoint:'https://executor.example',health:'HEALTHY'});
+  assert.equal(admission.state,'REJECTED');
+});
+
+test('verified oracle executor may handle web browser and heavy 3d classes', () => {
+  const oracle={...EXECUTOR_CANDIDATES.find(x=>x.id==='ORACLE_FREE_EXECUTOR'),endpoint:'https://oracle.example',health:'HEALTHY',zeroCostVerified:true};
+  assert.equal(evaluateExecutorAdmission(oracle).state,'ENABLED');
+  assert.equal(selectExecutor([oracle],'WEB_BUILD')?.id,'ORACLE_FREE_EXECUTOR');
+  assert.equal(selectExecutor([oracle],'BROWSER_3D')?.id,'ORACLE_FREE_EXECUTOR');
+  assert.equal(selectExecutor([oracle],'HEAVY_3D')?.id,'ORACLE_FREE_EXECUTOR');
+});
