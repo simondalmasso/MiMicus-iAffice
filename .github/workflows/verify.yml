@@ -1,12 +1,6 @@
 name: order-004-zero-cost-self-hosted-verify
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - order-004-sniper-autonomous-revenue-engine-v1
-  pull_request:
-    branches:
-      - order-003-zero-cost-compute-market-v1
 
 concurrency:
   group: order-004-verify-${{ github.ref }}
