@@ -1,0 +1,14 @@
+# Replace executor.example.com with a hostname you control.
+# The public executor registry must point to the HTTPS origin root only.
+executor.example.com {
+  encode zstd gzip
+  request_body {
+    max_size 512KB
+  }
+  reverse_proxy 127.0.0.1:8788
+  header {
+    X-Content-Type-Options nosniff
+    Referrer-Policy no-referrer
+    -Server
+  }
+}
