@@ -1499,3 +1499,453 @@ A fresh GPT must:
 15. Only after deploy gates pass, enable ONE real discovery adapter.
 16. Keep real outreach/payment/deploy effects behind A1 policy/effect gateway.
 17. Update this checkpoint in present tense before ending substantial work.
+
+## CHECKPOINT REFRESH — 2026-09-30 18:40 ART
+
+Present state:
+`ACTIVE / IMPLEMENTED PARTIAL / CLOUD VERIFICATION BLOCKED / PRODUCTION NOT DEPLOYED / DO NOT MERGE`
+
+Exact branch HEAD at checkpoint creation:
+`caae98096e4cf84d803a59009209e586d040ba88`
+
+Repository:
+`simondalmasso/the-iAffice`
+
+Branch:
+`order-004-sniper-autonomous-revenue-engine-v1`
+
+PR:
+`#8 — DRAFT ORDER-004 — iAffice Autonomous Revenue OS v1`
+
+Stacked base remains:
+`order-003-zero-cost-compute-market-v1@204ae12a74dd451561dc801631d671d35e65dd56`
+
+Always fetch the live HEAD before continuing. Never assume the SHA above is still current.
+
+### Repository is currently organized around one canonical path
+
+Canonical docs:
+- `README.md`
+- `AGENTS.md`
+- `docs/REPO_MAP.md`
+- `docs/CHECKPOINT_ORDER_004.md`
+- `docs/DEPLOYMENT.md`
+- `docs/ORACLE_EXECUTOR_RUNBOOK.md`
+
+Canonical Wrangler templates:
+- `wrangler.core.template.jsonc`
+- `wrangler.models.template.jsonc`
+- `wrangler.effects.template.jsonc`
+
+The duplicate generic `wrangler.template.jsonc` is removed.
+
+Generated deployment configs live only under:
+`.generated/`
+
+`scripts/render-wrangler.mjs` remains only as a deprecated compatibility wrapper.
+Canonical renderer:
+`scripts/render-deploy-config.mjs`
+
+The unused/conflicting `packages/sniper/src/semanticMemory.ts` is removed.
+Canonical durable semantic/procedural learning is:
+- `packages/sniper/src/learning.ts`
+- `sniper_semantic_patterns`
+- audited `sniper_memory_episodes`
+- `sniper_tactic_learning`
+
+### Current migration chain is 0001..0012
+
+Current migrations:
+- 0001_initial.sql
+- 0002_compute_market.sql
+- 0003_sniper_revenue_engine.sql
+- 0004_sniper_cognitive_memory.sql
+- 0005_sniper_global_core.sql
+- 0006_sniper_observability.sql
+- 0007_sniper_skill_registry.sql
+- 0008_sniper_discovery.sql
+- 0009_sniper_demo_jobs.sql
+- 0010_sniper_executor_registry.sql
+- 0011_sniper_executor_protocol.sql
+- 0012_sniper_commercial_guard.sql
+
+Migration 0012 adds:
+- `sniper_contact_controls`
+- `sniper_commercial_effects`
+
+No production migration 0012 is applied yet because the current public Worker is still the placeholder.
+
+### Audited memory replay is now idempotent
+
+`SniperStore.recordEpisode()` first checks `episode_id`.
+
+Behavior:
+- identical replay returns `idempotent=true`;
+- conflicting replay throws `SNIPER_EPISODE_REPLAY_CONFLICT`;
+- an already-recorded episode does NOT increment tactic or semantic memory again.
+
+This prevents Queue/retry duplication from biasing learned tactics and portfolio priorities.
+
+### Commercial safety is now a real double gate
+
+Previous state:
+`commercialPolicy.ts` existed but was disconnected.
+
+Current state:
+the commercial policy is enforced in both control plane and effect gateway.
+
+Files:
+- `packages/sniper/src/commercialPolicy.ts`
+- `packages/sniper/src/commercialGuard.ts`
+- `apps/worker/src/index.ts`
+- `apps/effects-worker/src/index.ts`
+- `migrations/0012_sniper_commercial_guard.sql`
+
+Persuasive outreach means:
+- SEND_OUTREACH
+- SCHEDULE_EXTERNAL_MEETING
+- SEND_PROPOSAL
+
+Current persuasive limits:
+- max 3 autonomous persuasive contacts per rolling 30-day window;
+- minimum 48 hours between persuasive contacts;
+- public/owner-provided business contact provenance only;
+- durable opt-out / explicit refusal;
+- no bulk blast;
+- no unsupported claim;
+- no false urgency;
+- no human impersonation;
+- exact-payload commercial AUD PASS required.
+
+Transactional SEND_DELIVERY_NOTICE / SEND_RECEIPT is separated from marketing fatigue/opt-out logic.
+SEND_RECEIPT still requires verified payment.
+
+Commercial state is derived from D1, not from a model assertion:
+- contact provenance from CASE contacts;
+- opt-out/refusal from `sniper_contact_controls`;
+- contact count/cooldown from executed `sniper_commercial_effects`;
+- accepted offer from CASE/negotiation state;
+- delivery approval from delivery acceptance;
+- payment verification from payment state;
+- HUMAN_GATE from the latest negotiation;
+- copy audit from canonical `audit_findings`.
+
+Exact-payload audit:
+`commercialActionDigest(caseId, operation, target, payload)`
+
+Persuasive action requires a canonical audit:
+- target_id = exact commercial payload digest;
+- verdict = PASS;
+- strategy = `COMMERCIAL_COPY_GUARD`;
+- evidence refs non-empty.
+
+Protected internal APIs now include:
+- POST `/api/sniper/contact-control`
+- POST `/api/sniper/commercial/audit`
+- POST `/api/sniper/commercial/action`
+
+`/api/sniper/commercial/action`:
+1. validates typed operation;
+2. evaluates current D1 commercial state;
+3. returns 409 for HUMAN_GATE;
+4. returns 403 for policy denial;
+5. derives ActionClass from the operation;
+6. refuses operations with no real effect adapter;
+7. creates an exact-digest ActionIntent;
+8. creates action-bound approval;
+9. persists the commercial metadata inside the action digest.
+
+The generic `/api/actions/request` rejects CASE-linked external actions with:
+`CASE_EXTERNAL_ACTION_REQUIRES_COMMERCIAL_GATE`
+
+This prevents the generic endpoint from bypassing CASE commercial policy.
+
+### aria-effects now revalidates commercial policy after approval
+
+For an external ActionIntent whose subject is an existing CASE:
+- commercial metadata is mandatory;
+- ExternalOperation → ActionClass is checked again;
+- current D1 commercial guard is reevaluated;
+- HUMAN_GATE blocks;
+- changed opt-out/refusal blocks;
+- changed contact fatigue/cooldown blocks;
+- changed acceptance/payment state blocks;
+- changed/missing audit blocks;
+- changed payload digest blocks.
+
+Only after EffectKernel returns EXECUTED:
+`CommercialGuard.recordExecuted()`
+writes durable effect history.
+
+Therefore:
+**an old human approval does not override a newer opt-out, cooldown, HUMAN_GATE or payload mutation.**
+
+Current `safe-outbound` adapter is still simulated.
+It unwraps the commercial envelope and stores only the outbound payload.
+
+Real email / WhatsApp / payment / publish / customer-deploy adapters are NOT connected yet.
+Unsupported commercial operations fail closed with:
+`COMMERCIAL_EFFECT_ADAPTER_NOT_AVAILABLE`
+
+Global policy still denies money/credential mutation where previously defined.
+Do not claim autonomous payment/invoice/credential transfer is live.
+
+### CASE dossier now exposes commercial safety
+
+CASE API/dashboard now shows:
+- DO NOT CONTACT state;
+- explicit refusal;
+- contact-control evidence;
+- recent executed commercial effects;
+- existing negotiation HUMAN_GATE.
+
+The cockpit labels commercial safety as revalidated again inside `aria-effects`.
+
+### Commercial guard tests now include real migrations
+
+`tests/sniper.test.mjs` now has:
+- public contact provenance tests;
+- exact commercial payload digest tests;
+- transaction vs marketing policy tests;
+- real `node:sqlite` D1 adapter;
+- all migrations applied to in-memory SQLite;
+- AUD-passed outreach → ALLOW;
+- opt-out after audit → DENY;
+- executed contact + short interval → CONTACT_COOLDOWN;
+- current negotiation human gate + proposal → HUMAN_GATE.
+
+These tests are written but NOT yet executed on an authorized Oracle runner.
+
+### Doctor now requires the commercial double gate
+
+`scripts/doctor.mjs` now expects >=12 migrations and tables:
+- `sniper_contact_controls`
+- `sniper_commercial_effects`
+
+It also statically requires:
+- Core `CommercialGuard`;
+- `/api/sniper/commercial/action`;
+- generic CASE external-action bypass rejection;
+- aria-effects commercial revalidation;
+- payload digest revalidation;
+- executed-effect recording;
+- core commercial rules.
+
+This is prepared evidence, NOT a PASS result until executed.
+
+### Oracle executor now accepts jobs asynchronously
+
+The previous executor request path could block until a build finished.
+That is no longer true.
+
+Current `apps/oracle-executor/iaffice_executor.py`:
+- validates signed envelope;
+- persists runId/nonce before execution;
+- responds HTTP 202 quickly;
+- runs the typed job in a background thread;
+- does not duplicate an already-running run;
+- persists signed result before callback;
+- tracks callback state/attempts/error;
+- retries callback with backoff;
+- scans pending callbacks after restart every ~5 minutes;
+- continues to expose NO arbitrary-shell job type;
+- continues to keep Discovery web audit disabled/fail-closed.
+
+Private artifact HMAC/digest proxy remains in place.
+
+### Verification tooling is runner-reproducible
+
+Added:
+`scripts/bootstrap_verify_tools.sh`
+
+Pinned defaults:
+- TypeScript 5.9.3
+- Playwright 1.55.0
+
+It installs Playwright Chromium for the cloud runner.
+`scripts/ui_smoke_order004.py` no longer hardcodes `/usr/bin/chromium`.
+
+### GitHub Actions is deliberately manual-only now
+
+`.github/workflows/verify.yml`:
+- workflow_dispatch only;
+- exact ORDER-004 branch;
+- runner labels:
+  `[self-hosted, linux, oracle-free, iaffice]`
+- bootstraps pinned verification tools;
+- executes the full exact-head ORDER-004 gate.
+
+This prevents Simon's Windows host or a GitHub hosted runner from receiving ORDER-004 work.
+
+Old run:
+- workflow run #78
+- run id 36777859725
+- job id 110100217350
+- state observed: queued
+- belongs to an older HEAD;
+- it is stale;
+- current GitHub connector exposes no cancel-run operation.
+
+Ignore this run as validation evidence.
+
+### Production deploy workflow exists but cannot run yet
+
+`.github/workflows/deploy-production.yml` is manual-only.
+
+It requires explicit input:
+`DEPLOY_AGENT_OS`
+
+It is Oracle-only and requires GitHub production secrets:
+- CLOUDFLARE_API_TOKEN
+- CLOUDFLARE_ACCOUNT_ID
+- CLOUDFLARE_D1_DATABASE_ID
+- ADMIN_TOKEN_HASH
+- APPROVAL_SIGNING_KEY
+- WEBHOOK_SECRET
+- EXECUTOR_SIGNING_KEY
+
+It:
+1. enforces exact branch HEAD;
+2. verifies required secret presence without printing values;
+3. runs full ORDER-004 verification;
+4. runs deploy preflight;
+5. renders generated Wrangler configs;
+6. installs core secrets;
+7. runs canonical Cloudflare deployment;
+8. runs exact-head live acceptance.
+
+The available GitHub connector cannot dispatch workflow_dispatch.
+No deploy was triggered from this chat.
+
+### Cloudflare deploy path is now canonical and less ambiguous
+
+`scripts/cloudflare-preflight.mjs`:
+- requires Cloudflare deploy token + account id;
+- does NOT require external Groq/Mistral/Gemini credentials just to deploy the app;
+- verifies worker boundary topology;
+- rejects configured paid model IDs.
+
+`scripts/ensure-cloudflare-resources.sh`:
+- verifies the supplied D1 ID exists;
+- verifies it is the existing `ariaos-v1` database;
+- does NOT silently create a different D1;
+- ensures Queue `ariaos-events-v1`;
+- ensures DLQ `ariaos-events-v1-dlq`;
+- creates only missing queues.
+
+`scripts/deploy-cloudflare.sh`:
+`exact HEAD → preflight → render → D1/Queue check → migrations → aria-models → aria-effects → agent-os`
+
+`scripts/live_acceptance_order004.py` checks exact SHA, real cockpit HTML, core APIs and security headers.
+
+### Production truth at this checkpoint
+
+Observed live:
+`https://agent-os.simondalmasso44.workers.dev/`
+
+Observed:
+- HTTP 200;
+- response is still 12-byte `text/plain` placeholder;
+- `/api/health` returns the same placeholder behavior;
+- current app/API is NOT deployed;
+- current security headers from the new Worker code are therefore NOT live.
+
+Deployment state:
+`BLOCKED_REAL_CLOUDFLARE_CREDENTIAL_PATH + ORACLE_RUNNER_NOT_ENROLLED`
+
+No Cloudflare connector is available in current tools.
+No OCI connector is available.
+SentinelX reports no connected hosts/integrations.
+No Simon-PC fallback is permitted.
+
+### Hourly continuity is active
+
+An hourly continuation task is active.
+
+Every run is instructed to:
+- resume ORDER-004 without reset;
+- fetch exact current HEAD;
+- read issue #7 / PR #8 / AGENTS / REPO_MAP / checkpoint;
+- never use Simon's PC;
+- continue safe pending code if deploy remains blocked;
+- never fabricate PASS;
+- preserve zero-spend/A1 boundaries;
+- update this checkpoint in present tense before ending.
+
+### Exact continuation for a fresh GPT
+
+A fresh GPT must execute this sequence:
+
+1. Read issue #7.
+2. Read PR #8.
+3. Read `AGENTS.md`.
+4. Read `docs/REPO_MAP.md`.
+5. Read this checkpoint, especially the newest refresh.
+6. Fetch live HEAD of:
+   `order-004-sniper-autonomous-revenue-engine-v1`.
+7. Confirm PR base still:
+   `order-003-zero-cost-compute-market-v1@204ae12a74dd451561dc801631d671d35e65dd56`.
+8. Do not reset/rebase to main.
+9. Do not use Simon's PC.
+
+First infrastructure priority:
+10. Obtain authorized shell on the existing Oracle Free Tier target using the existing ORDER076 path only.
+11. Confirm expected host identity before mutation.
+12. Checkout exact current ORDER-004 branch under a dedicated cloud path.
+13. Run:
+    `python3 scripts/oracle_executor_selftest.py`
+14. Install executor only if self-test passes.
+15. Bootstrap GitHub self-hosted runner with labels:
+    `oracle-free,iaffice`
+16. Do not create another SSH key or control plane.
+
+Verification priority:
+17. Manually dispatch `order-004-zero-cost-self-hosted-verify` from the ORDER-004 branch once Oracle runner is online.
+18. Require exact HEAD.
+19. Run the entire suite and repair every observed failure.
+20. Do not use static inspection as PASS evidence.
+
+Deployment priority after exact-head PASS:
+21. Ensure GitHub production secrets exist without exposing values.
+22. Manually dispatch `order-004-production-deploy` with:
+    `DEPLOY_AGENT_OS`
+23. The workflow must verify existing D1 and queues, apply migrations 0001..0012, deploy internal workers, then `agent-os`.
+24. Run `scripts/live_acceptance_order004.py`.
+25. Confirm root is real iAffice HTML and `/api/health` reports exact SHA.
+
+Oracle executor after Core is live:
+26. Configure the same EXECUTOR_SIGNING_KEY on Oracle.
+27. Put Oracle behind an authorized stable HTTPS hostname.
+28. Start executor and check localhost + public health.
+29. Gather real free-tier evidence for this exact VM.
+30. POST protected `/api/sniper/executors/verify`.
+31. Require Oracle admission = ENABLED.
+32. Run one private demo:
+    `CASE → Demo Job → Queue → Oracle → signed result → private artifact → AUD`.
+33. Verify private artifact proxy digest and auth.
+
+Commercial acceptance after deployment:
+34. Create a test CASE using only synthetic/test contact data.
+35. Create exact-payload commercial AUD PASS.
+36. Create commercial action.
+37. Verify approval is action-bound.
+38. Before approving, set DO NOT CONTACT and prove aria-effects rejects the stale approval.
+39. Clear only in a separate test CASE; verify cooldown after one executed simulated safe-outbound effect.
+40. Do not connect real outbound email/WhatsApp until a legitimate authorized adapter and its own compliance/cost gates exist.
+
+Only after all above:
+41. consider enabling ONE discovery adapter;
+42. then add one real outbound connector;
+43. then payment/deploy adapters;
+44. preserve HUMAN_GATE for large/meeting/non-standard/legal cases;
+45. keep actual production/customer deployment behind action-bound approval.
+
+Current forbidden claims:
+- do not say ORDER-004 tests PASS;
+- do not say Oracle runner is online;
+- do not say Oracle executor is live;
+- do not say Cloudflare app is deployed;
+- do not say outbound email/WhatsApp is live;
+- do not say Mercado Pago/invoicing is live;
+- do not say Discovery is scanning Santa Fe live;
+- do not merge PR #8.
