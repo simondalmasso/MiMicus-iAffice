@@ -836,7 +836,7 @@ import {
 test('executor protocol only exposes typed job kinds and a fixed request path', async () => {
   const env=await createExecutorEnvelope({
     runId:'run-1',executorId:'ORACLE_FREE_EXECUTOR',jobKind:'DEMO_WEB_BUILD',
-    jobId:'demo-1',caseId:'case-1',payloadDigest:'sha256:abc',
+    jobId:'demo-1',caseId:'case-1',payload:{servicePackId:'OPENINGS_COMMERCE',requestedDeliverables:['VISUAL_CONFIGURATOR'],evidenceRefs:['evidence:audit:1']},
     artifactInputRefs:['evidence:audit:1'],issuedAt:'2026-09-30T10:00:00.000Z',
     expiresAt:'2026-09-30T10:10:00.000Z',nonce:'nonce-12345678'
   },'test-secret');
@@ -849,7 +849,7 @@ test('executor protocol only exposes typed job kinds and a fixed request path', 
 test('executor envelope validates HMAC and expiration', async () => {
   const signed=await createExecutorEnvelope({
     runId:'run-2',executorId:'ORACLE_FREE_EXECUTOR',jobKind:'DISCOVERY_WEB_AUDIT',
-    jobId:'discovery-1',caseId:null,payloadDigest:'sha256:def',
+    jobId:'discovery-1',caseId:null,payload:{targetUrl:'https://example.test',auditProfile:'PUBLIC_BUSINESS_WEB'},
     artifactInputRefs:['url:https://example.test'],issuedAt:'2026-09-30T10:00:00.000Z',
     expiresAt:'2026-09-30T10:10:00.000Z',nonce:'nonce-abcdefgh'
   },'test-secret');
@@ -874,7 +874,7 @@ test('executor result rejects monetary spend and untyped artifacts', () => {
 test('executor protocol rejects arbitrary job kinds', async () => {
   await assert.rejects(()=>createExecutorEnvelope({
     runId:'run-x',executorId:'ORACLE_FREE_EXECUTOR',jobKind:'ARBITRARY_SHELL',
-    jobId:'x',caseId:null,payloadDigest:'sha256:x',artifactInputRefs:[],
+    jobId:'x',caseId:null,payload:{},artifactInputRefs:[],
     issuedAt:'2026-09-30T10:00:00.000Z',expiresAt:'2026-09-30T10:10:00.000Z',nonce:'nonce-12345678'
   },'test-secret'),/EXECUTOR_JOB_KIND_INVALID/);
 });
@@ -907,4 +907,26 @@ test('executor results are signed and signature verification fails after tamperi
   assert.equal(await verifySignedExecutorResult(signed,'test-secret'),true);
   signed.result.resultDigest='sha256:tampered';
   assert.equal(await verifySignedExecutorResult(signed,'test-secret'),false);
+});
+
+test('executor payload rejects command-like or unknown fields', async () => {
+  await assert.rejects(()=>createExecutorEnvelope({
+    runId:'run-p',executorId:'ORACLE_FREE_EXECUTOR',jobKind:'DEMO_WEB_BUILD',
+    jobId:'demo-p',caseId:'case-p',
+    payload:{servicePackId:'LOCAL_COMMERCE_DIGITAL',requestedDeliverables:['HIGH_CONVERSION_WEBSITE'],evidenceRefs:['audit:1'],command:'rm -rf /'},
+    artifactInputRefs:['audit:1'],issuedAt:'2026-09-30T10:00:00.000Z',
+    expiresAt:'2026-09-30T10:10:00.000Z',nonce:'nonce-payload-1'
+  },'test-secret'),/EXECUTOR_PAYLOAD_INVALID/);
+});
+
+test('successful executor result requires at least one artifact', () => {
+  const result=validateExecutorResult({
+    protocolVersion:'iaffice-executor-v1',runId:'run-empty',executorId:'ORACLE_FREE_EXECUTOR',
+    jobKind:'DEMO_WEB_BUILD',jobId:'demo-empty',caseId:'case-empty',state:'SUCCEEDED',
+    actualCostUsd:0,artifacts:[],
+    telemetry:{startedAt:'2026-09-30T10:00:00.000Z',endedAt:'2026-09-30T10:00:01.000Z',cpuMs:1,memoryPeakMb:1},
+    resultDigest:'sha256:result',errorCode:null
+  });
+  assert.equal(result.ok,false);
+  assert.ok(result.reasons.includes('SUCCEEDED_ARTIFACT_REQUIRED'));
 });
