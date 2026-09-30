@@ -5,6 +5,8 @@ import { verifyApprovalSignature } from "../../../packages/policy/src/policy.js"
 import { APPROVAL_CHAIN_VERSION, EffectKernel, POLICY_VERSION, type EffectAdapter } from "../../../packages/effects/src/kernel.js";
 import { D1ReceiptStore } from "../../../packages/effects/src/d1-store.js";
 import { GitHubIssueCommentEffectAdapter, NotionEffectAdapter } from "../../../packages/effects/src/adapters.js";
+import { CommercialGuard, isExternalOperation, type CommercialActionDraft } from "../../../packages/sniper/src/commercialGuard.js";
+import { requiredEffectClass } from "../../../packages/sniper/src/operatingModel.js";
 
 interface EffectsEnv {
   DB: D1Like;
@@ -20,9 +22,12 @@ class D1SafeOutboundAdapter implements EffectAdapter {
   async execute(parameters: Record<string, unknown>, idempotencyKey: string): Promise<Record<string, unknown>> {
     const existing = await this.db.prepare("SELECT payload_json,result_hash FROM safe_outbound WHERE idempotency_key=?1").bind(idempotencyKey).first<{payload_json:string;result_hash:string}>();
     if (existing) return { simulated: true, exactPayload: JSON.parse(existing.payload_json), idempotencyKey, resultHash: existing.result_hash };
-    const resultHash = await sha256(parameters);
-    await this.db.prepare("INSERT OR IGNORE INTO safe_outbound (idempotency_key,payload_json,result_hash,created_at) VALUES (?1,?2,?3,datetime('now'))").bind(idempotencyKey,JSON.stringify(parameters),resultHash).run();
-    return { simulated: true, exactPayload: parameters, idempotencyKey, resultHash };
+    const outbound=(parameters.payload&&typeof parameters.payload==="object"&&!Array.isArray(parameters.payload))
+      ? structuredClone(parameters.payload as Record<string,unknown>)
+      : structuredClone(parameters);
+    const resultHash = await sha256(outbound);
+    await this.db.prepare("INSERT OR IGNORE INTO safe_outbound (idempotency_key,payload_json,result_hash,created_at) VALUES (?1,?2,?3,datetime('now'))").bind(idempotencyKey,JSON.stringify(outbound),resultHash).run();
+    return { simulated: true, exactPayload: outbound, idempotencyKey, resultHash };
   }
 }
 async function canonicalApproval(db: D1Like, id: string): Promise<ApprovalRequest | undefined> {
@@ -43,11 +48,37 @@ export default {
       if (!storedApproval || storedApproval.state !== "APPROVED") throw new Error("CANONICAL_APPROVAL_NOT_APPROVED");
       if (!(await verifyApprovalSignature(storedApproval, env.APPROVAL_SIGNING_KEY))) throw new Error("APPROVAL_SIGNATURE_INVALID");
       if (storedApproval.actionHash !== body.intent.actionDigest) throw new Error("APPROVAL_DIGEST_MISMATCH");
+
+      const commercialGuard=new CommercialGuard(env.DB);
+      let commercialDraft:CommercialActionDraft|null=null;
+      const subjectIsCase=await commercialGuard.caseExists(body.intent.subjectId);
+      if(subjectIsCase&&["SEND_EXTERNAL","PUBLISH_CONTENT","MONEY_MUTATION","CREDENTIAL_MUTATION","DEPLOY"].includes(body.intent.actionClass)){
+        const cp=body.intent.canonicalParameters;
+        if(!isExternalOperation(cp.commercialOperation)||cp.caseId!==body.intent.subjectId||!cp.payload||typeof cp.payload!=="object"||Array.isArray(cp.payload)){
+          throw new Error("COMMERCIAL_GUARD_METADATA_REQUIRED");
+        }
+        if(requiredEffectClass(cp.commercialOperation)!==body.intent.actionClass)throw new Error("COMMERCIAL_ACTION_CLASS_MISMATCH");
+        commercialDraft={
+          caseId:body.intent.subjectId,
+          operation:cp.commercialOperation,
+          target:body.intent.target,
+          payload:cp.payload as Record<string,unknown>,
+          auditId:typeof cp.commercialAuditId==="string"?cp.commercialAuditId:null
+        };
+        const evaluation=await commercialGuard.evaluate(commercialDraft,body.now);
+        if(evaluation.decision==="HUMAN_GATE")throw new Error("COMMERCIAL_HUMAN_GATE_REQUIRED");
+        if(evaluation.decision!=="ALLOW")throw new Error("COMMERCIAL_POLICY_REVALIDATION_DENIED:"+evaluation.reasons.join(","));
+        if(cp.commercialPayloadDigest!==evaluation.snapshot.commercialPayloadDigest)throw new Error("COMMERCIAL_PAYLOAD_DIGEST_MISMATCH");
+      }
+
       const adapters: EffectAdapter[] = [new D1SafeOutboundAdapter(env.DB)];
       if (env.GITHUB_WRITE_TOKEN) adapters.push(new GitHubIssueCommentEffectAdapter(env.GITHUB_WRITE_TOKEN));
       if (env.NOTION_WRITE_TOKEN) adapters.push(new NotionEffectAdapter(env.NOTION_WRITE_TOKEN));
       const kernel = new EffectKernel(new D1ReceiptStore(env.DB), adapters, (approval) => verifyApprovalSignature(approval, env.APPROVAL_SIGNING_KEY!));
       const receipt: EffectReceipt = await kernel.execute({ intent: body.intent, approval: storedApproval, currentPolicyVersion: POLICY_VERSION, currentApprovalChainVersion: APPROVAL_CHAIN_VERSION, currentPreconditionHash: body.currentPreconditionHash, now: body.now });
+      if(receipt.status==="EXECUTED"&&commercialDraft){
+        await commercialGuard.recordExecuted({caseId:commercialDraft.caseId,operation:commercialDraft.operation,target:commercialDraft.target,intentId:body.intent.intentId,receiptId:receipt.receiptId},body.now);
+      }
       return Response.json({ receipt, observableCount: await countSafeOutbound(env.DB), gatewaySha: env.ARIA_GIT_SHA ?? "unknown" });
     } catch (error) {
       return Response.json({ error: error instanceof Error ? error.message : "EFFECT_GATEWAY_ERROR" }, { status: 400 });
