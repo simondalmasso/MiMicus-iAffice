@@ -18,7 +18,7 @@ import { buildAgencyOperationsSnapshot, OPERATING_STAGES } from "./operatingMode
 import { SKILL_SOURCE_CANDIDATES, evaluateSkillAdmission, type SkillHealth } from "./skillRegistry.js";
 import { evaluateDiscoveryJob, findingToBusinessSignal, type DigitalAuditEvidence, type DiscoveryJobRequest, type RawBusinessFinding } from "./discovery.js";
 import { DISCOVERY_SOURCE_CANDIDATES, evaluateDiscoverySourceAdmission, type DiscoverySourceHealth } from "./discoverySources.js";
-import { buildDemoArtifactManifest, evaluateDemoJob, type DemoArtifactRef, type DemoJobRequest } from "./demoJobs.js";
+import { buildDemoArtifactManifest, evaluateDemoJob, type DemoArtifactManifest, type DemoArtifactRef, type DemoJobRequest } from "./demoJobs.js";
 import { EXECUTOR_CANDIDATES, evaluateExecutorAdmission, type ExecutorCandidate, type ExecutorHealth } from "./executorRegistry.js";
 import { applySemanticObservation, smoothedOutcomeRate, type SemanticPatternState } from "./learning.js";
 import { createExecutorEnvelope, executorRequestPath, verifySignedExecutorResult, type ExecutorJobKind, type SignedExecutorEnvelope, type SignedExecutorResult } from "./executorProtocol.js";
@@ -990,6 +990,39 @@ export class SniperStore {
     },now);
     await this.activity(result.caseId,"EXECUTOR","DEMO","EXECUTOR_RUN_COMPLETED",{runId:result.runId,jobId:result.jobId,state:result.state,resultDigest:result.resultDigest,errorCode:result.errorCode},now);
     return {runId:result.runId,jobId:result.jobId,state:result.state,artifactCount:result.artifacts.length,costUsd:0,idempotent:false};
+  }
+
+
+  async resolvePrivateArtifact(runId:string,name:string):Promise<{
+    endpoint:string;
+    path:string;
+    kind:DemoArtifactRef["kind"];
+    digest:string;
+    ref:string;
+  }|null>{
+    if(!/^[A-Za-z0-9_.-]+$/.test(runId)||!/^[A-Za-z0-9_.-]+$/.test(name))throw new Error("ARTIFACT_PATH_INVALID");
+    const run=await this.db.prepare(
+      "SELECT executor_id,job_id,state FROM sniper_executor_runs WHERE run_id=?1"
+    ).bind(runId).first<Record<string,unknown>>();
+    if(!run||String(run.state)!=="SUCCEEDED")return null;
+    const demo=await this.db.prepare(
+      "SELECT artifact_manifest_json FROM sniper_demo_jobs WHERE job_id=?1"
+    ).bind(String(run.job_id)).first<Record<string,unknown>>();
+    if(!demo?.artifact_manifest_json)return null;
+    const manifest=parse<DemoArtifactManifest|null>(demo.artifact_manifest_json,null);
+    if(!manifest)return null;
+    const expectedRef="executor://"+String(run.executor_id)+"/"+runId+"/"+name;
+    const artifact=manifest.artifacts.find(x=>x.ref===expectedRef);
+    if(!artifact)return null;
+    const executor=await this.resolvedExecutor(String(run.executor_id));
+    if(!executor||!executor.endpoint||evaluateExecutorAdmission(executor).state!=="ENABLED")return null;
+    return {
+      endpoint:executor.endpoint,
+      path:"/v1/artifacts/"+encodeURIComponent(runId)+"/"+encodeURIComponent(name),
+      kind:artifact.kind,
+      digest:artifact.digest,
+      ref:artifact.ref
+    };
   }
 
   async recordDemoArtifacts(input:{jobId:string;artifacts:DemoArtifactRef[]}, now=new Date().toISOString()):Promise<Record<string,unknown>> {
