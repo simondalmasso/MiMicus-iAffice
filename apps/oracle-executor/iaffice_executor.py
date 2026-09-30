@@ -573,7 +573,14 @@ def self_test() -> int:
     signed = signed_result(result)
     if not hmac.compare_digest(signed["signature"], sign(result)):
         return 4
-    print(json.dumps({"ok": True, "artifacts": artifacts, "arbitraryShell": False}, indent=2))
+    artifact_path = "/v1/artifacts/self-test-run/index.html"
+    ts = int(time.time())
+    artifact_sig = hmac.new(SIGNING_KEY.encode("utf-8"), f"GET\\n{artifact_path}\\n{ts}".encode("utf-8"), hashlib.sha256).hexdigest()
+    if not verify_artifact_request(artifact_path, str(ts), artifact_sig):
+        return 5
+    if verify_artifact_request("/v1/artifacts/self-test-run/other.html", str(ts), artifact_sig):
+        return 6
+    print(json.dumps({"ok": True, "artifacts": artifacts, "arbitraryShell": False, "artifactAuth": "HMAC_TIME_BOUND"}, indent=2))
     return 0
 
 
