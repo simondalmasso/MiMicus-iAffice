@@ -49,6 +49,7 @@ jobs:
           for n in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_D1_DATABASE_ID ADMIN_TOKEN_HASH APPROVAL_SIGNING_KEY WEBHOOK_SECRET EXECUTOR_SIGNING_KEY; do
             test -n "${!n:-}" || { echo "MISSING_SECRET:$n" >&2; exit 45; }
           done
+      - run: bash scripts/bootstrap_verify_tools.sh
       - run: npm ci --offline --ignore-scripts
       - run: npm run verify:004
       - run: npm run deploy:preflight
