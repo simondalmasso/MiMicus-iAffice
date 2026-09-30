@@ -93,6 +93,22 @@ export interface CaseDemo {
   updatedAt: string;
 }
 
+export interface CaseCommercialEffect {
+  operation: string;
+  target: string;
+  state: string;
+  createdAt: string;
+}
+
+export interface CaseCommercialControl {
+  doNotContact: boolean;
+  explicitRefusal: boolean;
+  reason: string | null;
+  evidenceRefs: string[];
+  updatedAt: string | null;
+  effects: CaseCommercialEffect[];
+}
+
 export interface CaseEvaluationInput {
   opportunity: CaseOpportunity;
   negotiations: CaseNegotiation[];
@@ -102,6 +118,7 @@ export interface CaseEvaluationInput {
   episodes: CaseEpisode[];
   decisions: CaseDecision[];
   demos?: CaseDemo[];
+  commercialControl?: CaseCommercialControl;
 }
 
 export function buildCaseEvaluation(input: CaseEvaluationInput) {
@@ -140,6 +157,9 @@ export function buildCaseEvaluation(input: CaseEvaluationInput) {
     },
     demos: (input.demos ?? []).map(x => structuredClone(x)),
     commercial: {
+      controls: structuredClone(input.commercialControl ?? {
+        doNotContact:false, explicitRefusal:false, reason:null, evidenceRefs:[], updatedAt:null, effects:[]
+      }),
       negotiations: input.negotiations.map(x => structuredClone(x)),
       deliveries: input.deliveries.map(x => structuredClone(x)),
       payments: input.payments.map(x => structuredClone(x))
