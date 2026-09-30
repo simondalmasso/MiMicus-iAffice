@@ -901,10 +901,17 @@ export class SniperStore {
     const attempt=Number(count?.n??0)+1;
     const evidenceRefs=parse<string[]>(job.evidence_refs_json,[]);
     const requestedDeliverables=parse<string[]>(job.requested_deliverables_json,[]);
+    const opportunity=await this.get(String(job.case_id));
+    if(!opportunity)throw new Error("DEMO_CASE_NOT_FOUND");
     const payload={
+      businessName:opportunity.businessName,
+      category:opportunity.category,
+      locality:opportunity.locality,
       servicePackId:String(job.service_pack_id),
       requestedDeliverables,
-      evidenceRefs
+      evidenceRefs,
+      observedFacts:[...opportunity.persuasion.observedFacts],
+      demoBrief:opportunity.persuasion.demoBrief
     };
     const payloadDigest="sha256:"+await sha256(payload);
     const runId=await stableId("executor-run",{executorId:executor.id,jobKind,jobId,attempt});
