@@ -49,6 +49,7 @@ async function sniperGet(url:URL,env:Env):Promise<Response|null>{
   if(url.pathname==="/api/sniper/discovery/sources")return json(await sniper.discoverySourcesOverview());
   if(url.pathname==="/api/sniper/discovery/jobs")return json(await sniper.listDiscoveryJobs(Number(url.searchParams.get("limit")??100)));
   if(url.pathname==="/api/sniper/demos")return json(await sniper.listDemoJobs(Number(url.searchParams.get("limit")??100)));
+  if(url.pathname==="/api/sniper/executors")return json(await sniper.executorRegistryOverview());
   if(url.pathname==="/api/sniper/telemetry")return json(await sniper.telemetryOverview(Number(url.searchParams.get("limit")??500)));
   const traceMatch=url.pathname.match(/^\/api\/sniper\/telemetry\/traces\/([^/]+)$/);
   if(traceMatch)return json(await sniper.telemetryTrace(decodeURIComponent(traceMatch[1]!)));
@@ -58,13 +59,18 @@ async function sniperGet(url:URL,env:Env):Promise<Response|null>{
   if(match)return json(await sniper.get(decodeURIComponent(match[1]!)));
   return null;
 }
-async function api(request:Request,env:Env):Promise<Response|null>{const url=new URL(request.url);if(!url.pathname.startsWith("/api/"))return null;const store=new D1StateStore(env.DB);if(request.method==="GET"){const compute=await computeGet(url,env);if(compute)return compute;const sniper=await sniperGet(url,env);if(sniper)return sniper;if(url.pathname==="/api/health"){const cfg=configured(env);return json({ok:cfg.ready,service:"AriaOS",worker:"aria-core",environment:env.ENVIRONMENT??"unknown",sha:env.ARIA_GIT_SHA??"unknown",canonicalMemory:"D1",effectBoundary:"SERVICE_BINDING_ONLY",modelBoundary:"SERVICE_BINDING_ONLY",agentWriteCredentials:0,modelProviderCredentials:0,costPolicy:"ZERO_SPEND_HARD_LOCK",missingBindings:cfg.missing},cfg.ready?200:503);}if(url.pathname==="/api/system/budget")return json(new BudgetGovernor().snapshot());if(url.pathname==="/api/system/policy")return json(new PolicyEngine().policyMatrix());if(url.pathname==="/api/state")return json(await store.load());}
+async function api(request:Request,env:Env):Promise<Response|null>{const url=new URL(request.url);if(!url.pathname.startsWith("/api/"))return null;const store=new D1StateStore(env.DB);if(request.method==="GET"){const compute=await computeGet(url,env);if(compute)return compute;const sniper=await sniperGet(url,env);if(sniper)return sniper;if(url.pathname==="/api/health"){const cfg=configured(env);return json({ok:cfg.ready,service:"iAffice",worker:"agent-os",environment:env.ENVIRONMENT??"unknown",sha:env.ARIA_GIT_SHA??"unknown",canonicalMemory:"D1",effectBoundary:"SERVICE_BINDING_ONLY",modelBoundary:"SERVICE_BINDING_ONLY",agentWriteCredentials:0,modelProviderCredentials:0,costPolicy:"ZERO_SPEND_HARD_LOCK",missingBindings:cfg.missing},cfg.ready?200:503);}if(url.pathname==="/api/system/budget")return json(new BudgetGovernor().snapshot());if(url.pathname==="/api/system/policy")return json(new PolicyEngine().policyMatrix());if(url.pathname==="/api/state")return json(await store.load());}
  if(request.method!=="GET"){if(!(await withinRateLimit(env,`admin:${url.pathname}`,30)))return json({error:"RATE_LIMITED_OR_COORDINATOR_UNAVAILABLE"},429);if(!(await authorized(request,env)))return json({error:"ADMIN_AUTH_REQUIRED"},401);}
  if(request.method==="POST"&&url.pathname==="/api/sniper/opportunities/ingest"){
     const body=await request.json();
     if(!validSignal(body))return json({error:"SNIPER_SIGNAL_SCHEMA_INVALID"},400);
     const sniper=new SniperStore(env.DB),record=await sniper.ingest(body);
     return json(record,201);
+  }
+ if(request.method==="POST"&&url.pathname==="/api/sniper/executors/verify"){
+    const body=await request.json() as {executorId?:string;endpoint?:string|null;costClass?:"FREE_VERIFIED"|"FREE_USER_CONFIRMED"|"UNKNOWN"|"PAID";zeroCostVerified?:boolean;health?:"HEALTHY"|"UNKNOWN"|"DEGRADED";evidenceRefs?:string[];lastHealthAt?:string|null;verifiedAt?:string};
+    if(!body.executorId||body.endpoint===undefined||!body.costClass||typeof body.zeroCostVerified!=="boolean"||!body.health||!Array.isArray(body.evidenceRefs))return json({error:"EXECUTOR_VERIFY_SCHEMA_INVALID"},400);
+    try{return json(await new SniperStore(env.DB).verifyExecutor({executorId:body.executorId,endpoint:body.endpoint,costClass:body.costClass,zeroCostVerified:body.zeroCostVerified,health:body.health,evidenceRefs:body.evidenceRefs,...(body.lastHealthAt!==undefined?{lastHealthAt:body.lastHealthAt}:{}),...(body.verifiedAt?{verifiedAt:body.verifiedAt}:{})}),201);}catch(error){return json({error:error instanceof Error?error.message:"EXECUTOR_VERIFY_FAILED"},400);}
   }
  if(request.method==="POST"&&url.pathname==="/api/sniper/demos"){
     const body=await request.json() as import("../../../packages/sniper/src/demoJobs.js").DemoJobRequest;
