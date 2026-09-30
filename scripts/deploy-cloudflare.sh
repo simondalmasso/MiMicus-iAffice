@@ -12,6 +12,7 @@ fi
 
 node scripts/cloudflare-preflight.mjs
 node scripts/render-deploy-config.mjs
+bash scripts/ensure-cloudflare-resources.sh
 
 WRANGLER_VERSION="4.122.0"
 CORE=".generated/wrangler.agent-os.jsonc"
