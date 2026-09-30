@@ -1,2 +1,2 @@
-import fs from 'node:fs';
-const id=process.env.CLOUDFLARE_D1_DATABASE_ID,sha=process.env.ARIA_HEAD_SHA;if(!id)throw new Error('CLOUDFLARE_D1_DATABASE_ID_REQUIRED');if(!sha)throw new Error('ARIA_HEAD_SHA_REQUIRED');if(!/^[0-9a-f-]{16,}$/i.test(id))throw new Error('D1_DATABASE_ID_FORMAT_INVALID');if(!/^[0-9a-f]{40}$/i.test(sha))throw new Error('ARIA_HEAD_SHA_FORMAT_INVALID');for(const[src,dst]of[['wrangler.core.template.jsonc','wrangler.core.generated.jsonc'],['wrangler.effects.template.jsonc','wrangler.effects.generated.jsonc'],['wrangler.models.template.jsonc','wrangler.models.generated.jsonc']]){const template=fs.readFileSync(src,'utf8');const rendered=template.replaceAll('__D1_DATABASE_ID__',id).replaceAll('__ARIA_GIT_SHA__',sha);fs.writeFileSync(dst,rendered);console.log(dst);}
+console.error('DEPRECATED: use scripts/render-deploy-config.mjs or npm run deploy:config');
+await import('./render-deploy-config.mjs');
