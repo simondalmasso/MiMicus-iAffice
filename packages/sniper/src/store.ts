@@ -902,7 +902,6 @@ export class SniperStore {
     const evidenceRefs=parse<string[]>(job.evidence_refs_json,[]);
     const requestedDeliverables=parse<string[]>(job.requested_deliverables_json,[]);
     const payload={
-      caseId:String(job.case_id),
       servicePackId:String(job.service_pack_id),
       requestedDeliverables,
       evidenceRefs
