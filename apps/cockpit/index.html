@@ -31,7 +31,7 @@ input{width:100%;padding:9px;border:1px solid #bbb;border-radius:8px;background:
 <main id="app" aria-live="polite"></main>
 <script>
 const sections=['Revenue','Global Core','Operations','Discovery','Demos','Cases','Live','Decisions','Learning','Telemetry','Skills','Squad','Approvals','Compute','System'];
-let current='Revenue',core={},sniper={pipeline:{},money:{},topOpportunities:[],activity:[],memory:{}},globalState={portfolio:{total:0,signals:[]},latest:null,architecture:{}},operationsState={stages:[],workstreams:{},totalCases:0},discoveryState={sources:{policy:{},totals:{},sources:[]},jobs:[]},demoState=[],telemetryState={summary:{},recentSpans:[],recentTraceIds:[],adapters:[]},skillsState={policy:{},totals:{},sources:[]},selectedTrace=null,selectedTraceId=null,caseIndex=[],squad=[],compute={providers:[],budget:{}},healthState={},adminToken='',selectedCase=null,selectedCaseId=null,casesViewMode='BOARD';
+let current='Revenue',core={},sniper={pipeline:{},money:{},topOpportunities:[],activity:[],memory:{}},globalState={portfolio:{total:0,signals:[]},latest:null,architecture:{}},operationsState={stages:[],workstreams:{},totalCases:0},discoveryState={sources:{policy:{},totals:{},sources:[]},jobs:[]},demoState=[],executorState={policy:{},totals:{},executors:[]},telemetryState={summary:{},recentSpans:[],recentTraceIds:[],adapters:[]},skillsState={policy:{},totals:{},sources:[]},selectedTrace=null,selectedTraceId=null,caseIndex=[],squad=[],compute={providers:[],budget:{}},healthState={},adminToken='',selectedCase=null,selectedCaseId=null,casesViewMode='BOARD';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>Number(n||0).toLocaleString('es-AR');
 const empty=t=>'<div class="empty">'+esc(t)+'</div>';
@@ -156,7 +156,7 @@ function learning(){
 
 
 function demosView(){
- const ds=demoState||[];
+ const ds=demoState||[],ex=executorState||{},executors=ex.executors||[],tot=ex.totals||{};
  return '<div class="hero"><div><div class="eyebrow">Private proof factory</div><h1>Demos</h1><p>Every demo belongs to a CASE, uses evidence and a vertical service pack, stays private, runs only on a verified zero-cost executor and requires AUD before commercial use.</p></div></div>'+
  '<div class="grid">'+
  '<div class="card"><div class="eyebrow">Jobs</div><div class="metric">'+fmt(ds.length)+'</div></div>'+
@@ -164,7 +164,7 @@ function demosView(){
  '<div class="card"><div class="eyebrow">Audit required</div><div class="metric">'+fmt(ds.filter(x=>x.state==="AUDIT_REQUIRED").length)+'</div></div>'+
  '<div class="card"><div class="eyebrow">Blocked / failed</div><div class="metric">'+fmt(ds.filter(x=>["BLOCKED","FAILED"].includes(x.state)).length)+'</div></div>'+
  '</div>'+
- '<div class="section"><h2>Demo jobs</h2><span class="muted">CASE → pack → executor → artifacts → AUD</span></div>'+
+ '<div class="section"><h2>Executors</h2><span class="muted">Cloudflare controls; heavy jobs require an ENABLED external executor</span></div>'+ '<div class="grid"><div class="card"><div class="eyebrow">Enabled</div><div class="metric">'+fmt(tot.enabled)+'</div></div><div class="card"><div class="eyebrow">Quarantined</div><div class="metric">'+fmt(tot.quarantined)+'</div></div><div class="card"><div class="eyebrow">Rejected</div><div class="metric">'+fmt(tot.rejected)+'</div></div><div class="card"><div class="eyebrow">Canonical state</div><div class="metric" style="font-size:18px">D1</div></div></div>'+ (executors.length?'<table><thead><tr><th>Executor</th><th>Role</th><th>Admission</th><th>Capabilities</th><th>Endpoint</th><th>Cost</th><th>$0 verified</th><th>Health</th></tr></thead><tbody>'+executors.map(x=>'<tr><td><strong>'+esc(x.label)+'</strong></td><td>'+esc(x.role)+'</td><td>'+badge(x.admission?.state)+'</td><td>'+esc((x.capabilities||[]).join(' · '))+'</td><td class="tiny">'+esc(x.endpoint||'UNSET')+'</td><td>'+esc(x.costClass)+'</td><td>'+esc(x.zeroCostVerified)+'</td><td>'+esc(x.health)+'</td></tr>').join('')+'</tbody></table>':empty('No executor registry data.'))+ '<div class="section"><h2>Demo jobs</h2><span class="muted">CASE → pack → executor → artifacts → AUD</span></div>'+
  (ds.length?'<table><thead><tr><th>Job</th><th>Case</th><th>Pack</th><th>Executor</th><th>Class</th><th>Deliverables</th><th>State</th><th>AUD</th></tr></thead><tbody>'+
  ds.map(x=>'<tr><td><strong>'+esc(x.jobId)+'</strong></td><td><button class="case-link" data-case="'+esc(x.caseId)+'">'+esc(x.caseId)+'</button></td><td>'+esc(x.servicePackId)+'</td><td>'+esc(x.executorId)+'</td><td>'+esc(x.executorClass)+'</td><td>'+esc((x.requestedDeliverables||[]).join(' · '))+'</td><td>'+badge(x.state)+'</td><td>'+badge(x.auditVerdict||'PENDING')+'</td></tr>').join('')+
  '</tbody></table>':empty('No demo jobs yet.'));
@@ -253,7 +253,7 @@ function bindApprovals(){
 async function safe(url,fallback){try{const r=await fetch(url,{cache:'no-store'});return r.ok?await r.json():fallback}catch{return fallback}}
 
 async function load(){
- const [h,c,d,g,o,ds,dj,dm,t,sk,ci,sq,p,b]=await Promise.all([
+ const [h,c,d,g,o,ds,dj,dm,ex,t,sk,ci,sq,p,b]=await Promise.all([
   safe('/api/health',{ok:false}),
   safe('/api/state',{}),
   safe('/api/sniper/dashboard',{pipeline:{},money:{},topOpportunities:[],activity:[],memory:{}}),
@@ -262,6 +262,7 @@ async function load(){
   safe('/api/sniper/discovery/sources',{policy:{},totals:{},sources:[]}),
   safe('/api/sniper/discovery/jobs?limit=100',[]),
   safe('/api/sniper/demos?limit=100',[]),
+  safe('/api/sniper/executors',{policy:{},totals:{},executors:[]}),
   safe('/api/sniper/telemetry',{summary:{},recentSpans:[],recentTraceIds:[],adapters:[]}),
   safe('/api/sniper/skills',{policy:{},totals:{},sources:[]}),
   safe('/api/sniper/opportunities?limit=500',[]),
@@ -269,7 +270,7 @@ async function load(){
   safe('/api/compute/providers',[]),
   safe('/api/compute/budget',{})
  ]);
- healthState=h;core=c;sniper=d;globalState=g;operationsState=o;discoveryState={sources:ds,jobs:dj};demoState=dm;telemetryState=t;skillsState=sk;caseIndex=ci;squad=sq;compute={providers:p,budget:b};
+ healthState=h;core=c;sniper=d;globalState=g;operationsState=o;discoveryState={sources:ds,jobs:dj};demoState=dm;executorState=ex;telemetryState=t;skillsState=sk;caseIndex=ci;squad=sq;compute={providers:p,budget:b};
  health.textContent='health · '+(h.ok?'PASS':'DEGRADED');
  if(selectedCaseId)selectedCase=await safe('/api/sniper/cases/'+encodeURIComponent(selectedCaseId),selectedCase);
  if(selectedTraceId)selectedTrace=await safe('/api/sniper/telemetry/traces/'+encodeURIComponent(selectedTraceId),selectedTrace);
