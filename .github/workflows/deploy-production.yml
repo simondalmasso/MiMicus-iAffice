@@ -1,0 +1,70 @@
+name: order-004-production-deploy
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: Type DEPLOY_AGENT_OS
+        required: true
+        type: string
+
+concurrency:
+  group: order-004-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  verify-and-deploy:
+    if: github.event.inputs.confirm == 'DEPLOY_AGENT_OS'
+    runs-on: [self-hosted, linux, oracle-free, iaffice]
+    permissions:
+      contents: read
+    environment: production
+    env:
+      ARIA_HEAD_SHA: ${{ github.sha }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_D1_DATABASE_ID: ${{ secrets.CLOUDFLARE_D1_DATABASE_ID }}
+      ADMIN_TOKEN_HASH: ${{ secrets.ADMIN_TOKEN_HASH }}
+      APPROVAL_SIGNING_KEY: ${{ secrets.APPROVAL_SIGNING_KEY }}
+      WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+      EXECUTOR_SIGNING_KEY: ${{ secrets.EXECUTOR_SIGNING_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: order-004-sniper-autonomous-revenue-engine-v1
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Enforce exact branch HEAD
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = "order-004-sniper-autonomous-revenue-engine-v1"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Require deployment secrets without printing values
+        shell: bash
+        run: |
+          set -euo pipefail
+          for n in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_D1_DATABASE_ID ADMIN_TOKEN_HASH APPROVAL_SIGNING_KEY WEBHOOK_SECRET EXECUTOR_SIGNING_KEY; do
+            test -n "${!n:-}" || { echo "MISSING_SECRET:$n" >&2; exit 45; }
+          done
+      - run: npm ci --offline --ignore-scripts
+      - run: npm run verify:004
+      - run: npm run deploy:preflight
+      - run: npm run deploy:config
+      - name: Install agent-os secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          CFG=".generated/wrangler.agent-os.jsonc"
+          printf '%s' "$ADMIN_TOKEN_HASH" | npx --yes wrangler@4.122.0 secret put ADMIN_TOKEN_HASH --config "$CFG"
+          printf '%s' "$APPROVAL_SIGNING_KEY" | npx --yes wrangler@4.122.0 secret put APPROVAL_SIGNING_KEY --config "$CFG"
+          printf '%s' "$WEBHOOK_SECRET" | npx --yes wrangler@4.122.0 secret put WEBHOOK_SECRET --config "$CFG"
+          printf '%s' "$EXECUTOR_SIGNING_KEY" | npx --yes wrangler@4.122.0 secret put EXECUTOR_SIGNING_KEY --config "$CFG"
+      - run: npm run deploy:cloudflare
+      - name: Live health gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/live_acceptance_order004.py
