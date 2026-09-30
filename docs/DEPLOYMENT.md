@@ -1,19 +1,82 @@
-# Deployment
+# iAffice — Cloudflare deployment
 
-ORDER-003 deploys three capability domains: private `aria-models`, private `aria-effects`, then control-plane `aria-core`, plus existing D1/Queues/Workflows/Durable Objects.
+Status: prepared; live deploy still requires an authorized Cloudflare credential path.
 
-`wrangler.models.template.jsonc` has `workers_dev=false` and model execution bindings only. `wrangler.effects.template.jsonc` remains private and contains effect-domain bindings only. `wrangler.core.template.jsonc` contains D1, private Service Bindings `MODELS` and `EFFECTS`, queues/workflows and two Durable Objects; it does not directly invoke model vendors or business-effect vendors.
+## Canonical topology
 
-Deployment sequence:
+Deploy order:
+1. D1 migrations `0001..0011`
+2. `aria-models` private Worker
+3. `aria-effects` private Worker
+4. Queue / DLQ / Durable Objects / Workflow bindings
+5. `agent-os` public Worker + `apps/cockpit`
+6. live exact-head acceptance
+
+Public:
+- `agent-os.simondalmasso44.workers.dev`
+
+Private:
+- `aria-models` with `workers_dev=false`
+- `aria-effects` with `workers_dev=false`
+
+## Canonical config files
+
+Source templates:
+- `wrangler.core.template.jsonc`
+- `wrangler.models.template.jsonc`
+- `wrangler.effects.template.jsonc`
+
+Generated, ignored files:
+- `.generated/wrangler.agent-os.jsonc`
+- `.generated/wrangler.models.jsonc`
+- `.generated/wrangler.effects.jsonc`
+
+There is no second generic Wrangler template.
+
+## Required deployment environment
+
+Required:
+- `CLOUDFLARE_API_TOKEN` or `CF_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID` or `CF_ACCOUNT_ID`
+- `CLOUDFLARE_D1_DATABASE_ID`
+- `ARIA_HEAD_SHA`
+
+Runtime secrets are installed through Wrangler/Cloudflare secret bindings, never committed:
+- `ADMIN_TOKEN_HASH`
+- `APPROVAL_SIGNING_KEY`
+- `WEBHOOK_SECRET`
+- `EXECUTOR_SIGNING_KEY`
+
+External model-provider keys are optional at deploy time. A provider route remains disabled until its independent zero-cost/privacy/evidence gates pass.
+
+## Commands
 
 ```bash
-node scripts/cloudflare-preflight.mjs
-node scripts/render-wrangler.mjs
-./scripts/deploy-cloudflare.sh
+npm run deploy:preflight
+npm run deploy:config
+npm run deploy:cloudflare
 ```
 
-The deploy script applies both D1 migrations, then deploys models, effects and core using pinned Wrangler. Exact code SHA and D1 identifier are supplied by the authorized deployment environment and are never committed.
+`deploy:preflight` checks topology and Cloudflare deployment authorization without printing secret values.
 
-Live acceptance requires exact SHA/version from all three Workers; remote migration state; a real Workers AI benchmark/call; a distinct direct first-party Free provider benchmark/call; controlled safe fallback; sanitized inference receipts; durable quota reconciliation; parent reference E2E; no effect-authority expansion; and cumulative monetary spend USD 0.
+`deploy:config` renders configs under `.generated/`.
 
-If the execution environment lacks authorized deployment/account access or a distinct external provider capability, local success is recorded but cannot be promoted to the live gates.
+`deploy:cloudflare`:
+- verifies the exact Git SHA;
+- applies remote D1 migrations;
+- deploys private model/effect Workers first;
+- deploys `agent-os` last.
+
+## Live acceptance
+
+After deploy verify:
+- `GET /api/health` returns 200, `service=iAffice`, `worker=agent-os`, exact SHA;
+- cockpit HTML loads instead of the old text placeholder;
+- Global Core, Operations, Discovery, Demos, Executors, Telemetry APIs answer;
+- desktop/mobile smoke passes;
+- internal Workers have no public workers.dev endpoints;
+- no billable execution attempt occurred.
+
+Compute-provider live acceptance is a separate gate from basic application deployment.
+
+Do not call deployment PASS if credentials are missing, migrations are unapplied, exact SHA differs, or the hostname still serves a placeholder.
