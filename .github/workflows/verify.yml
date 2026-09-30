@@ -1,12 +1,17 @@
-name: zero-cost-self-hosted-verify
+name: order-004-zero-cost-self-hosted-verify
 on:
   workflow_dispatch:
   push:
     branches:
-      - order-003-zero-cost-compute-market-v1
+      - order-004-sniper-autonomous-revenue-engine-v1
   pull_request:
     branches:
-      - order-002-ariaos-business-os-v1
+      - order-003-zero-cost-compute-market-v1
+
+concurrency:
+  group: order-004-verify-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   exact-head:
     runs-on: self-hosted
@@ -14,10 +19,16 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
+      - name: Exact head
+        run: |
+          echo "ARIA_HEAD_SHA=$GITHUB_SHA" >> "$GITHUB_ENV"
+          git rev-parse HEAD
       - run: npm ci --offline --ignore-scripts
       - run: npm run typecheck
       - run: npm test
@@ -28,4 +39,5 @@ jobs:
       - run: npm run benchmark:compute
       - run: npm run chaos:compute
       - run: npm run security
-      - run: npm run doctor
+      - run: npm run doctor:004
+      - run: python scripts/ui_smoke_order004.py
