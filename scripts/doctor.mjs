@@ -105,8 +105,8 @@ check('cron-count-unchanged',()=>{
 
 check('zero-cost-ci-guard',()=>{
   const y=fs.readFileSync('.github/workflows/verify.yml','utf8');
-  if(!y.includes('workflow_dispatch')||!y.includes('self-hosted'))throw new Error('CI cost guard');
-  return 'workflow_dispatch+self-hosted';
+  if(!y.includes('workflow_dispatch')||!y.includes('[self-hosted, linux, oracle-free, iaffice]'))throw new Error('CI Oracle-only cost/host guard');
+  return 'workflow_dispatch+oracle-free-linux-iaffice';
 });
 
 check('zero-spend-source-guards',()=>{
