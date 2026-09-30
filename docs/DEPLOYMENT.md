@@ -5,7 +5,7 @@ Status: prepared; live deploy still requires an authorized Cloudflare credential
 ## Canonical topology
 
 Deploy order:
-1. D1 migrations `0001..0011`
+1. D1 migrations `0001..0012`
 2. `aria-models` private Worker
 3. `aria-effects` private Worker
 4. Queue / DLQ / Durable Objects / Workflow bindings
@@ -80,3 +80,13 @@ After deploy verify:
 Compute-provider live acceptance is a separate gate from basic application deployment.
 
 Do not call deployment PASS if credentials are missing, migrations are unapplied, exact SHA differs, or the hostname still serves a placeholder.
+
+## ORDER-004 commercial gate
+
+Migration `0012_sniper_commercial_guard.sql` adds durable contact controls and executed-commercial-effect history.
+
+Deployment acceptance must preserve both gates:
+- `agent-os` checks commercial policy before creating an ActionIntent;
+- `aria-effects` revalidates current D1 state immediately before executing an approved CASE-linked effect.
+
+A stale approval must not bypass a later opt-out, cooldown, HUMAN_GATE or changed payload digest.
