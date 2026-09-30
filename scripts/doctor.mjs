@@ -20,7 +20,7 @@ check('locked-install',()=>{
 check('all-migrations-empty-db',()=>{
   const db=new DatabaseSync(':memory:');
   const migrationFiles=fs.readdirSync('migrations').filter(x=>/^\d{4}_.+\.sql$/.test(x)).sort();
-  if(migrationFiles.length<10)throw new Error('expected >=10 migrations; found '+migrationFiles.length);
+  if(migrationFiles.length<11)throw new Error('expected >=11 migrations; found '+migrationFiles.length);
   for(const file of migrationFiles)db.exec(fs.readFileSync(path.join('migrations',file),'utf8'));
   const rows=db.prepare("select name from sqlite_master where type='table'").all();
   const names=new Set(rows.map(r=>r.name));
@@ -41,6 +41,30 @@ check('all-migrations-empty-db',()=>{
 });
 
 check('strict-typecheck',()=>execFileSync('tsc',['-p','tsconfig.json','--noEmit'],{stdio:'pipe'}).toString()||'PASS');
+
+
+check('oracle-executor-python',()=>{
+  return execFileSync('python3',['-m','py_compile','apps/oracle-executor/iaffice_executor.py'],{stdio:'pipe'}).toString()||'PASS';
+});
+
+check('oracle-executor-selftest',()=>{
+  return execFileSync('python3',['scripts/oracle_executor_selftest.py'],{stdio:'pipe'}).toString().trim()||'PASS';
+});
+
+check('oracle-executor-security-guard',()=>{
+  const py=fs.readFileSync('apps/oracle-executor/iaffice_executor.py','utf8');
+  const unit=fs.readFileSync('apps/oracle-executor/iaffice-executor.service','utf8');
+  for(const forbidden of ['shell=True','os.system(','/bin/sh','ARBITRARY_SHELL']){
+    if(py.includes(forbidden))throw new Error('forbidden executor primitive: '+forbidden);
+  }
+  for(const required of ['IAFFICE_EXECUTOR_SIGNING_KEY','DISCOVERY_EXECUTOR_ADAPTER_NOT_ENABLED','actualCostUsd','executor://']){
+    if(!py.includes(required))throw new Error('missing executor guard: '+required);
+  }
+  for(const hardening of ['NoNewPrivileges=true','ProtectSystem=strict','CapabilityBoundingSet=']){
+    if(!unit.includes(hardening))throw new Error('missing systemd hardening: '+hardening);
+  }
+  return 'typed jobs+hmac+no arbitrary shell+systemd hardening';
+});
 
 check('cockpit-integrity',()=>{
   const h=fs.readFileSync('apps/cockpit/index.html','utf8');
