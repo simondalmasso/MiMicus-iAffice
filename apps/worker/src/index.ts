@@ -15,13 +15,17 @@ import { SniperStore } from "../../../packages/sniper/src/store.js";
 import { buildAgentSquad, requiresHumanGate, type BusinessSignal, type LearningObservation } from "../../../packages/sniper/src/engine.js";
 import type { CognitiveContext, MemoryEpisode } from "../../../packages/sniper/src/cognition.js";
 import type { TelemetrySpanInput } from "../../../packages/sniper/src/telemetry.js";
-import type { SignedExecutorResult } from "../../../packages/sniper/src/executorProtocol.js";
+import { signArtifactRequest, type SignedExecutorResult } from "../../../packages/sniper/src/executorProtocol.js";
 import type { Env, MessageBatch, ServiceBindingLike } from "./runtime-types.js";
 export { AriaCoordinator } from "./coordinator.js";
 export { ComputeGovernorDO } from "./computeGovernorDO.js";
 export { BusinessWorkflow } from "./workflow.js";
 function securityHeaders():HeadersInit{return{"content-type":"application/json; charset=utf-8","cache-control":"no-store","content-security-policy":"default-src 'none'; frame-ancestors 'none'","x-content-type-options":"nosniff","referrer-policy":"no-referrer"};}
 function json(body:unknown,status=200):Response{return new Response(JSON.stringify(redactSecrets(body)),{status,headers:securityHeaders()});}
+async function sha256Bytes(bytes:ArrayBuffer):Promise<string>{
+  const digest=await crypto.subtle.digest("SHA-256",bytes);
+  return "sha256:"+[...new Uint8Array(digest)].map(b=>b.toString(16).padStart(2,"0")).join("");
+}
 async function tokenHash(token:string):Promise<string>{const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(token));return[...new Uint8Array(digest)].map(b=>b.toString(16).padStart(2,"0")).join("");}
 async function authorized(request:Request,env:Env):Promise<boolean>{if(!env.ADMIN_TOKEN_HASH)return false;const token=request.headers.get("authorization")?.replace(/^Bearer\s+/i,"")??"";return Boolean(token)&&(await tokenHash(token))===env.ADMIN_TOKEN_HASH;}
 async function withinRateLimit(env:Env,bucket:string,limit:number):Promise<boolean>{if(!env.COORDINATOR)return false;const stub=env.COORDINATOR.get(env.COORDINATOR.idFromName("global"));const response=await stub.fetch("https://coordinator.internal/rate",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({bucket,limit,windowMs:60000})});if(!response.ok)return false;return((await response.json()) as{allowed?:boolean}).allowed===true;}
@@ -75,6 +79,41 @@ async function sniperGet(url:URL,env:Env):Promise<Response|null>{
   return null;
 }
 async function api(request:Request,env:Env):Promise<Response|null>{const url=new URL(request.url);if(!url.pathname.startsWith("/api/"))return null;const store=new D1StateStore(env.DB);
+ const artifactMatch=url.pathname.match(/^\/api\/sniper\/executor\/artifact\/([^/]+)\/([^/]+)$/);
+ if(request.method==="GET"&&artifactMatch){
+   if(!(await withinRateLimit(env,"artifact-proxy",60)))return json({error:"RATE_LIMITED_OR_COORDINATOR_UNAVAILABLE"},429);
+   if(!(await authorized(request,env)))return json({error:"ADMIN_AUTH_REQUIRED"},401);
+   if(!env.EXECUTOR_SIGNING_KEY)return json({error:"EXECUTOR_ARTIFACT_PROXY_NOT_CONFIGURED"},503);
+   try{
+     const runId=decodeURIComponent(artifactMatch[1]!),name=decodeURIComponent(artifactMatch[2]!);
+     const resolved=await new SniperStore(env.DB).resolvePrivateArtifact(runId,name);
+     if(!resolved)return json({error:"ARTIFACT_NOT_FOUND_OR_NOT_AUTHORIZED"},404);
+     const timestamp=Math.floor(Date.now()/1000);
+     const signature=await signArtifactRequest(resolved.path,timestamp,env.EXECUTOR_SIGNING_KEY);
+     const upstream=await fetch(new URL(resolved.path,resolved.endpoint).toString(),{
+       method:"GET",
+       headers:{
+         "x-iaffice-artifact-ts":String(timestamp),
+         "x-iaffice-artifact-signature":signature
+       }
+     });
+     if(!upstream.ok)return json({error:"EXECUTOR_ARTIFACT_UPSTREAM_"+upstream.status},502);
+     const declared=Number(upstream.headers.get("content-length")??0);
+     if(Number.isFinite(declared)&&declared>15_000_000)return json({error:"ARTIFACT_TOO_LARGE_FOR_PRIVATE_PROXY"},413);
+     const bytes=await upstream.arrayBuffer();
+     if(bytes.byteLength>15_000_000)return json({error:"ARTIFACT_TOO_LARGE_FOR_PRIVATE_PROXY"},413);
+     const digest=await sha256Bytes(bytes);
+     if(digest!==resolved.digest)return json({error:"ARTIFACT_DIGEST_MISMATCH"},409);
+     const headers=new Headers();
+     headers.set("content-type",upstream.headers.get("content-type")??"application/octet-stream");
+     headers.set("content-length",String(bytes.byteLength));
+     headers.set("cache-control","no-store");
+     headers.set("x-content-type-options","nosniff");
+     headers.set("referrer-policy","no-referrer");
+     headers.set("content-security-policy","default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; frame-ancestors 'self'");
+     return new Response(bytes,{status:200,headers});
+   }catch(error){return json({error:error instanceof Error?error.message:"ARTIFACT_PROXY_FAILED"},400);}
+ }
  if(request.method==="POST"&&url.pathname==="/api/sniper/executor/result"){
    if(!env.EXECUTOR_SIGNING_KEY)return json({error:"EXECUTOR_CALLBACK_NOT_CONFIGURED"},503);
    const body=await request.json() as SignedExecutorResult;
