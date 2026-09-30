@@ -825,3 +825,56 @@ test('contradictions can demote a previously verified semantic pattern', () => {
   p=applySemanticObservation(p,{supports:false,audited:true});
   assert.notEqual(p.status,'VERIFIED');
 });
+
+import {
+  createExecutorEnvelope,
+  verifyExecutorEnvelope,
+  validateExecutorResult,
+  executorRequestPath
+} from '../dist/packages/sniper/src/executorProtocol.js';
+
+test('executor protocol only exposes typed job kinds and a fixed request path', async () => {
+  const env=await createExecutorEnvelope({
+    runId:'run-1',executorId:'ORACLE_FREE_EXECUTOR',jobKind:'DEMO_WEB_BUILD',
+    jobId:'demo-1',caseId:'case-1',payloadDigest:'sha256:abc',
+    artifactInputRefs:['evidence:audit:1'],issuedAt:'2026-09-30T10:00:00.000Z',
+    expiresAt:'2026-09-30T10:10:00.000Z',nonce:'nonce-12345678'
+  },'test-secret');
+  assert.equal(env.body.expectedCostUsd,0);
+  assert.equal(executorRequestPath(env.body.jobKind),'/v1/jobs/demo-web-build');
+  assert.equal('command' in env.body,false);
+  assert.equal('shell' in env.body,false);
+});
+
+test('executor envelope validates HMAC and expiration', async () => {
+  const signed=await createExecutorEnvelope({
+    runId:'run-2',executorId:'ORACLE_FREE_EXECUTOR',jobKind:'DISCOVERY_WEB_AUDIT',
+    jobId:'discovery-1',caseId:null,payloadDigest:'sha256:def',
+    artifactInputRefs:['url:https://example.test'],issuedAt:'2026-09-30T10:00:00.000Z',
+    expiresAt:'2026-09-30T10:10:00.000Z',nonce:'nonce-abcdefgh'
+  },'test-secret');
+  assert.equal(await verifyExecutorEnvelope(signed,'test-secret','2026-09-30T10:05:00.000Z'),true);
+  assert.equal(await verifyExecutorEnvelope(signed,'wrong-secret','2026-09-30T10:05:00.000Z'),false);
+  assert.equal(await verifyExecutorEnvelope(signed,'test-secret','2026-09-30T10:11:00.000Z'),false);
+});
+
+test('executor result rejects monetary spend and untyped artifacts', () => {
+  const base={
+    protocolVersion:'iaffice-executor-v1',runId:'run-3',executorId:'ORACLE_FREE_EXECUTOR',
+    jobKind:'DEMO_WEB_BUILD',jobId:'demo-3',caseId:'case-3',state:'SUCCEEDED',
+    actualCostUsd:0,artifacts:[{kind:'WEB_PREVIEW',ref:'artifact:web:3',digest:'sha256:ok'}],
+    telemetry:{startedAt:'2026-09-30T10:00:00.000Z',endedAt:'2026-09-30T10:01:00.000Z',cpuMs:1000,memoryPeakMb:512},
+    resultDigest:'sha256:result',errorCode:null
+  };
+  assert.equal(validateExecutorResult(base).ok,true);
+  assert.equal(validateExecutorResult({...base,actualCostUsd:.01}).ok,false);
+  assert.equal(validateExecutorResult({...base,artifacts:[{kind:'SHELL_OUTPUT',ref:'x',digest:'sha256:x'}]}).ok,false);
+});
+
+test('executor protocol rejects arbitrary job kinds', async () => {
+  await assert.rejects(()=>createExecutorEnvelope({
+    runId:'run-x',executorId:'ORACLE_FREE_EXECUTOR',jobKind:'ARBITRARY_SHELL',
+    jobId:'x',caseId:null,payloadDigest:'sha256:x',artifactInputRefs:[],
+    issuedAt:'2026-09-30T10:00:00.000Z',expiresAt:'2026-09-30T10:10:00.000Z',nonce:'nonce-12345678'
+  },'test-secret'),/EXECUTOR_JOB_KIND_INVALID/);
+});
