@@ -48,6 +48,7 @@ async function sniperGet(url:URL,env:Env):Promise<Response|null>{
   if(url.pathname==="/api/sniper/skills")return json(await sniper.skillRegistryOverview());
   if(url.pathname==="/api/sniper/discovery/sources")return json(await sniper.discoverySourcesOverview());
   if(url.pathname==="/api/sniper/discovery/jobs")return json(await sniper.listDiscoveryJobs(Number(url.searchParams.get("limit")??100)));
+  if(url.pathname==="/api/sniper/demos")return json(await sniper.listDemoJobs(Number(url.searchParams.get("limit")??100)));
   if(url.pathname==="/api/sniper/telemetry")return json(await sniper.telemetryOverview(Number(url.searchParams.get("limit")??500)));
   const traceMatch=url.pathname.match(/^\/api\/sniper\/telemetry\/traces\/([^/]+)$/);
   if(traceMatch)return json(await sniper.telemetryTrace(decodeURIComponent(traceMatch[1]!)));
@@ -64,6 +65,21 @@ async function api(request:Request,env:Env):Promise<Response|null>{const url=new
     if(!validSignal(body))return json({error:"SNIPER_SIGNAL_SCHEMA_INVALID"},400);
     const sniper=new SniperStore(env.DB),record=await sniper.ingest(body);
     return json(record,201);
+  }
+ if(request.method==="POST"&&url.pathname==="/api/sniper/demos"){
+    const body=await request.json() as import("../../../packages/sniper/src/demoJobs.js").DemoJobRequest;
+    if(!body||!body.jobId||!body.caseId||!body.servicePackId||!Array.isArray(body.evidenceRefs)||!Array.isArray(body.requestedDeliverables)||typeof body.privatePreview!=="boolean"||typeof body.productionDeploy!=="boolean"||!body.executorId||typeof body.executorCostVerifiedZero!=="boolean"||!body.createdAt)return json({error:"DEMO_JOB_SCHEMA_INVALID"},400);
+    try{return json(await new SniperStore(env.DB).createDemoJob(body),201);}catch(error){return json({error:error instanceof Error?error.message:"DEMO_JOB_FAILED"},400);}
+  }
+ if(request.method==="POST"&&url.pathname==="/api/sniper/demos/artifacts"){
+    const body=await request.json() as {jobId?:string;artifacts?:import("../../../packages/sniper/src/demoJobs.js").DemoArtifactRef[]};
+    if(!body.jobId||!Array.isArray(body.artifacts))return json({error:"DEMO_ARTIFACT_SCHEMA_INVALID"},400);
+    try{return json(await new SniperStore(env.DB).recordDemoArtifacts({jobId:body.jobId,artifacts:body.artifacts}),201);}catch(error){return json({error:error instanceof Error?error.message:"DEMO_ARTIFACT_FAILED"},400);}
+  }
+ if(request.method==="POST"&&url.pathname==="/api/sniper/demos/audit"){
+    const body=await request.json() as {jobId?:string;verdict?:"PASS"|"FAIL"|"UNCERTAIN";evidenceRefs?:string[]};
+    if(!body.jobId||!body.verdict||!Array.isArray(body.evidenceRefs))return json({error:"DEMO_AUDIT_SCHEMA_INVALID"},400);
+    try{return json(await new SniperStore(env.DB).auditDemo({jobId:body.jobId,verdict:body.verdict,evidenceRefs:body.evidenceRefs}),201);}catch(error){return json({error:error instanceof Error?error.message:"DEMO_AUDIT_FAILED"},400);}
   }
  if(request.method==="POST"&&url.pathname==="/api/sniper/discovery/source/verify"){
     const body=await request.json() as {sourceId?:string;revisionPin?:string;zeroCostVerified?:boolean;targetTermsVerified?:boolean;automationAllowed?:boolean;health?:"HEALTHY"|"UNKNOWN"|"DEGRADED";evidenceRefs?:string[];verifiedAt?:string};
