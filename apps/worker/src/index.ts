@@ -16,6 +16,8 @@ import { buildAgentSquad, requiresHumanGate, type BusinessSignal, type LearningO
 import type { CognitiveContext, MemoryEpisode } from "../../../packages/sniper/src/cognition.js";
 import type { TelemetrySpanInput } from "../../../packages/sniper/src/telemetry.js";
 import { signArtifactRequest, type SignedExecutorResult } from "../../../packages/sniper/src/executorProtocol.js";
+import { CommercialGuard, isExternalOperation } from "../../../packages/sniper/src/commercialGuard.js";
+import { requiredEffectClass, type ExternalOperation } from "../../../packages/sniper/src/operatingModel.js";
 import type { Env, MessageBatch, ServiceBindingLike } from "./runtime-types.js";
 export { AriaCoordinator } from "./coordinator.js";
 export { ComputeGovernorDO } from "./computeGovernorDO.js";
@@ -54,6 +56,13 @@ function validSignal(value:unknown):value is BusinessSignal{
     const v=value as Partial<BusinessSignal>;
     return typeof v.businessId==="string"&&typeof v.name==="string"&&typeof v.category==="string"&&typeof v.locality==="string"&&typeof v.observedAt==="string"&&Boolean(v.demand)&&Boolean(v.digital)&&Array.isArray(v.contacts)&&Array.isArray(v.evidenceRefs)&&v.evidenceRefs.length>0;
   }
+function commercialEffectRoute(operation:ExternalOperation):{connector:string;operation:string}|null{
+  if(["SEND_OUTREACH","SCHEDULE_EXTERNAL_MEETING","SEND_PROPOSAL","SEND_DELIVERY_NOTICE","SEND_RECEIPT"].includes(operation)){
+    return {connector:"safe-outbound",operation:"send"};
+  }
+  return null;
+}
+
 async function sniperGet(url:URL,env:Env):Promise<Response|null>{
   if(!url.pathname.startsWith("/api/sniper/"))return null;
   const sniper=new SniperStore(env.DB);
@@ -125,6 +134,83 @@ async function api(request:Request,env:Env):Promise<Response|null>{const url=new
     if(!validSignal(body))return json({error:"SNIPER_SIGNAL_SCHEMA_INVALID"},400);
     const sniper=new SniperStore(env.DB),record=await sniper.ingest(body);
     return json(record,201);
+  }
+ if(request.method==="POST"&&url.pathname==="/api/sniper/contact-control"){
+    const body=await request.json() as {caseId?:string;doNotContact?:boolean;explicitRefusal?:boolean;reason?:string|null;evidenceRefs?:string[]};
+    if(!body.caseId||typeof body.doNotContact!=="boolean"||typeof body.explicitRefusal!=="boolean"||!Array.isArray(body.evidenceRefs))return json({error:"CONTACT_CONTROL_SCHEMA_INVALID"},400);
+    try{
+      await new CommercialGuard(env.DB).setContactControl({caseId:body.caseId,doNotContact:body.doNotContact,explicitRefusal:body.explicitRefusal,reason:body.reason??null,evidenceRefs:body.evidenceRefs.map(String)});
+      return json({ok:true,caseId:body.caseId,doNotContact:body.doNotContact,explicitRefusal:body.explicitRefusal},201);
+    }catch(error){return json({error:error instanceof Error?error.message:"CONTACT_CONTROL_FAILED"},400);}
+  }
+ if(request.method==="POST"&&url.pathname==="/api/sniper/commercial/audit"){
+    const body=await request.json() as {caseId?:string;operation?:string;target?:string;payload?:Record<string,unknown>;verdict?:"PASS"|"FAIL"|"UNCERTAIN";reason?:string;evidenceRefs?:string[]};
+    if(!body.caseId||!isExternalOperation(body.operation)||!body.target||!body.payload||typeof body.payload!=="object"||!body.verdict||!body.reason||!Array.isArray(body.evidenceRefs))return json({error:"COMMERCIAL_AUDIT_SCHEMA_INVALID"},400);
+    try{
+      return json(await new CommercialGuard(env.DB).recordCommercialAudit({caseId:body.caseId,operation:body.operation,target:body.target,payload:body.payload,verdict:body.verdict,reason:body.reason,evidenceRefs:body.evidenceRefs.map(String)}),201);
+    }catch(error){return json({error:error instanceof Error?error.message:"COMMERCIAL_AUDIT_FAILED"},400);}
+  }
+ if(request.method==="POST"&&url.pathname==="/api/sniper/commercial/action"){
+    const body=await request.json() as {
+      requestId?:string;caseId?:string;operation?:string;target?:string;payload?:Record<string,unknown>;
+      auditId?:string|null;evidenceRefs?:string[];reason?:string;requestedBy?:"CEO"|"RESEARCH"|"CMO"|"SALES"|"DATA"|"DEV"|"AUD"
+    };
+    if(!body.requestId||!body.caseId||!isExternalOperation(body.operation)||!body.target||!body.payload||typeof body.payload!=="object"||!Array.isArray(body.evidenceRefs)||!body.reason)return json({error:"COMMERCIAL_ACTION_SCHEMA_INVALID"},400);
+    const route=commercialEffectRoute(body.operation);
+    if(!route)return json({error:"COMMERCIAL_EFFECT_ADAPTER_NOT_AVAILABLE",operation:body.operation},501);
+    const guard=new CommercialGuard(env.DB);
+    try{
+      const evaluation=await guard.evaluate({caseId:body.caseId,operation:body.operation,target:body.target,payload:body.payload,auditId:body.auditId??null});
+      if(evaluation.decision==="HUMAN_GATE")return json({error:"HUMAN_GATE_REQUIRED",reasons:evaluation.reasons,snapshot:evaluation.snapshot},409);
+      if(evaluation.decision!=="ALLOW")return json({error:"COMMERCIAL_POLICY_DENIED",reasons:evaluation.reasons,snapshot:evaluation.snapshot},403);
+
+      const actionClass=requiredEffectClass(body.operation);
+      const policy=new PolicyEngine(),policyDecision=policy.decision(actionClass);
+      if(policyDecision==="DENY")return json({error:"ACTION_DENIED_BY_GLOBAL_POLICY",actionClass,operation:body.operation},403);
+      if(!env.APPROVAL_SIGNING_KEY||!env.MODELS)return json({error:"CORE_BINDING_REQUIRED"},503);
+
+      const requestedBy=body.requestedBy??"SALES";
+      const now=new Date(),orchestrator=new AriaOrchestrator(store,modelProvider(env),env.APPROVAL_SIGNING_KEY);
+      await orchestrator.load();
+      const preconditionHash=await businessPreconditionHash(orchestrator.state);
+      const evidenceRefs=[...new Set([...body.evidenceRefs.map(String),...(evaluation.snapshot.commercialAuditId?[evaluation.snapshot.commercialAuditId]:[])])];
+      const canonicalParameters={
+        commercialOperation:body.operation,
+        caseId:body.caseId,
+        commercialAuditId:evaluation.snapshot.commercialAuditId,
+        commercialPayloadDigest:evaluation.snapshot.commercialPayloadDigest,
+        payload:structuredClone(body.payload)
+      };
+      const idempotencyKey=await stableId("commercial-idem",{caseId:body.caseId,operation:body.operation,target:body.target,requestId:body.requestId,payloadDigest:evaluation.snapshot.commercialPayloadDigest});
+      const intent=await createActionIntent({
+        taskId:await stableId("commercial-task",{caseId:body.caseId,requestId:body.requestId}),
+        agentId:requestedBy,
+        subjectId:body.caseId,
+        actionClass,
+        connector:route.connector,
+        operation:route.operation,
+        target:body.target,
+        canonicalParameters,
+        justification:body.reason.slice(0,512),
+        evidenceRefs,
+        preconditionHash,
+        idempotencyKey,
+        requestedAt:now.toISOString(),
+        expiresAt:new Date(now.getTime()+15*60_000).toISOString()
+      });
+      intent.status="APPROVAL_REQUIRED";
+      await store.commitStateAndIntent(orchestrator.state,intent);
+      orchestrator.state.actionIntents.push(intent);
+      const approval=await orchestrator.approvals.request({actionClass,requestedBy,reason:intent.justification,scope:"action-digest",actionDigest:intent.actionDigest,policyVersion:intent.policyVersion,approvalChainVersion:intent.approvalChainVersion});
+      intent.approvalId=approval.id;
+      const actionId=await stableId("action",{intentId:intent.intentId});
+      orchestrator.state.actions.push({id:actionId,actionClass,payload:structuredClone(body.payload),requestedBy,policyDecision,approvalId:approval.id,status:"BLOCKED",createdAt:now.toISOString()});
+      await store.commitStateAndIntent(orchestrator.state,intent);
+      orchestrator.state.approvals=orchestrator.approvals.list();
+      await orchestrator.persist();
+      if(env.BUSINESS_WORKFLOW)await env.BUSINESS_WORKFLOW.create({id:approval.id,params:{taskId:actionId,kind:actionClass,approvalId:approval.id}});
+      return json({actionId,intentId:intent.intentId,actionDigest:intent.actionDigest,approvalId:approval.id,policyDecision,status:"PENDING_APPROVAL",commercial:evaluation.snapshot},202);
+    }catch(error){return json({error:error instanceof Error?error.message:"COMMERCIAL_ACTION_FAILED"},400);}
   }
  if(request.method==="POST"&&url.pathname==="/api/sniper/executors/verify"){
     const body=await request.json() as {executorId?:string;endpoint?:string|null;costClass?:"FREE_VERIFIED"|"FREE_USER_CONFIRMED"|"UNKNOWN"|"PAID";zeroCostVerified?:boolean;health?:"HEALTHY"|"UNKNOWN"|"DEGRADED";evidenceRefs?:string[];lastHealthAt?:string|null;verifiedAt?:string};
@@ -218,7 +304,7 @@ async function api(request:Request,env:Env):Promise<Response|null>{const url=new
  if(request.method==="POST"&&url.pathname.startsWith("/api/compute/probe/")){const providerId=decodeURIComponent(url.pathname.slice("/api/compute/probe/".length)),body=await request.json() as{modelId?:string};if(!body.modelId)return json({error:"MODEL_ID_REQUIRED"},400);const probe=await probeProvider(env,providerId,body.modelId);if(!probe.ok)return json(probe,409);const runtime=await buildComputeRuntime(env);await runtime.store.addEvidence(probe.evidence!);return json({ok:true,providerId,modelId:body.modelId,evidenceId:probe.evidence!.evidenceId,expiresAt:probe.evidence!.expiresAt,detail:probe.detail},200);}
  if(request.method==="POST"&&url.pathname==="/api/compute/run"){const body=await request.json() as Partial<ComputeRequest>;if(!body.taskId||!body.role||!body.tier||!body.taskClass||!body.dataClass||typeof body.pii!=="boolean"||!body.prompt||!Number.isFinite(body.requestedMaxOutputTokens)||!Array.isArray(body.requiredCapabilities)||!body.reason)return json({error:"COMPUTE_REQUEST_SCHEMA_INVALID"},400);try{const result=await executeComputeRequest(env,body as ComputeRequest);return json({text:result.text,receipt:result.receipt,route:result.route,reservation:result.reservation});}catch(error){const message=error instanceof Error?error.message:"NO_SAFE_MODEL_ROUTE";return json({error:message,deferred:!body.critical,costUsd:0},409);}}
  if(request.method==="POST"&&url.pathname.startsWith("/api/compute/disable/")){const id=decodeURIComponent(url.pathname.slice("/api/compute/disable/".length)),runtime=await buildComputeRuntime(env);if(!runtime.registry.disable(id,"EMERGENCY_OPERATOR_KILL"))return json({error:"PROVIDER_OR_MODEL_NOT_FOUND"},404);for(const p of runtime.registry.listProviders())await runtime.store.upsertProvider(p);for(const m of runtime.registry.listModels())await runtime.store.upsertModel(m);return json({disabled:id,durable:true,costUsd:0});}
- if(request.method==="POST"&&url.pathname==="/api/actions/request"){if(!env.APPROVAL_SIGNING_KEY||!env.MODELS)return json({error:"CORE_BINDING_REQUIRED"},503);const body=await request.json() as{actionClass?:ActionClass;payload?:Record<string,unknown>;reason?:string;requestedBy?:"CEO"|"RESEARCH"|"CMO"|"SALES"|"DATA"|"DEV"|"AUD";connector?:string;operation?:string;target?:string;subjectId?:string;taskId?:string};const classes:ActionClass[]=["READ_PUBLIC","READ_PRIVATE","INTERNAL_WRITE","DRAFT_EXTERNAL","SEND_EXTERNAL","PUBLISH_CONTENT","MONEY_MUTATION","DESTRUCTIVE_MUTATION","CREDENTIAL_MUTATION","CODE_WRITE","CODE_MERGE","DEPLOY"];if(!body.actionClass||!classes.includes(body.actionClass)||!body.payload||typeof body.payload!=="object")return json({error:"ACTION_SCHEMA_INVALID"},400);const requestedBy=body.requestedBy??"CEO",policy=new PolicyEngine(),decision=policy.decision(body.actionClass),orchestrator=new AriaOrchestrator(store,modelProvider(env),env.APPROVAL_SIGNING_KEY);await orchestrator.load();if(decision==="DENY")return json({error:"ACTION_DENIED_BY_POLICY",actionClass:body.actionClass},403);if(decision==="ALLOW"){const id=await stableId("action",{actionClass:body.actionClass,payload:body.payload,at:Date.now()});orchestrator.state.actions.push({id,actionClass:body.actionClass,payload:structuredClone(body.payload),requestedBy,policyDecision:decision,status:"DRAFT",createdAt:new Date().toISOString()});await orchestrator.persist();return json({id,policyDecision:decision,status:"DRAFT",externalEffect:false},201);}const now=new Date(),preconditionHash=await businessPreconditionHash(orchestrator.state),intent=await createActionIntent({taskId:body.taskId??await stableId("task",{requestedBy,at:now.toISOString()}),agentId:requestedBy,subjectId:body.subjectId??"business",actionClass:body.actionClass,connector:body.connector??"safe-outbound",operation:body.operation??"send",target:body.target??String(body.payload.to??"unspecified"),canonicalParameters:body.payload,justification:String(body.reason??"protected action").slice(0,512),evidenceRefs:[],preconditionHash,idempotencyKey:await stableId("idem",{requestedBy,body:body.payload,at:now.toISOString()}),requestedAt:now.toISOString(),expiresAt:new Date(now.getTime()+15*60000).toISOString()});intent.status="APPROVAL_REQUIRED";await store.commitStateAndIntent(orchestrator.state,intent);orchestrator.state.actionIntents.push(intent);const approval=await orchestrator.approvals.request({actionClass:body.actionClass,requestedBy,reason:intent.justification,scope:"action-digest",actionDigest:intent.actionDigest,policyVersion:intent.policyVersion,approvalChainVersion:intent.approvalChainVersion});intent.approvalId=approval.id;const actionId=await stableId("action",{intentId:intent.intentId});orchestrator.state.actions.push({id:actionId,actionClass:body.actionClass,payload:structuredClone(body.payload),requestedBy,policyDecision:decision,approvalId:approval.id,status:"BLOCKED",createdAt:now.toISOString()});await store.commitStateAndIntent(orchestrator.state,intent);orchestrator.state.approvals=orchestrator.approvals.list();await orchestrator.persist();if(env.BUSINESS_WORKFLOW)await env.BUSINESS_WORKFLOW.create({id:approval.id,params:{taskId:actionId,kind:body.actionClass,approvalId:approval.id}});return json({actionId,intentId:intent.intentId,actionDigest:intent.actionDigest,approvalId:approval.id,policyDecision:decision,status:"PENDING_APPROVAL"},202);}
+ if(request.method==="POST"&&url.pathname==="/api/actions/request"){if(!env.APPROVAL_SIGNING_KEY||!env.MODELS)return json({error:"CORE_BINDING_REQUIRED"},503);const body=await request.json() as{actionClass?:ActionClass;payload?:Record<string,unknown>;reason?:string;requestedBy?:"CEO"|"RESEARCH"|"CMO"|"SALES"|"DATA"|"DEV"|"AUD";connector?:string;operation?:string;target?:string;subjectId?:string;taskId?:string};const classes:ActionClass[]=["READ_PUBLIC","READ_PRIVATE","INTERNAL_WRITE","DRAFT_EXTERNAL","SEND_EXTERNAL","PUBLISH_CONTENT","MONEY_MUTATION","DESTRUCTIVE_MUTATION","CREDENTIAL_MUTATION","CODE_WRITE","CODE_MERGE","DEPLOY"];if(!body.actionClass||!classes.includes(body.actionClass)||!body.payload||typeof body.payload!=="object")return json({error:"ACTION_SCHEMA_INVALID"},400);if(body.subjectId&&["SEND_EXTERNAL","PUBLISH_CONTENT","MONEY_MUTATION","CREDENTIAL_MUTATION","DEPLOY"].includes(body.actionClass)&&await new CommercialGuard(env.DB).caseExists(body.subjectId))return json({error:"CASE_EXTERNAL_ACTION_REQUIRES_COMMERCIAL_GATE"},409);const requestedBy=body.requestedBy??"CEO",policy=new PolicyEngine(),decision=policy.decision(body.actionClass),orchestrator=new AriaOrchestrator(store,modelProvider(env),env.APPROVAL_SIGNING_KEY);await orchestrator.load();if(decision==="DENY")return json({error:"ACTION_DENIED_BY_POLICY",actionClass:body.actionClass},403);if(decision==="ALLOW"){const id=await stableId("action",{actionClass:body.actionClass,payload:body.payload,at:Date.now()});orchestrator.state.actions.push({id,actionClass:body.actionClass,payload:structuredClone(body.payload),requestedBy,policyDecision:decision,status:"DRAFT",createdAt:new Date().toISOString()});await orchestrator.persist();return json({id,policyDecision:decision,status:"DRAFT",externalEffect:false},201);}const now=new Date(),preconditionHash=await businessPreconditionHash(orchestrator.state),intent=await createActionIntent({taskId:body.taskId??await stableId("task",{requestedBy,at:now.toISOString()}),agentId:requestedBy,subjectId:body.subjectId??"business",actionClass:body.actionClass,connector:body.connector??"safe-outbound",operation:body.operation??"send",target:body.target??String(body.payload.to??"unspecified"),canonicalParameters:body.payload,justification:String(body.reason??"protected action").slice(0,512),evidenceRefs:[],preconditionHash,idempotencyKey:await stableId("idem",{requestedBy,body:body.payload,at:now.toISOString()}),requestedAt:now.toISOString(),expiresAt:new Date(now.getTime()+15*60000).toISOString()});intent.status="APPROVAL_REQUIRED";await store.commitStateAndIntent(orchestrator.state,intent);orchestrator.state.actionIntents.push(intent);const approval=await orchestrator.approvals.request({actionClass:body.actionClass,requestedBy,reason:intent.justification,scope:"action-digest",actionDigest:intent.actionDigest,policyVersion:intent.policyVersion,approvalChainVersion:intent.approvalChainVersion});intent.approvalId=approval.id;const actionId=await stableId("action",{intentId:intent.intentId});orchestrator.state.actions.push({id:actionId,actionClass:body.actionClass,payload:structuredClone(body.payload),requestedBy,policyDecision:decision,approvalId:approval.id,status:"BLOCKED",createdAt:now.toISOString()});await store.commitStateAndIntent(orchestrator.state,intent);orchestrator.state.approvals=orchestrator.approvals.list();await orchestrator.persist();if(env.BUSINESS_WORKFLOW)await env.BUSINESS_WORKFLOW.create({id:approval.id,params:{taskId:actionId,kind:body.actionClass,approvalId:approval.id}});return json({actionId,intentId:intent.intentId,actionDigest:intent.actionDigest,approvalId:approval.id,policyDecision:decision,status:"PENDING_APPROVAL"},202);}
  if(request.method==="POST"&&url.pathname==="/api/reference-e2e"){if(!env.APPROVAL_SIGNING_KEY||!env.EFFECTS||!env.MODELS)return json({error:"LIVE_BINDINGS_REQUIRED"},503);const orchestrator=new AriaOrchestrator(store,modelProvider(env),env.APPROVAL_SIGNING_KEY,()=>new Date("2026-08-19T15:00:00.000Z"));await orchestrator.load();const result=await orchestrator.runReferenceE2E(await referenceEvents(),new ServiceEffectDispatcher(env.EFFECTS));return json({...result,state:undefined});}
  const approvalMatch=url.pathname.match(/^\/api\/approvals\/([^/]+)\/(approve|reject)$/);if(request.method==="POST"&&approvalMatch){if(!env.APPROVAL_SIGNING_KEY||!env.MODELS)return json({error:"CORE_BINDING_REQUIRED"},503);const orchestrator=new AriaOrchestrator(store,modelProvider(env),env.APPROVAL_SIGNING_KEY);await orchestrator.load();const id=decodeURIComponent(approvalMatch[1]!),operation=approvalMatch[2]!;try{const body=await request.json() as{actor?:string},actor=String(body.actor??"cockpit-human").slice(0,128),result=operation==="approve"?await orchestrator.approvals.approve(id,actor):orchestrator.approvals.reject(id,actor);orchestrator.state.approvals=orchestrator.approvals.list();await orchestrator.persist();if(env.BUSINESS_WORKFLOW){try{await env.BUSINESS_WORKFLOW.get(id).sendEvent({type:"approval",payload:{approvalId:id,decision:operation==="approve"?"APPROVED":"REJECTED"}});}catch{}}if(operation==="approve"){const intent=orchestrator.state.actionIntents.find(v=>v.approvalId===id);if(!intent)return json({error:"APPROVAL_INTENT_NOT_FOUND"},409);try{const effect=await dispatchApprovedIntent(orchestrator,env,intent,result);return json({approval:orchestrator.approvals.get(id),intent,effect});}catch(error){intent.status="RETRYABLE";await store.commitStateAndIntent(orchestrator.state,intent);return json({approval:result,intent,error:error instanceof Error?error.message:"EFFECT_DISPATCH_FAILED",status:"RETRYABLE"},409);}}return json(result);}catch(error){return json({error:error instanceof Error?error.message:"APPROVAL_ERROR"},400);}}
  if(request.method==="POST"&&url.pathname==="/api/ingest/webhook"){if(!env.WEBHOOK_SECRET)return json({error:"WEBHOOK_NOT_CONFIGURED"},503);const raw=await request.text(),signature=request.headers.get("x-aria-signature")??"";try{const event=await new WebhookIngestConnector(env.WEBHOOK_SECRET).parse(raw,signature);if(env.EVENTS_QUEUE)await env.EVENTS_QUEUE.send({kind:"event",event});else return json({error:"EVENT_QUEUE_NOT_CONFIGURED"},503);return json({accepted:true,id:event.id},202);}catch(error){return json({error:error instanceof Error?error.message:"INGEST_ERROR"},400);}}
