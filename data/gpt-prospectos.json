@@ -508,6 +508,88 @@
         "message": "Mae, the useful split is whether the failed attempt is a Cloudflare/security response or the booking app itself. I’d capture one successful request and the next failed one, then compare status code, cookies and any IP/challenge signal before changing anything. What HTTP status or error shows on the failed attempt?",
         "contactedAt": null
       }
+    },
+    {
+      "id": "reddit-internationalsun4095-supplement-ecom-design-1wubotj",
+      "prospectType": "microjob",
+      "title": "Diseño gráfico urgente para marca de suplementos/e-commerce",
+      "company": "Marca de suplementos/e-commerce (nombre no publicado)",
+      "buyer": "u/InternationalSun4095",
+      "location": "Australia",
+      "description": "Tiene branding, imágenes de producto y referencias ya definidos y busca diseño pago para product graphics, visuales web y creatividades sociales. Pide disponibilidad inmediata y quiere empezar ya.",
+      "category": "content-social",
+      "sourceName": "Reddit",
+      "sourceUrl": "https://www.reddit.com/r/slavelabour/comments/1wubotj/task_graphic_designer_needed_for/",
+      "directUrl": "https://www.reddit.com/r/slavelabour/comments/1wubotj/task_graphic_designer_needed_for/",
+      "publishedAt": "2026-09-30T14:49:37-03:00",
+      "verifiedAt": "2026-10-01T12:46:00-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "applicationMode": "direct",
+      "workerFee": false,
+      "salary": {
+        "raw": "Trabajo pago; monto no publicado",
+        "monthlyMin": null,
+        "monthlyMax": null,
+        "currency": "otra"
+      },
+      "scamRisk": "low",
+      "rank": {
+        "score": 91,
+        "reason": "Buyer intent explícito: pide trabajo pago, disponible ASAP y con assets listos. La cuenta existe desde 2022 y su historial público muestra la misma marca de suplementos y búsquedas previas de email marketer para ecommerce. Competencia visible moderada, pero el brief está listo para ejecución."
+      },
+      "evidence": [
+        "https://www.reddit.com/r/slavelabour/comments/1wubotj/task_graphic_designer_needed_for/",
+        "https://www.reddit.com/user/InternationalSun4095/",
+        "https://www.reddit.com/r/cofounderhunt/comments/1sqb0ja/looking_for_a_marketing_co_founder_for_my_ecom/"
+      ],
+      "outreach": {
+        "status": "prepared",
+        "channel": "post-comment",
+        "message": "$bid — Since the branding, product shots and references are already set, I’d lock one reusable product-visual system first so the website and social creatives don’t drift apart. How many SKUs/creatives are in the first batch?",
+        "contactedAt": null
+      }
+    },
+    {
+      "id": "reddit-mydogs22-halloween-poster-1wv2797",
+      "prospectType": "microjob",
+      "title": "Póster editable de Halloween para fiesta privada",
+      "company": "Comprador particular — fiesta privada",
+      "buyer": "u/mydogs22",
+      "location": "A verificar",
+      "description": "Necesita diseñar un póster de Halloween con reglas e información de un juego, entregado como archivo Photoshop o Illustrator editable. Tiene una referencia del año pasado y presupuesto explícito de USD 50–75, negociable si el alcance lo justifica.",
+      "category": "content-social",
+      "sourceName": "Reddit",
+      "sourceUrl": "https://www.reddit.com/r/DesignJobs/comments/1wv2797/hiring_halloween_poster_needs_to_be_designed/",
+      "directUrl": "https://www.reddit.com/r/DesignJobs/comments/1wv2797/hiring_halloween_poster_needs_to_be_designed/",
+      "publishedAt": "2026-10-01T12:18:42-03:00",
+      "verifiedAt": "2026-10-01T12:46:00-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "applicationMode": "direct",
+      "workerFee": false,
+      "salary": {
+        "raw": "USD 50–75; abierto a otra tarifa razonable",
+        "monthlyMin": null,
+        "monthlyMax": null,
+        "currency": "USD"
+      },
+      "scamRisk": "low",
+      "rank": {
+        "score": 88,
+        "reason": "Pedido pequeño pero extremadamente fresco, presupuesto explícito, entregable claro y comprador con cuenta Reddit desde 2017 y karma sustancial. Encaje directo con Photoshop/Illustrator; la competencia visible ya existe pero el comprador todavía no marcó cierre."
+      },
+      "evidence": [
+        "https://www.reddit.com/r/DesignJobs/comments/1wv2797/hiring_halloween_poster_needs_to_be_designed/",
+        "https://www.reddit.com/user/mydogs22/",
+        "https://www.reddit.com/r/DesignJobs/about/rules/"
+      ],
+      "outreach": {
+        "status": "prepared",
+        "channel": "post-comment",
+        "message": "I’d keep the artwork and text fully separated so you can reuse the PSD/AI later without rebuilding the poster. If last year’s version already had the right information hierarchy, I’d use that as the layout baseline and push the Halloween atmosphere harder. Can you send that reference and the final print size?",
+        "contactedAt": null
+      }
     }
   ],
   "canonicalEditUrl": "https://github.com/simondalmasso/the-iAffice/edit/main/data/gpt-prospectos.json",
