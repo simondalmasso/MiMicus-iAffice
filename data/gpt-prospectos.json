@@ -118,8 +118,8 @@
       "sourceUrl": "https://www.facebook.com/groups/935153674204046/posts/1745371439848928/",
       "directUrl": "https://www.facebook.com/profile.php?id=100000501998049",
       "publishedAt": "2026-09-30T12:47:28-03:00",
-      "verifiedAt": "2026-10-01T05:16:13-03:00",
-      "active": true,
+      "verifiedAt": "2026-10-01T08:44:00-03:00",
+      "active": false,
       "argentinaEligible": true,
       "applicationMode": "direct",
       "workerFee": false,
@@ -131,17 +131,17 @@
       },
       "scamRisk": "medium",
       "rank": {
-        "score": 73,
-        "reason": "Demanda real y fresca con contacto directo, pero el alcance es todavía genérico y tiene mucha competencia visible."
+        "score": 46,
+        "reason": "Pedido real, pero alcance mínimo y sin señales adicionales de selección; acumula ~83 comentarios, casi todos ofertas genéricas, y no aparece respuesta del comprador que permita un ángulo comercial mejor. No justifica uno de los 3 slots activos."
       },
       "evidence": [
         "https://www.facebook.com/groups/935153674204046/posts/1745371439848928/",
         "https://www.facebook.com/profile.php?id=100000501998049"
       ],
       "outreach": {
-        "status": "prepared",
+        "status": "closed",
         "channel": "messenger",
-        "message": "Tony, vi lo de la landing. Antes de cotizarla miraría una sola cosa: qué tiene que hacer la página y de dónde llega el tráfico, porque eso define estructura y medición. Ya tenés contenido y referencia visual?",
+        "message": null,
         "contactedAt": null
       }
     },
