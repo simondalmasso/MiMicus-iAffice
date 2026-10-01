@@ -132,6 +132,17 @@ def build_parser() -> argparse.ArgumentParser:
     p_triage.add_argument("--as-of", required=True)
     p_triage.add_argument("--trace-jsonl", action="store_true")
 
+    p_observe = sub.add_parser("observe")
+    source_group = p_observe.add_mutually_exclusive_group(required=True)
+    source_group.add_argument("--ledger-file")
+    source_group.add_argument("--ledger-url")
+    p_observe.add_argument("--policy-file", required=True)
+    p_observe.add_argument("--cockpit-dir", required=True)
+    p_observe.add_argument("--host", default="127.0.0.1")
+    p_observe.add_argument("--port", type=int, default=8788)
+    p_observe.add_argument("--poll-seconds", type=float, default=5.0)
+    p_observe.add_argument("--max-events", type=int, default=512)
+
     p_state = sub.add_parser("state")
     state_sub = p_state.add_subparsers(dest="state_command", required=True)
     p_inspect = state_sub.add_parser("inspect")
@@ -247,6 +258,45 @@ def main(argv: Sequence[str] | None = None) -> int:
 
         batch = _engine(args.profile).triage_prospects(ledger, policy=policy, as_of=as_of)
         print(batch.model_dump_json(indent=2))
+        return 0
+    if args.command == "observe":
+        from mimicus.commercial.observer import ActivityBuffer, CommercialObserver, FileLedgerSource, UrlLedgerSource
+        from mimicus.interfaces.commercial_observer_server import run_commercial_observer
+
+        if args.poll_seconds <= 0:
+            raise ValueError("poll_seconds must be positive")
+        if args.max_events < 1:
+            raise ValueError("max_events must be positive")
+
+        policy_payload = _load_json_object(args.policy_file, label="policy")
+        policy = LeadDecisionPolicy.model_validate(policy_payload)
+        source = FileLedgerSource(args.ledger_file) if args.ledger_file is not None else UrlLedgerSource(args.ledger_url)
+        buffer = ActivityBuffer(max_events=args.max_events)
+        observer = CommercialObserver(
+            engine=_engine("offline"),
+            source=source,
+            policy=policy,
+            buffer=buffer,
+        )
+        print(
+            json.dumps(
+                {
+                    "mode": "local-live-observer",
+                    "url": f"http://{args.host}:{args.port}/",
+                    "sideEffects": False,
+                    "decisionAuthority": "MiMicusEngine",
+                },
+                sort_keys=True,
+            ),
+            flush=True,
+        )
+        run_commercial_observer(
+            observer=observer,
+            cockpit_dir=args.cockpit_dir,
+            host=args.host,
+            port=args.port,
+            poll_seconds=args.poll_seconds,
+        )
         return 0
     if args.command == "state":
         print(json.dumps(Repository(_database_url()).inspect_state(args.run_id), indent=2, sort_keys=True))
