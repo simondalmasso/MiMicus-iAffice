@@ -1,0 +1,606 @@
+{
+  "schemaVersion": 1,
+  "lane": "PROSPECTOS",
+  "updatedAt": "2026-10-01",
+  "curator": "GPT PROSPECTOR",
+  "writeContract": "CANONICAL WRITE TARGET: GitHub simondalmasso/the-iAffice main. Al iniciar: leer este JSON y data/gpt-prospectos.json, reverificar estado actual, preservar cambios ajenos y escribir en iAffice. JOBAS queda como origen/legacy durante la transición; no usarlo como autoridad de escritura.",
+  "findingSchema": {
+    "id": "string único y estable",
+    "prospectType": "microjob",
+    "title": "string: síntesis factual de lo que necesita el comprador",
+    "company": "string: empresa o nombre público verificable del comprador; si no existe, descripción factual sin inventar",
+    "buyer": "string | null: nombre público verificable del comprador cuando aplique",
+    "location": "string: ubicación publicada o A verificar",
+    "description": "string breve y factual del dolor/necesidad concreta",
+    "category": "customer-success | support | travel | admin-va | operations | sales | marketing | ecommerce-crm | content-social | data-ai | tech | finance | other",
+    "sourceName": "Facebook | Telegram | Workana | Upwork | Reddit | LinkedIn | otra fuente",
+    "sourceUrl": "https://... PERMALINK exacto de la publicación original",
+    "directUrl": "https://... enlace exacto donde responder/contactar/atacar; puede ser igual a sourceUrl",
+    "publishedAt": "ISO-8601 del timestamp individual verificable de esa publicación",
+    "verifiedAt": "ISO-8601",
+    "active": "boolean",
+    "argentinaEligible": "boolean | null",
+    "applicationMode": "direct | platform",
+    "workerFee": "false para no-pay-to-apply; true si exige pago; null si no se pudo verificar",
+    "salary": {
+      "raw": "presupuesto publicado o No publicado",
+      "monthlyMin": "number | null",
+      "monthlyMax": "number | null",
+      "currency": "USD | ARS | otra"
+    },
+    "scamRisk": "low | medium | high",
+    "rank": {
+      "score": "0-100",
+      "reason": "justificación factual y breve"
+    },
+    "evidence": [
+      "URLs primarias o evidencias de verificación"
+    ],
+    "outreach": {
+      "status": "prepared | contacted | replied | closed",
+      "channel": "post-comment | messenger | email | platform",
+      "message": "string | null",
+      "contactedAt": "ISO-8601 | null"
+    }
+  },
+  "rules": [
+    "EXCLUSIVO PROSPECTOS/MICROJOBS: demanda directa, comprador real, proyecto puntual o necesidad accionable. No guardar vacantes laborales genéricas en este archivo.",
+    "FILTRO DURO DE FRESCURA: persistir solo pedido real + comprador + timestamp individual verificable <=48h + permalink directo + posibilidad real de contacto.",
+    "sourceUrl debe ser el permalink EXACTO de la publicación individual. No usar home del grupo, resultados de búsqueda, perfiles genéricos ni URLs de navegación.",
+    "directUrl debe abrir el lugar exacto donde responder/contactar/atacar. Si el contacto ocurre en la publicación, repetir sourceUrl.",
+    "Facebook: abrir el post y verificar el timestamp real individual. Si un buscador/feed parece fresco pero el post real supera 48h, DESCARTAR.",
+    "Si no se puede obtener el permalink exacto o el timestamp individual verificable, NO persistir.",
+    "Deduplicar principalmente por sourceUrl; nunca agregar dos veces el mismo post.",
+    "applicationMode=direct para Facebook/Telegram/Reddit/contacto directo; applicationMode=platform para Workana/Upwork u otras plataformas de propuesta.",
+    "No inventar empresa, comprador, ubicación, presupuesto, fecha, contacto ni URL.",
+    "Antes de contactar, investigar solo información pública/profesional relevante del comprador, negocio y proyecto para entender el dolor real.",
+    "OUTREACH: diagnosticar el dolor, demostrar comprensión específica, bajar riesgo y cerrar con una pregunta concreta. No vender años de experiencia, no portfolio/WhatsApp de entrada, no corporate fluff, no mencionar IA.",
+    "OUTREACH: 1-4 frases cuando alcance; humano, específico y sin regalar precio antes de entender alcance.",
+    "SETTER CORE: la tarea no termina al encontrar prospectos. Primero revisar con lupa todos los prospectos abiertos y conversaciones pendientes; solo después buscar nuevos.",
+    "SECUENCIA OBLIGATORIA: OPEN LEADS -> reverificar publicación/mensaje/respuesta/cierre -> actualizar estado -> preparar siguiente paso -> recién después NEW PROSPECTING.",
+    "ESTADO COMPARTIDO: data/gpt-prospectos.json es el ledger común de ambos setters para microjobs/prospectos. Leerlo al inicio y persistir cada cambio material inmediatamente.",
+    "CONCURRENCIA: antes de escribir, volver a leer la versión actual del archivo y su SHA; fusionar cambios y nunca pisar findings ajenos.",
+    "FOLLOW-UP: un prospecto validado puede seguirse aunque ya haya superado 48h. El límite <=48h aplica a la admisión de prospectos NUEVOS, no al seguimiento de abiertos.",
+    "OUTREACH STYLE: cuanto más corto mejor si conserva diagnóstico. En español usar '?' solo al final de la pregunta, sin '¿'. Una pregunta concreta por mensaje cuando alcance.",
+    "NO RESET: nunca descartar contexto abierto sólo porque empieza un chat nuevo. Reanudar desde el JSON canónico y el estado de outreach."
+  ],
+  "findings": [
+    {
+      "id": "fb-jhosep-salor-shirt-customizer-1745241856528553",
+      "prospectType": "microjob",
+      "title": "Personalizador web tipo Canva para estampados en camisetas",
+      "company": "Jhosep SalOr",
+      "buyer": "Jhosep SalOr",
+      "location": "Harderwijk, Países Bajos",
+      "description": "Necesita un configurador donde el cliente elija camiseta y color y pueda preparar visualmente un estampado; el cuello de botella es el editor y la salida útil para producción.",
+      "category": "ecommerce-crm",
+      "sourceName": "Facebook",
+      "sourceUrl": "https://www.facebook.com/groups/desarrolladorweb/posts/1745241856528553/",
+      "directUrl": "https://www.facebook.com/groups/desarrolladorweb/posts/1745241856528553/",
+      "publishedAt": "2026-09-30T10:03:22-03:00",
+      "verifiedAt": "2026-10-01T01:56:18-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "applicationMode": "direct",
+      "workerFee": false,
+      "salary": {
+        "raw": "No publicado",
+        "monthlyMin": null,
+        "monthlyMax": null,
+        "currency": "otra"
+      },
+      "scamRisk": "medium",
+      "rank": {
+        "score": 84,
+        "reason": "Pedido técnico concreto, comprador público y contacto directo; competencia alta en comentarios pero el dolor permite diferenciarse con diagnóstico."
+      },
+      "evidence": [
+        "https://www.facebook.com/groups/desarrolladorweb/posts/1745241856528553/",
+        "https://www.facebook.com/profile.php?id=100092644057390"
+      ],
+      "outreach": {
+        "status": "contacted",
+        "channel": "post-comment",
+        "message": "Jhosep, por lo que describís, el problema no es hacer una app: es resolver bien el editor tipo Canva. WooCommerce puede manejar catálogo/pago, pero necesitás que el cliente elija modelo/color, suba el diseño, lo mueva/escale dentro del área imprimible y que esa composición quede guardada/exportable para producción. Yo arrancaría con un prototipo corto sobre 2–3 camisetas para validar ese flujo antes de meterte en el desarrollo completo. Ya tenés los mockups y las medidas/áreas de impresión de cada modelo?",
+        "contactedAt": null
+      }
+    },
+    {
+      "id": "fb-tony-negro-wp-landing-1745371439848928",
+      "prospectType": "microjob",
+      "title": "Landing page WordPress freelance",
+      "company": "Tony Negro",
+      "buyer": "Tony Negro",
+      "location": "Ciudad de México, México",
+      "description": "Busca un programador freelance para una landing en WordPress y enfatiza honestidad y experiencia; todavía no publicó objetivo, tráfico, contenido ni alcance.",
+      "category": "tech",
+      "sourceName": "Facebook",
+      "sourceUrl": "https://www.facebook.com/groups/935153674204046/posts/1745371439848928/",
+      "directUrl": "https://www.facebook.com/profile.php?id=100000501998049",
+      "publishedAt": "2026-09-30T12:47:28-03:00",
+      "verifiedAt": "2026-10-01T05:16:13-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "applicationMode": "direct",
+      "workerFee": false,
+      "salary": {
+        "raw": "No publicado",
+        "monthlyMin": null,
+        "monthlyMax": null,
+        "currency": "otra"
+      },
+      "scamRisk": "medium",
+      "rank": {
+        "score": 73,
+        "reason": "Demanda real y fresca con contacto directo, pero el alcance es todavía genérico y tiene mucha competencia visible."
+      },
+      "evidence": [
+        "https://www.facebook.com/groups/935153674204046/posts/1745371439848928/",
+        "https://www.facebook.com/profile.php?id=100000501998049"
+      ],
+      "outreach": {
+        "status": "prepared",
+        "channel": "messenger",
+        "message": "Tony, vi lo de la landing. Antes de cotizarla miraría una sola cosa: qué tiene que hacer la página y de dónde llega el tráfico, porque eso define estructura y medición. Ya tenés contenido y referencia visual?",
+        "contactedAt": null
+      }
+    },
+    {
+      "id": "fb-james-palacio-evolution-api-28780201864945507",
+      "prospectType": "microjob",
+      "title": "Automatización de reportes por WhatsApp con Evolution API",
+      "company": "James Palacio",
+      "buyer": "James Palacio",
+      "location": "Medellín, Colombia",
+      "description": "Quiere automatizar envío de reportes por WhatsApp y está evaluando Evolution API; el riesgo operativo es pérdida silenciosa de envíos ante caída de sesión, por lo que requiere cola, reintentos y trazabilidad.",
+      "category": "tech",
+      "sourceName": "Facebook",
+      "sourceUrl": "https://www.facebook.com/groups/desarrolladoresencolombia/posts/28780201864945507/",
+      "directUrl": "https://www.facebook.com/groups/desarrolladoresencolombia/posts/28780201864945507/",
+      "publishedAt": "2026-09-30T01:44:17-03:00",
+      "verifiedAt": "2026-10-01T01:56:18-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "applicationMode": "direct",
+      "workerFee": false,
+      "salary": {
+        "raw": "No publicado",
+        "monthlyMin": null,
+        "monthlyMax": null,
+        "currency": "otra"
+      },
+      "scamRisk": "medium",
+      "rank": {
+        "score": 88,
+        "reason": "Problema acotado, técnico y accionable, comprador identificable, baja competencia relativa y posibilidad de diagnosticar antes de vender."
+      },
+      "evidence": [
+        "https://www.facebook.com/groups/desarrolladoresencolombia/posts/28780201864945507/",
+        "https://www.facebook.com/james.palacio.376"
+      ],
+      "outreach": {
+        "status": "contacted",
+        "channel": "post-comment",
+        "message": "James, si son reportes salientes programados, el riesgo no es sólo que Evolution funcione: es perder envíos cuando cae una sesión y no enterarte. Yo lo armaría con cola, reintentos y log de entrega; según volumen, compararía Cloud API oficial vs Evolution. Cuántos reportes por día y a cuántos números?",
+        "contactedAt": null
+      }
+    },
+    {
+      "id": "fb-kayleigh-benton-ghl-email-sync-1766308701316803",
+      "prospectType": "microjob",
+      "title": "Diagnóstico y reparación de sincronización Gmail–GoHighLevel",
+      "company": "Crystal Digital Solutions",
+      "buyer": "Kayleigh Benton",
+      "location": "A verificar",
+      "description": "Un cliente concreto responde por email y Gmail recibe los mensajes, pero algunas respuestas no llegan a HighLevel Conversations/contact history. Pide diagnóstico e implementación, no sólo instrucciones.",
+      "category": "support",
+      "sourceName": "Facebook",
+      "sourceUrl": "https://www.facebook.com/groups/997316161549398/permalink/1766308701316803/",
+      "directUrl": "https://www.facebook.com/kayleigh.benton.75/",
+      "publishedAt": "2026-09-30T08:28:13-03:00",
+      "verifiedAt": "2026-10-01T01:56:18-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "applicationMode": "direct",
+      "workerFee": false,
+      "salary": {
+        "raw": "Pide rough quote; monto no publicado",
+        "monthlyMin": null,
+        "monthlyMax": null,
+        "currency": "otra"
+      },
+      "scamRisk": "low",
+      "rank": {
+        "score": 90,
+        "reason": "Dolor de producción muy específico, negocio público verificable, solicita implementación rápida y ofrece DM/email directo; competencia visible alta."
+      },
+      "evidence": [
+        "https://www.facebook.com/groups/997316161549398/permalink/1766308701316803/",
+        "https://crystaldigitalsolutions.co.uk/",
+        "https://crystaldigitalsolutions.co.uk/about-us"
+      ],
+      "outreach": {
+        "status": "contacted",
+        "channel": "messenger",
+        "message": "Kay, saw your GHL/Workspace issue. If Gmail gets the reply but GHL misses only that client, I’d check thread/message IDs and contact association before reconnecting anything — sounds more like mapping than delivery. Want me to help isolate it?",
+        "contactedAt": null
+      }
+    },
+    {
+      "id": "fb-jules-lam-fashion-ecommerce-1037037489383801",
+      "prospectType": "microjob",
+      "title": "Ecommerce custom para marca de ropa con menor costo recurrente",
+      "company": "Jules Lam",
+      "buyer": "Jules Lam",
+      "location": "A verificar",
+      "description": "Busca un ecommerce de moda como proyecto único, evitando plataformas por cuotas mensuales y buscando más control; el punto crítico es reducir recurrencia sin trasladar el costo a mantenimiento de un stack totalmente custom.",
+      "category": "ecommerce-crm",
+      "sourceName": "Facebook",
+      "sourceUrl": "https://www.facebook.com/groups/671788822575338/posts/1037037489383801/",
+      "directUrl": "https://www.facebook.com/fourthofjuliee/",
+      "publishedAt": "2026-09-30T22:44:02-03:00",
+      "verifiedAt": "2026-10-01T05:16:13-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "applicationMode": "direct",
+      "workerFee": false,
+      "salary": {
+        "raw": "Solicita one-time project rate; monto no publicado",
+        "monthlyMin": null,
+        "monthlyMax": null,
+        "currency": "otra"
+      },
+      "scamRisk": "medium",
+      "rank": {
+        "score": 82,
+        "reason": "Brief comercial claro, comprador identificable y muy fresco; alta competencia, pero el trade-off entre cuotas y mantenimiento permite una respuesta diferenciada."
+      },
+      "evidence": [
+        "https://www.facebook.com/groups/671788822575338/posts/1037037489383801/",
+        "https://www.facebook.com/fourthofjuliee/"
+      ],
+      "outreach": {
+        "status": "replied",
+        "channel": "messenger",
+        "message": "Jules, if the goal is lower monthly fees and more control, I wouldn’t rebuild every ecommerce piece from zero. I’d keep the storefront custom but use a self-hosted commerce core, so you own it without turning maintenance into a second problem. What country and payment methods are you selling with?",
+        "contactedAt": null
+      }
+    },
+    {
+      "id": "reddit-townevening7180-small-business-site-1wt2fvt",
+      "prospectType": "pain-signal",
+      "title": "Sitio simple para negocio local con portfolio y pedidos de presupuesto",
+      "company": "Negocio local no publicado",
+      "buyer": "u/TownEvening7180 (display: zardyboy12)",
+      "location": "A verificar",
+      "description": "Ya opera un pequeño negocio y quiere una web simple para mostrar trabajos previos, zona de operación y recibir solicitudes de presupuesto. Está frenado por la elección de plataforma y teme aumentos/lock-in de builders.",
+      "category": "tech",
+      "sourceName": "Reddit",
+      "sourceUrl": "https://www.reddit.com/r/smallbusiness/comments/1wt2fvt/where_to_build_a_website_for_a_small_business/",
+      "directUrl": "https://www.reddit.com/r/smallbusiness/comments/1wt2fvt/where_to_build_a_website_for_a_small_business/",
+      "publishedAt": "2026-09-29T03:14:12-03:00",
+      "verifiedAt": "2026-10-01T05:26-03:00",
+      "active": false,
+      "argentinaEligible": true,
+      "applicationMode": "direct",
+      "workerFee": false,
+      "salary": {
+        "raw": "No publicado",
+        "monthlyMin": null,
+        "monthlyMax": null,
+        "currency": "otra"
+      },
+      "scamRisk": "medium",
+      "rank": {
+        "score": 79,
+        "reason": "Dolor real y comprador identificable, pero al reverificar el 2026-10-01 ya superó el filtro duro de frescura de 48 h; queda fuera del radar accionable."
+      },
+      "evidence": [
+        "https://www.reddit.com/r/smallbusiness/comments/1wt2fvt/where_to_build_a_website_for_a_small_business/",
+        "https://www.reddit.com/user/TownEvening7180/"
+      ],
+      "outreach": {
+        "status": "prepared",
+        "channel": "post-comment",
+        "message": "For what you need, I wouldn’t overbuild this. A clean site with past work, service area and a quote form is enough — the important part is owning the domain and keeping the setup easy to move later. What kind of work does the business do?",
+        "contactedAt": null
+      }
+    },
+    {
+      "id": "fb-diego-antonio-wordpress-refresh-2478645066214466",
+      "prospectType": "microjob",
+      "title": "Actualización de sitio WordPress inmobiliario existente",
+      "company": "Loy & Ferraresi Propiedades",
+      "buyer": "Diego Antonio",
+      "location": "Chile",
+      "description": "Tiene un WordPress existente que considera demasiado básico. Su perfil público lo vincula como asesor inmobiliario de Loy & Ferraresi, cuyo sitio ya posee catálogo amplio, buscador por propiedades, fichas y contacto. El ángulo es modernizar experiencia, fichas y conversión sin rehacer innecesariamente ni romper SEO/inventario.",
+      "category": "tech",
+      "sourceName": "Facebook",
+      "sourceUrl": "https://www.facebook.com/groups/1178185956260390/posts/2478645066214466/",
+      "directUrl": "https://www.facebook.com/diego.a.arevalo.35/",
+      "publishedAt": "2026-09-30T16:57:24-03:00",
+      "verifiedAt": "2026-10-01T03:04:00-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "applicationMode": "direct",
+      "workerFee": false,
+      "salary": {
+        "raw": "No publicado",
+        "monthlyMin": null,
+        "monthlyMax": null,
+        "currency": "otra"
+      },
+      "scamRisk": "low",
+      "rank": {
+        "score": 88,
+        "reason": "Comprador identificable, sitio y negocio públicos, pedido fresco y concreto. Competencia muy alta en comentarios, pero casi toda genérica; permite diferenciarse auditando el sitio existente."
+      },
+      "evidence": [
+        "https://www.facebook.com/groups/1178185956260390/posts/2478645066214466/",
+        "https://www.facebook.com/diego.a.arevalo.35/",
+        "https://www.loyferraresi.cl/"
+      ],
+      "outreach": {
+        "status": "contacted",
+        "channel": "messenger",
+        "message": "Diego, vi que estás en Loy & Ferraresi y la web ya tiene bastante catálogo. Yo no la rehacería de cero: tocaría primero fichas, buscador y contacto para que se sienta más actual sin romper lo que ya funciona. Si esa es la web que querés actualizar, te marco 3 cambios concretos?",
+        "contactedAt": "2026-10-01T03:19:36-03:00"
+      }
+    },
+    {
+      "id": "fb-jaylyn-san-pedro-whop-ghl-1766807894600217",
+      "prospectType": "microjob",
+      "title": "Whop → GHL payment automation troubleshooting",
+      "company": "No publicado",
+      "buyer": "Jaylyn San Pedro",
+      "location": "A verificar",
+      "description": "Tiene un flujo GHL opt-in → pago en Whop → Zapier → GHL nurturing. El test de pago existe, pero Zapier recibe nombre y no email; Find Member devuelve unauthorized incluso tras renovar API key. Antes de seguir parcheando Zapier conviene evaluar la integración nativa Whop como payment provider dentro de GHL, que puede eliminar esa capa si el checkout encaja en el flujo nativo.",
+      "category": "ecommerce-crm",
+      "sourceName": "Facebook",
+      "sourceUrl": "https://www.facebook.com/groups/997316161549398/posts/1766807894600217/",
+      "directUrl": "https://www.facebook.com/profile.php?id=100000821612172",
+      "publishedAt": "2026-09-30T20:11:09-03:00",
+      "verifiedAt": "2026-10-01T06:16:51-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "applicationMode": "direct",
+      "workerFee": false,
+      "salary": {
+        "raw": "No publicado",
+        "monthlyMin": null,
+        "monthlyMax": null,
+        "currency": "otra"
+      },
+      "scamRisk": "low",
+      "rank": {
+        "score": 92,
+        "reason": "Dolor técnico muy concreto y fresco, comprador identificable, flujo reproducible y contacto directo. Hay competencia, pero la documentación oficial de Whop permite un ángulo distinto al troubleshooting genérico."
+      },
+      "evidence": [
+        "https://www.facebook.com/groups/997316161549398/posts/1766807894600217/",
+        "https://docs.whop.com/third-party-integrations/gohighlevel",
+        "https://www.facebook.com/profile.php?id=100000821612172"
+      ],
+      "outreach": {
+        "status": "contacted",
+        "channel": "post-comment",
+        "message": "Jaylyn, Whop has a native GoHighLevel integration. I'd test that before touching Zapier again: it removes the mapping layer where the email is disappearing. Want me to map the clean flow?",
+        "contactedAt": "2026-10-01T06:16:51-03:00"
+      }
+    },
+    {
+      "id": "reddit-monowyrm-restaurant-produce-ordering-1wtmjgi",
+      "prospectType": "microjob",
+      "title": "Sistema de compras e inventario de produce para cuatro restaurantes",
+      "company": "Cuatro restaurantes (nombre no publicado)",
+      "buyer": "u/monowyrm (display: youdeservebetter)",
+      "location": "A verificar",
+      "description": "Creció de uno a cuatro restaurantes y necesita que nuevos managers puedan calcular y ejecutar pedidos de produce sin depender de los dueños. Pregunta por hojas, automatización y software para mantener stock suficiente.",
+      "category": "operations",
+      "sourceName": "Reddit",
+      "sourceUrl": "https://www.reddit.com/r/smallbusiness/comments/1wtmjgi/produce_ordering_from_suppliers/",
+      "directUrl": "https://www.reddit.com/r/smallbusiness/comments/1wtmjgi/produce_ordering_from_suppliers/",
+      "publishedAt": "2026-09-29T18:21:17-03:00",
+      "verifiedAt": "2026-10-01T05:48:39-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "applicationMode": "direct",
+      "workerFee": false,
+      "salary": {
+        "raw": "No publicado",
+        "monthlyMin": null,
+        "monthlyMax": null,
+        "currency": "otra"
+      },
+      "scamRisk": "medium",
+      "rank": {
+        "score": 78,
+        "reason": "Dolor operativo concreto, dueño de cuatro restaurantes y contacto directo dentro de <48 h. No pide contratar explícitamente y ya recibió varias respuestas sobre par levels; el ángulo diferencial es reducir trabajo manual conectando ventas, recepción y desperdicio. El historial público incluye intercambio de reseñas, por lo que conviene mantener riesgo medio."
+      },
+      "evidence": [
+        "https://www.reddit.com/r/smallbusiness/comments/1wtmjgi/produce_ordering_from_suppliers/",
+        "https://www.reddit.com/user/monowyrm/"
+      ],
+      "outreach": {
+        "status": "prepared",
+        "channel": "post-comment",
+        "message": "At four locations, I’d separate the system from the ordering method: standardize one SKU/unit list and par levels first, then use POS sales plus receiving/waste to pre-fill the expected order so managers only correct exceptions. Are all four locations on the same POS and supplier list?",
+        "contactedAt": null
+      }
+    },
+    {
+      "id": "reddit-amateurtech-shopify-catalogue-sites-1wu6sfw",
+      "prospectType": "microjob",
+      "title": "Alternativa reusable a Shopify para sitios catálogo con solicitudes de presupuesto",
+      "company": "Small business en Irlanda (nombre no publicado)",
+      "buyer": "u/AmatuerTech",
+      "location": "Irlanda",
+      "description": "Su Shopify actual genera consultas que luego convierte en pedidos offline, pero no usa checkout. Quiere lanzar varios sitios adicionales con catálogo, fichas, formularios y solicitudes de presupuesto evitando pagar más de €300/año por Shopify en cada uno.",
+      "category": "tech",
+      "sourceName": "Reddit",
+      "sourceUrl": "https://www.reddit.com/r/smallbusiness/comments/1wu6sfw/best_alternative_to_shopify_for_a_small_business/",
+      "directUrl": "https://www.reddit.com/r/smallbusiness/comments/1wu6sfw/best_alternative_to_shopify_for_a_small_business/",
+      "publishedAt": "2026-09-30T11:43:26-03:00",
+      "verifiedAt": "2026-10-01T05:48:39-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "applicationMode": "direct",
+      "workerFee": false,
+      "salary": {
+        "raw": "No publica presupuesto de proyecto; quiere reducir el costo recurrente de €300+/año por sitio",
+        "monthlyMin": null,
+        "monthlyMax": null,
+        "currency": "EUR"
+      },
+      "scamRisk": "low",
+      "rank": {
+        "score": 83,
+        "reason": "Dueño de negocio con necesidad concreta, varios sitios potenciales, costo actual explícito, contacto directo y timestamp <48 h. No pide contratar todavía y ya recibió recomendaciones de WordPress; la oportunidad diferencial está en diseñar una arquitectura reusable de catálogo y cotización."
+      },
+      "evidence": [
+        "https://www.reddit.com/r/smallbusiness/comments/1wu6sfw/best_alternative_to_shopify_for_a_small_business/"
+      ],
+      "outreach": {
+        "status": "prepared",
+        "channel": "post-comment",
+        "message": "Since you’re planning several sites, I’d solve the repeatability before choosing the builder: one reusable product/content structure plus the same enquiry flow, then deploy each site separately so you’re not maintaining three different setups. Are the new sites basically the same catalogue/quote model or genuinely different businesses?",
+        "contactedAt": null
+      }
+    }
+  ],
+  "canonicalEditUrl": "https://github.com/simondalmasso/the-iAffice/edit/main/data/gpt-prospectos.json",
+  "canonicalRawUrl": "https://raw.githubusercontent.com/simondalmasso/the-iAffice/main/data/gpt-prospectos.json",
+  "gitlabMirrorUrl": "https://gitlab.com/simondalmasso/jobas/-/blob/main/data/gpt-prospectos.json",
+  "platformLearnings": {
+    "facebook": {
+      "lastUpdated": "2026-10-01",
+      "confidence": "medium-high",
+      "sampleNote": "Aprendizajes derivados de búsquedas y validaciones reales realizadas en la sesión actual. No equivalen a tasas de conversión ni a resultados comerciales cerrados.",
+      "observations": [
+        {
+          "finding": "Los grupos habitados por compradores o dueños de negocio producen mejores señales que los grupos dominados por desarrolladores ofreciendo servicios.",
+          "evidence": [
+            "GoHighLevel Users Funnels Automation & Hiring Support produjo un caso real de troubleshooting de Gmail/HighLevel.",
+            "Shopify/WooCommerce/Small Business muestran dolor operativo más útil que grupos genéricos de developers."
+          ],
+          "action": "Priorizar GHL/CRM, Shopify/WooCommerce, small business, ecommerce y automation antes que grupos de developers/jobs."
+        },
+        {
+          "finding": "La búsqueda global de Facebook genera falsos frescos: un resultado puede parecer reciente por actividad/comentarios aunque el post original sea viejo.",
+          "evidence": [
+            "Karinee Del Castillo apareció como candidata reciente y al abrir el post resultó ser de hace 42 semanas.",
+            "Pablo Almanza parecía reciente y terminó siendo viejo.",
+            "NeXA 11 AI apareció con señal reciente pero el timestamp interno real correspondía a junio."
+          ],
+          "action": "Nunca aceptar la fecha del resultado de búsqueda. Abrir el post individual y validar `creation_time` o timestamp equivalente."
+        },
+        {
+          "finding": "El permalink individual y la accesibilidad desde la sesión son parte del filtro de calidad.",
+          "evidence": [
+            "Algunos posts indexados externamente devolvieron 'contenido no disponible' en la sesión de Facebook.",
+            "Los leads inaccesibles no permiten revisar cierre, comentarios ni contactar con certeza."
+          ],
+          "action": "No persistir como accionable si el permalink no abre en la sesión o no existe una vía concreta de contacto."
+        },
+        {
+          "finding": "Los posts genéricos de 'I need a developer' concentran muchísima competencia y poca información útil.",
+          "evidence": [
+            "Tony recibió decenas de respuestas genéricas.",
+            "Ali Ahmad tenía decenas de comentarios tipo 'I can help / let's connect'."
+          ],
+          "action": "Evitar competir con experiencia/portfolio. Buscar una observación específica del problema y cerrar con una pregunta diagnóstica."
+        },
+        {
+          "finding": "Un mensaje diagnóstico y corto distingue más que un pitch comercial.",
+          "evidence": [
+            "Jhosep fue abordado explicando que el cuello de botella era el editor tipo Canva y la salida de producción.",
+            "Kayleigh fue abordada por posible problema de mapping/thread IDs en lugar de vender 'GHL expertise'.",
+            "Jules fue abordado por el trade-off entre cuotas recurrentes y mantenimiento de un stack custom."
+          ],
+          "action": "Mantener secuencia: dolor -> observación útil -> bajar riesgo -> una pregunta concreta."
+        },
+        {
+          "finding": "El perfil personal funciona como capa de credibilidad después de un buen comentario o DM.",
+          "evidence": [
+            "Se optimizó el perfil de Facebook para que muestre identidad real, GitHub y una bio no comercial."
+          ],
+          "action": "Mantener perfil humano y verificable; evitar convertirlo en un perfil de vendedor/freelancer genérico."
+        },
+        {
+          "finding": "Los posts anónimos pueden tener presupuesto y dolor real, pero fallan el criterio de comprador identificable.",
+          "evidence": [
+            "El ecommerce de ropa con presupuesto de USD 750 tenía permalink y timestamp exactos, pero autor anónimo."
+          ],
+          "action": "No contar como prospecto validado bajo el filtro duro, salvo que aparezca una vía de contacto identificable."
+        }
+      ]
+    },
+    "telegram": {
+      "lastUpdated": "2026-10-01",
+      "confidence": "medium",
+      "sampleNote": "Aprendizajes derivados de varias comunidades técnicas y comerciales revisadas con sesión iniciada. La muestra es limitada y no implica tasa de conversión estable.",
+      "observations": [
+        {
+          "finding": "Las comunidades técnicas con problemas concretos producen mejores microjobs que los canales de empleo genéricos.",
+          "evidence": [
+            "WordPress Hispano produjo el caso de Fabián RS con login bloqueado.",
+            "PHP - Comunidad española produjo el caso de Elio Navarro con envíos Telegram desde PHP.",
+            "Los grupos genéricos de empleo aportaron menos dolor accionable."
+          ],
+          "action": "Priorizar WordPress/PHP/Laravel/PrestaShop y comunidades donde la gente pide ayuda concreta."
+        },
+        {
+          "finding": "Los grupos comerciales amplios tienen más volumen pero también mucho más ruido y riesgo.",
+          "evidence": [
+            "Drop Shipping Group produjo a Rajat como excepción útil, pero la mayoría del feed era spam, autopromoción o señales de scam."
+          ],
+          "action": "Usar grupos comerciales como fuente secundaria y filtrar agresivamente."
+        },
+        {
+          "finding": "La ficha pública de t.me no alcanza para prospectar mensajes históricos.",
+          "evidence": [
+            "Los enlaces públicos permitían verificar grupo/tamaño, pero no leer el historial necesario para evaluar dolor y fecha."
+          ],
+          "action": "Usar la sesión de Telegram Web para historial y validar cada mensaje individual."
+        },
+        {
+          "finding": "La navegación por IDs/hashes de Telegram Web puede abrir a la persona equivocada.",
+          "evidence": [
+            "Un hash numérico de WebK abrió un perfil incorrecto al intentar llegar a Fabián."
+          ],
+          "action": "Antes de escribir, verificar visualmente nombre/header del chat. No confiar en hashes numéricos crudos."
+        },
+        {
+          "finding": "Los intentos repetidos de JOIN pueden activar controles anti-bot o cooldowns.",
+          "evidence": [
+            "WordPress Brasil pidió verificación y el ingreso falló."
+          ],
+          "action": "No repetir JOIN ni intentar evasiones. Priorizar grupos ya unidos o accesibles."
+        },
+        {
+          "finding": "El formato de outreach que mejor encaja es extremadamente corto y humano.",
+          "evidence": [
+            "Fabián: diagnóstico de conflicto/bloqueo de seguridad.",
+            "Elio: pedir el error devuelto por Telegram y señalar chat_id/respuesta como primera línea de investigación."
+          ],
+          "action": "No mencionar IA, no vender experiencia y no mandar portfolio de entrada."
+        },
+        {
+          "finding": "Sin permalink individual verificable no debe entrar al CANON como prospecto duro.",
+          "evidence": [
+            "Fabián, Elio y Rajat fueron contactados, pero todavía no se capturó un `t.me/<grupo>/<message_id>` individual verificable para cada pedido."
+          ],
+          "action": "En futuras revisiones, capturar primero link individual del mensaje antes de persistirlo como finding."
+        }
+      ]
+    }
+  },
+  "legacyJobasUrl": "https://github.com/simondalmasso/jobas/blob/main/data/gpt-prospectos.json",
+  "migration": {
+    "from": "simondalmasso/jobas",
+    "to": "simondalmasso/the-iAffice",
+    "migratedAt": "2026-10-01",
+    "status": "active",
+    "note": "iAffice es el hogar operativo nuevo. Mantener continuidad de prospectos y no resetear estado entre sesiones."
+  }
+}
