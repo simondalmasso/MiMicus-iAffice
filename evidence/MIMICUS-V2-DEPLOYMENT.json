@@ -1,0 +1,27 @@
+{
+  "taxonomy": "LIVE_EXTERNAL",
+  "timestamp": "2026-10-01T14:04:54Z",
+  "branch": "mimicus-v2-monochrome",
+  "head_sha": "038ce795f16d193bb31a9308435724f6d73822eb",
+  "worker": "mimicus",
+  "url": "https://mimicus.simondalmasso44.workers.dev",
+  "version_id": "8840605b-6249-498c-8c78-fbc434405dc9",
+  "cloudflare_account": "test",
+  "wrangler": "4.134.0",
+  "dry_run": {
+    "explicit_config": true,
+    "bindings": [
+      "ASSETS"
+    ],
+    "pass": true
+  },
+  "live_probe": {
+    "root_status": 200,
+    "root_has_mimicus": true,
+    "health_ok": true,
+    "health_service": "mimicus",
+    "health_ui": "monochrome-v2",
+    "core_archive": "565407eb1296eae617f5b14b512d2e0cf08c6c02"
+  },
+  "pass": true
+}
