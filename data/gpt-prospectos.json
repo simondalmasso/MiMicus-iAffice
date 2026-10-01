@@ -467,6 +467,47 @@
         "message": "If the new sites use the same catalogue + quote flow, I’d make that reusable once instead of choosing a different builder each time. Are the product fields and enquiry flow basically the same across them?",
         "contactedAt": null
       }
+    },
+    {
+      "id": "fb-apple-mae-hilay-ticket-booking-security-29721753714081926",
+      "prospectType": "microjob",
+      "title": "Diagnóstico de errores de seguridad en sitio de reservas de tickets",
+      "company": "Apple Mae Hilay / sitio de ticket-booking no publicado",
+      "buyer": "Apple Mae Hilay",
+      "location": "Davao City, Filipinas",
+      "description": "Busca diagnóstico legítimo de fallas recurrentes durante el checkout/reserva de un sitio de tickets: una reserva puede completar y las siguientes fallar pese a que aún aparece disponibilidad. Quiere distinguir entre sesión/cookies, IP/red, Cloudflare/protecciones o configuración del sitio/servidor antes de pagar una segunda etapa técnica.",
+      "category": "tech",
+      "sourceName": "Facebook",
+      "sourceUrl": "https://www.facebook.com/applemae.belo/posts/pfbid029hZmmwjFUHU2aHWhobf4ajcM4R2sMHqexgZ33biDWgfim3PAPBdYrez7yePkWf4l",
+      "directUrl": "https://www.facebook.com/applemae.belo",
+      "publishedAt": "2026-09-30T08:02:59-03:00",
+      "verifiedAt": "2026-10-01T11:06:14-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "applicationMode": "direct",
+      "workerFee": false,
+      "salary": {
+        "raw": "USD 50–100 fixed rate por diagnóstico inicial; trabajo técnico posterior a cotizar por separado",
+        "monthlyMin": null,
+        "monthlyMax": null,
+        "currency": "USD"
+      },
+      "scamRisk": "low",
+      "rank": {
+        "score": 88,
+        "reason": "Buyer intent y presupuesto explícitos, problema de producción concreto, permalink y creation_time exactos, comprador público y sólo ~15 comentarios visibles. Hay potencial de segunda etapa paga. El fit no es perfecto porque pide experiencia hands-on en web security/Cloudflare, así que conviene entrar por diagnóstico reproducible sin vender expertise no demostrada."
+      },
+      "evidence": [
+        "https://www.facebook.com/applemae.belo/posts/pfbid029hZmmwjFUHU2aHWhobf4ajcM4R2sMHqexgZ33biDWgfim3PAPBdYrez7yePkWf4l",
+        "Facebook embedded story data: post_id 29721753714081926; creation_time 1790766179 = 2026-09-30T08:02:59-03:00",
+        "https://www.facebook.com/applemae.belo"
+      ],
+      "outreach": {
+        "status": "prepared",
+        "channel": "messenger",
+        "message": "Mae, the strongest clue is that one booking can succeed and the next fails while availability still shows. Before changing Cloudflare, I’d compare the successful vs failed request and first separate a 403/429/challenge from a normal application error. What status or error do you get on the failed attempt?",
+        "contactedAt": null
+      }
     }
   ],
   "canonicalEditUrl": "https://github.com/simondalmasso/the-iAffice/edit/main/data/gpt-prospectos.json",
