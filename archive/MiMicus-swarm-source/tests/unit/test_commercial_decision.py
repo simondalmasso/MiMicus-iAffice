@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -12,7 +12,7 @@ from mimicus.commercial.models import (
     LeadStage,
 )
 
-AS_OF = datetime(2026, 10, 1, 15, 0, tzinfo=timezone.utc)
+AS_OF = datetime(2026, 10, 1, 15, 0, tzinfo=UTC)
 
 
 def _candidate(
