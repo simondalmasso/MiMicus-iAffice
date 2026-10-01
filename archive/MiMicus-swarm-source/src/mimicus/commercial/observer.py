@@ -149,16 +149,16 @@ class CommercialObserver:
                 return False
 
             as_of = self._now()
-            trace: list[CommercialTraceEvent] = []
+
+            def publish_trace(event: CommercialTraceEvent) -> None:
+                self.buffer.append(event.model_dump(mode="json"))
+
             batch = self.engine.triage_prospects(
                 payload,
                 policy=self.policy,
                 as_of=as_of,
-                trace_sink=trace.append,
+                trace_sink=publish_trace,
             )
-
-            for event in trace:
-                self.buffer.append(event.model_dump(mode="json"))
 
             batch_payload = batch.model_dump(mode="json")
             self.buffer.append(
