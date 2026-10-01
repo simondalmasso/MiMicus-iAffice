@@ -279,7 +279,7 @@
       "sourceUrl": "https://www.reddit.com/r/smallbusiness/comments/1wt2fvt/where_to_build_a_website_for_a_small_business/",
       "directUrl": "https://www.reddit.com/r/smallbusiness/comments/1wt2fvt/where_to_build_a_website_for_a_small_business/",
       "publishedAt": "2026-09-29T03:14:12-03:00",
-      "verifiedAt": "2026-10-01T05:26-03:00",
+      "verifiedAt": "2026-10-01T07:57:00-03:00",
       "active": false,
       "argentinaEligible": true,
       "applicationMode": "direct",
@@ -292,17 +292,17 @@
       },
       "scamRisk": "medium",
       "rank": {
-        "score": 79,
-        "reason": "Dolor real y comprador identificable, pero al reverificar el 2026-10-01 ya superó el filtro duro de frescura de 48 h; queda fuera del radar accionable."
+        "score": 34,
+        "reason": "Negocio real, pero el hilo es una consulta de plataforma sin señal de contratación ni presupuesto. Ya recibió respuestas suficientes sobre dominio, builders y WordPress, y nuestro draft repetía ese consejo. Bajo BUYER INTENT no justifica WIP."
       },
       "evidence": [
         "https://www.reddit.com/r/smallbusiness/comments/1wt2fvt/where_to_build_a_website_for_a_small_business/",
         "https://www.reddit.com/user/TownEvening7180/"
       ],
       "outreach": {
-        "status": "prepared",
+        "status": "closed",
         "channel": "post-comment",
-        "message": "For what you need, I wouldn’t overbuild this. A clean site with past work, service area and a quote form is enough — the important part is owning the domain and keeping the setup easy to move later. What kind of work does the business do?",
+        "message": null,
         "contactedAt": null
       }
     },
@@ -401,8 +401,8 @@
       "sourceUrl": "https://www.reddit.com/r/smallbusiness/comments/1wtmjgi/produce_ordering_from_suppliers/",
       "directUrl": "https://www.reddit.com/r/smallbusiness/comments/1wtmjgi/produce_ordering_from_suppliers/",
       "publishedAt": "2026-09-29T18:21:17-03:00",
-      "verifiedAt": "2026-10-01T05:48:39-03:00",
-      "active": true,
+      "verifiedAt": "2026-10-01T07:57:00-03:00",
+      "active": false,
       "argentinaEligible": true,
       "applicationMode": "direct",
       "workerFee": false,
@@ -414,17 +414,17 @@
       },
       "scamRisk": "medium",
       "rank": {
-        "score": 78,
-        "reason": "Dolor operativo concreto, dueño de cuatro restaurantes y contacto directo dentro de <48 h. No pide contratar explícitamente y ya recibió varias respuestas sobre par levels; el ángulo diferencial es reducir trabajo manual conectando ventas, recepción y desperdicio. El historial público incluye intercambio de reseñas, por lo que conviene mantener riesgo medio."
+        "score": 41,
+        "reason": "Dueño de cuatro restaurantes con dolor operativo real, pero no aparece intención de contratar/pagar. El hilo ya recibió múltiples respuestas de par levels y una oferta concreta de construir el sistema móvil; además el historial público incluye intercambio de reseñas. La evidencia adicional no mejoró probabilidad de pago ni ventaja competitiva."
       },
       "evidence": [
         "https://www.reddit.com/r/smallbusiness/comments/1wtmjgi/produce_ordering_from_suppliers/",
         "https://www.reddit.com/user/monowyrm/"
       ],
       "outreach": {
-        "status": "prepared",
+        "status": "closed",
         "channel": "post-comment",
-        "message": "At four locations, I’d separate the system from the ordering method: standardize one SKU/unit list and par levels first, then use POS sales plus receiving/waste to pre-fill the expected order so managers only correct exceptions. Are all four locations on the same POS and supplier list?",
+        "message": null,
         "contactedAt": null
       }
     },
@@ -441,7 +441,7 @@
       "sourceUrl": "https://www.reddit.com/r/smallbusiness/comments/1wu6sfw/best_alternative_to_shopify_for_a_small_business/",
       "directUrl": "https://www.reddit.com/r/smallbusiness/comments/1wu6sfw/best_alternative_to_shopify_for_a_small_business/",
       "publishedAt": "2026-09-30T11:43:26-03:00",
-      "verifiedAt": "2026-10-01T05:48:39-03:00",
+      "verifiedAt": "2026-10-01T07:57:00-03:00",
       "active": true,
       "argentinaEligible": true,
       "applicationMode": "direct",
@@ -454,8 +454,8 @@
       },
       "scamRisk": "low",
       "rank": {
-        "score": 83,
-        "reason": "Dueño de negocio con necesidad concreta, varios sitios potenciales, costo actual explícito, contacto directo y timestamp <48 h. No pide contratar todavía y ya recibió recomendaciones de WordPress; la oportunidad diferencial está en diseñar una arquitectura reusable de catálogo y cotización."
+        "score": 72,
+        "reason": "Dueño de negocio verificable; el Shopify actual ya le generó pedidos y dice que se pagó solo. Quiere lanzar varios sitios y tiene un costo recurrente explícito que desea evitar. La intención de pagar a un implementador sigue siendo indirecta, por eso queda PREPARED pero no se escala como compra confirmada."
       },
       "evidence": [
         "https://www.reddit.com/r/smallbusiness/comments/1wu6sfw/best_alternative_to_shopify_for_a_small_business/"
@@ -463,7 +463,7 @@
       "outreach": {
         "status": "prepared",
         "channel": "post-comment",
-        "message": "Since you’re planning several sites, I’d solve the repeatability before choosing the builder: one reusable product/content structure plus the same enquiry flow, then deploy each site separately so you’re not maintaining three different setups. Are the new sites basically the same catalogue/quote model or genuinely different businesses?",
+        "message": "If the new sites use the same catalogue + quote flow, I’d make that reusable once instead of choosing a different builder each time. Are the product fields and enquiry flow basically the same across them?",
         "contactedAt": null
       }
     }
