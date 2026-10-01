@@ -130,6 +130,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_triage.add_argument("--ledger-file", required=True)
     p_triage.add_argument("--policy-file", required=True)
     p_triage.add_argument("--as-of", required=True)
+    p_triage.add_argument("--trace-jsonl", action="store_true")
 
     p_state = sub.add_parser("state")
     state_sub = p_state.add_subparsers(dest="state_command", required=True)
@@ -216,6 +217,34 @@ def main(argv: Sequence[str] | None = None) -> int:
         policy_payload = _load_json_object(args.policy_file, label="policy")
         policy = LeadDecisionPolicy.model_validate(policy_payload)
         as_of = _parse_aware_datetime(args.as_of, label="as_of")
+
+        if args.trace_jsonl:
+            def trace_sink(event: object) -> None:
+                print(event.model_dump_json(), flush=True)  # type: ignore[attr-defined]
+
+            batch = _engine(args.profile).triage_prospects(
+                ledger,
+                policy=policy,
+                as_of=as_of,
+                trace_sink=trace_sink,
+            )
+            print(
+                json.dumps(
+                    {
+                        "event": "batch_complete",
+                        "as_of": as_of.isoformat(),
+                        "batch_hash": batch.batch_hash,
+                        "selected_by_lane": batch.model_dump(mode="json")["selected_by_lane"],
+                        "held_ids": list(batch.held_ids),
+                        "rejected_ids": list(batch.rejected_ids),
+                        "repair_data_ids": list(batch.repair_data_ids),
+                    },
+                    sort_keys=True,
+                ),
+                flush=True,
+            )
+            return 0
+
         batch = _engine(args.profile).triage_prospects(ledger, policy=policy, as_of=as_of)
         print(batch.model_dump_json(indent=2))
         return 0
