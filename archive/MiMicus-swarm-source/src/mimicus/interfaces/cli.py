@@ -4,11 +4,13 @@ import argparse
 import json
 import os
 from collections.abc import Sequence
+from datetime import datetime
 from pathlib import Path
 
 from mimicus import __version__
 from mimicus.benchmark import write_benchmark
 from mimicus.canonical import sha256_obj
+from mimicus.commercial.models import LeadDecisionPolicy
 from mimicus.config import Settings
 from mimicus.orchestration.engine import MiMicusEngine, RunRequest, _spec_keys, scenario_fixture
 from mimicus.orchestration.morphology import compile_morphology
@@ -77,6 +79,20 @@ def _load_task(path: str) -> dict[str, object]:
     return payload
 
 
+def _load_json_object(path: str, *, label: str) -> dict[str, object]:
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"{label} file must contain a JSON object")
+    return payload
+
+
+def _parse_aware_datetime(value: str, *, label: str) -> datetime:
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if parsed.utcoffset() is None:
+        raise ValueError(f"{label} must include timezone information")
+    return parsed
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="mimicus")
     parser.add_argument("--version", action="version", version=__version__)
@@ -108,6 +124,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_plan.add_argument("--task-file", required=True)
     p_plan.add_argument("--max-agents", type=int, default=4)
     p_plan.add_argument("--max-concurrency", type=int, default=4)
+
+    p_triage = sub.add_parser("triage")
+    p_triage.add_argument("--profile", choices=sorted(PROFILES), default="offline")
+    p_triage.add_argument("--ledger-file", required=True)
+    p_triage.add_argument("--policy-file", required=True)
+    p_triage.add_argument("--as-of", required=True)
 
     p_state = sub.add_parser("state")
     state_sub = p_state.add_subparsers(dest="state_command", required=True)
@@ -188,6 +210,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             learn=request.learn,
         )
         print(json.dumps(plan.as_dict(), indent=2, sort_keys=True))
+        return 0
+    if args.command == "triage":
+        ledger = _load_json_object(args.ledger_file, label="ledger")
+        policy_payload = _load_json_object(args.policy_file, label="policy")
+        policy = LeadDecisionPolicy.model_validate(policy_payload)
+        as_of = _parse_aware_datetime(args.as_of, label="as_of")
+        batch = _engine(args.profile).triage_prospects(ledger, policy=policy, as_of=as_of)
+        print(batch.model_dump_json(indent=2))
         return 0
     if args.command == "state":
         print(json.dumps(Repository(_database_url()).inspect_state(args.run_id), indent=2, sort_keys=True))
