@@ -18,6 +18,7 @@ def test_profiles_mount_reversible() -> None:
     assert order.index("storage.sqlite") < order.index("model.scripted")
     kernel.mount_all()
     assert "falsifiers" in kernel.services.snapshot()
+    assert "lead_decision" in kernel.services.snapshot()
     kernel.unmount_all()
     assert kernel.services.snapshot() == {}
     with pytest.raises(ValueError):
