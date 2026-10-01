@@ -98,3 +98,11 @@ def test_absent_outcome_is_backward_compatible() -> None:
     candidate = normalize_prospect(deepcopy(row))
 
     assert candidate.prospect_id == "lead-1"
+
+
+def test_missing_active_is_not_silently_synthesized() -> None:
+    row = _finding()
+    del row["active"]
+
+    with pytest.raises(ValueError, match="active"):
+        normalize_prospect(row)

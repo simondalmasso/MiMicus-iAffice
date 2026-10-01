@@ -249,3 +249,17 @@ def test_unknown_outreach_status_is_repair_data() -> None:
 
     assert decision.stage == LeadStage.UNKNOWN  # type: ignore[union-attr]
     assert decision.disposition == LeadDisposition.REPAIR_DATA  # type: ignore[union-attr]
+
+
+def test_policy_and_batch_mappings_are_immutable() -> None:
+    policy = _policy()
+    with pytest.raises(TypeError):
+        policy.follow_up_after_hours["messenger"] = 1  # type: ignore[index]
+
+    batch = DeterministicLeadDecisionService().decide(
+        [_candidate("immutable")],
+        policy,
+        as_of=AS_OF,
+    )
+    with pytest.raises(TypeError):
+        batch.selected_by_lane["facebook"] = ()  # type: ignore[index]
