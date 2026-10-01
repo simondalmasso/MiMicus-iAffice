@@ -130,6 +130,14 @@ Terminal `closed` records are excluded from active selection.
 
 A setter's existing `rank.score` may be used only as a late tie-breaker. It cannot override stage, hard eligibility, risk, or data-quality policy.
 
+Within the same stage, V1 tie-break order is:
+
+1. lower scam risk (`low` before `medium`);
+2. complete action metadata before incomplete action metadata;
+3. higher setter `rank.score`;
+4. newer `verifiedAt`;
+5. stable lexical `prospect_id` as the final deterministic tie-breaker.
+
 ### 4.4 Hard eligibility
 
 A prospect must not enter `WORK_NOW` when a binding hard failure is known, including:
@@ -150,7 +158,7 @@ Important V1 cases:
 
 - contacted lead with missing `contactedAt`:
   - do not invent follow-up timing;
-  - emit `REPAIR_DATA` or keep below clearly actionable records;
+  - emit `REPAIR_DATA`;
 - missing exact `sourceUrl` / `directUrl`:
   - no external action;
 - missing identifiable buyer when the admission contract requires one:
@@ -202,7 +210,7 @@ Frozen configuration containing:
 - `max_work_per_lane=3`
 - stage precedence;
 - hard-reject rules;
-- follow-up timing thresholds;
+- required explicit follow-up timing thresholds by channel (no hidden wall-clock default inside the service);
 - tie-break order;
 - policy version.
 
@@ -514,7 +522,7 @@ This spec does not:
 
 These do not block V1 pure-domain implementation:
 
-- exact follow-up delay by channel;
+- production follow-up delay by channel; the pure decision service receives this explicitly through policy and does not invent a default;
 - whether future cross-lane global WIP should be lower than 6 total;
 - eventual commercial-value weighting after explicit won/lost data exists;
 - whether a local model can outperform deterministic policy in shadow mode.
