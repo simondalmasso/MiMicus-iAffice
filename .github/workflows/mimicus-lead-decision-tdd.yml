@@ -26,6 +26,8 @@ jobs:
         run: pytest --cov=mimicus --cov-report=term-missing
       - name: Ruff
         run: ruff check src tests
+      - name: Cockpit JS syntax
+        run: node --check ../../public/app.js
       - name: Mypy
         run: mypy src/mimicus
       - name: Build
