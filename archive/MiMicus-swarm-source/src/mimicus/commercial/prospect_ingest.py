@@ -5,7 +5,6 @@ from typing import Any
 
 from mimicus.commercial.models import LeadCandidate
 
-
 _LANES = {
     "facebook": "facebook",
     "reddit": "reddit",
