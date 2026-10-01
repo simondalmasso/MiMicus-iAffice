@@ -78,7 +78,7 @@
       "sourceUrl": "https://www.facebook.com/groups/desarrolladorweb/posts/1745241856528553/",
       "directUrl": "https://www.facebook.com/groups/desarrolladorweb/posts/1745241856528553/",
       "publishedAt": "2026-09-30T10:03:22-03:00",
-      "verifiedAt": "2026-10-01T01:56:18-03:00",
+      "verifiedAt": "2026-10-01T08:44:00-03:00",
       "active": true,
       "argentinaEligible": true,
       "applicationMode": "direct",
@@ -91,8 +91,8 @@
       },
       "scamRisk": "medium",
       "rank": {
-        "score": 84,
-        "reason": "Pedido técnico concreto, comprador público y contacto directo; competencia alta en comentarios pero el dolor permite diferenciarse con diagnóstico."
+        "score": 72,
+        "reason": "Necesidad real de implementación, pero acumula ~46 comentarios y no respondió al diagnóstico publicado hace ~8 h. Sigue válido, aunque por ahora queda fuera del WIP top 3."
       },
       "evidence": [
         "https://www.facebook.com/groups/desarrolladorweb/posts/1745241856528553/",
@@ -158,8 +158,8 @@
       "sourceUrl": "https://www.facebook.com/groups/desarrolladoresencolombia/posts/28780201864945507/",
       "directUrl": "https://www.facebook.com/groups/desarrolladoresencolombia/posts/28780201864945507/",
       "publishedAt": "2026-09-30T01:44:17-03:00",
-      "verifiedAt": "2026-10-01T01:56:18-03:00",
-      "active": true,
+      "verifiedAt": "2026-10-01T08:44:00-03:00",
+      "active": false,
       "argentinaEligible": true,
       "applicationMode": "direct",
       "workerFee": false,
@@ -171,15 +171,15 @@
       },
       "scamRisk": "medium",
       "rank": {
-        "score": 88,
-        "reason": "Problema acotado, técnico y accionable, comprador identificable, baja competencia relativa y posibilidad de diagnosticar antes de vender."
+        "score": 38,
+        "reason": "Dolor técnico real, pero el post pide consejo sobre Evolution API y no muestra intención clara de contratar ni presupuesto. No hubo respuesta al diagnóstico y quedaron dos comentarios nuestros similares, por lo que insistir aumentaría ruido sin mejorar probabilidad de pago."
       },
       "evidence": [
         "https://www.facebook.com/groups/desarrolladoresencolombia/posts/28780201864945507/",
         "https://www.facebook.com/james.palacio.376"
       ],
       "outreach": {
-        "status": "contacted",
+        "status": "closed",
         "channel": "post-comment",
         "message": "James, si son reportes salientes programados, el riesgo no es sólo que Evolution funcione: es perder envíos cuando cae una sesión y no enterarte. Yo lo armaría con cola, reintentos y log de entrega; según volumen, compararía Cloud API oficial vs Evolution. Cuántos reportes por día y a cuántos números?",
         "contactedAt": null
@@ -198,7 +198,7 @@
       "sourceUrl": "https://www.facebook.com/groups/997316161549398/permalink/1766308701316803/",
       "directUrl": "https://www.facebook.com/kayleigh.benton.75/",
       "publishedAt": "2026-09-30T08:28:13-03:00",
-      "verifiedAt": "2026-10-01T01:56:18-03:00",
+      "verifiedAt": "2026-10-01T08:44:00-03:00",
       "active": true,
       "argentinaEligible": true,
       "applicationMode": "direct",
@@ -212,7 +212,7 @@
       "scamRisk": "low",
       "rank": {
         "score": 90,
-        "reason": "Dolor de producción muy específico, negocio público verificable, solicita implementación rápida y ofrece DM/email directo; competencia visible alta."
+        "reason": "Buyer intent explícito: pide implementación, rough quote y resolución rápida esta semana. El problema sigue publicado y no aparece señal visible de cierre; competencia alta, pero el DM ya está enviado."
       },
       "evidence": [
         "https://www.facebook.com/groups/997316161549398/permalink/1766308701316803/",
@@ -320,7 +320,7 @@
       "sourceUrl": "https://www.facebook.com/groups/1178185956260390/posts/2478645066214466/",
       "directUrl": "https://www.facebook.com/diego.a.arevalo.35/",
       "publishedAt": "2026-09-30T16:57:24-03:00",
-      "verifiedAt": "2026-10-01T03:04:00-03:00",
+      "verifiedAt": "2026-10-01T08:44:00-03:00",
       "active": true,
       "argentinaEligible": true,
       "applicationMode": "direct",
@@ -333,8 +333,8 @@
       },
       "scamRisk": "low",
       "rank": {
-        "score": 88,
-        "reason": "Comprador identificable, sitio y negocio públicos, pedido fresco y concreto. Competencia muy alta en comentarios, pero casi toda genérica; permite diferenciarse auditando el sitio existente."
+        "score": 78,
+        "reason": "Negocio y WordPress existentes verificables y necesidad concreta, pero el post ya supera ~100 comentarios y todavía no respondió al DM específico. Mantener abierto sin follow-up inmediato."
       },
       "evidence": [
         "https://www.facebook.com/groups/1178185956260390/posts/2478645066214466/",
@@ -361,7 +361,7 @@
       "sourceUrl": "https://www.facebook.com/groups/997316161549398/posts/1766807894600217/",
       "directUrl": "https://www.facebook.com/profile.php?id=100000821612172",
       "publishedAt": "2026-09-30T20:11:09-03:00",
-      "verifiedAt": "2026-10-01T06:16:51-03:00",
+      "verifiedAt": "2026-10-01T08:44:00-03:00",
       "active": true,
       "argentinaEligible": true,
       "applicationMode": "direct",
@@ -375,7 +375,7 @@
       "scamRisk": "low",
       "rank": {
         "score": 92,
-        "reason": "Dolor técnico muy concreto y fresco, comprador identificable, flujo reproducible y contacto directo. Hay competencia, pero la documentación oficial de Whop permite un ángulo distinto al troubleshooting genérico."
+        "reason": "Dolor técnico concreto, flujo reproducible y comentario diferencial ya publicado. Sigue sin respuesta ~2 h después; no corresponde follow-up todavía."
       },
       "evidence": [
         "https://www.facebook.com/groups/997316161549398/posts/1766807894600217/",
