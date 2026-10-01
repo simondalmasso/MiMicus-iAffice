@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "lane": "LOCAL",
+  "updatedAt": "2026-10-01",
+  "curator": "GPT BUSQ LOCAL",
+  "writeContract": "CANONICAL WRITE TARGET: GitHub simondalmasso/the-iAffice main. Al iniciar: leer este JSON y data/gpt-prospectos.json, reverificar estado actual, preservar cambios ajenos y escribir en iAffice. JOBAS queda como origen/legacy durante la transición; no usarlo como autoridad de escritura.",
+  "findingSchema": {
+    "id": "string único y estable",
+    "title": "string",
+    "company": "string",
+    "location": "string",
+    "description": "string breve y factual",
+    "category": "customer-success | support | travel | admin-va | operations | sales | marketing | ecommerce-crm | content-social | data-ai | tech | finance | other",
+    "sourceName": "string",
+    "sourceUrl": "https://...",
+    "applyUrl": "https://... enlace directo a postulación/trabajo",
+    "publishedAt": "ISO-8601 o null",
+    "verifiedAt": "ISO-8601",
+    "active": "boolean",
+    "argentinaEligible": "boolean | null",
+    "workerFee": "false para no-pay-to-apply; true si exige pago; null si no se pudo verificar",
+    "salary": {
+      "raw": "texto salarial original o No publicado",
+      "monthlyMin": "number | null",
+      "monthlyMax": "number | null",
+      "currency": "USD | ARS | otra"
+    },
+    "scamRisk": "low | medium | high",
+    "rank": {
+      "score": "0-100",
+      "reason": "justificación factual y breve"
+    },
+    "evidence": [
+      "URLs primarias o evidencias de verificación"
+    ]
+  },
+  "rules": [
+    "Solo oportunidades reales y verificadas.",
+    "Priorizar Santa Fe capital y área cercana; luego Paraná o híbridas razonables.",
+    "No incluir pay-to-apply ni fuentes con señales fuertes de scam.",
+    "Verificar que la vacante siga activa antes de agregarla.",
+    "Usar applyUrl directo cuando exista.",
+    "rank.score debe ser 0-100 y estar justificado en rank.reason.",
+    "No inventar salario: si no está publicado usar null y conservar salary.raw.",
+    "MODO PROSPECTOR ESPADA: priorizar demanda directa del comprador y microjobs concretos; no confundir con ofertas laborales genéricas ni autopromoción de proveedores.",
+    "Antes de contactar, investigar solo información pública/profesional relevante del solicitante, negocio y proyecto; identificar el dolor real y cualquier contexto verificable que permita una respuesta específica.",
+    "OUTREACH: no vender años de experiencia ni tirar portfolio/WhatsApp de entrada. Abrir demostrando comprensión del problema, aportar una observación o diagnóstico útil, bajar riesgo y terminar con un próximo paso o pregunta concreta.",
+    "OUTREACH: 1-4 frases cuando sea posible, humano, específico, sin corporate fluff, sin mencionar IA, sin afirmaciones inventadas y sin regalar precio antes de entender alcance.",
+    "RADAR MICROJOBS: aceptar como fresco solo pedido real + comprador + timestamp individual verificable <=48h + enlace directo + contacto posible; si no cumple, marcarlo como no verificado o descartarlo.",
+    "SETTER CORE: la tarea no termina al encontrar prospectos. Primero revisar con lupa todos los prospectos abiertos y conversaciones pendientes; solo después buscar nuevos.",
+    "SECUENCIA OBLIGATORIA: OPEN LEADS -> reverificar publicación/mensaje/respuesta/cierre -> actualizar estado -> preparar siguiente paso -> recién después NEW PROSPECTING.",
+    "ESTADO COMPARTIDO: data/gpt-prospectos.json es el ledger común de ambos setters para microjobs/prospectos. Leerlo al inicio y persistir cada cambio material inmediatamente.",
+    "CONCURRENCIA: antes de escribir, volver a leer la versión actual del archivo y su SHA; fusionar cambios y nunca pisar findings ajenos.",
+    "FOLLOW-UP: un prospecto validado puede seguirse aunque ya haya superado 48h. El límite <=48h aplica a la admisión de prospectos NUEVOS, no al seguimiento de abiertos.",
+    "OUTREACH STYLE: cuanto más corto mejor si conserva diagnóstico. En español usar '?' solo al final de la pregunta, sin '¿'. Una pregunta concreta por mensaje cuando alcance.",
+    "NO RESET: nunca descartar contexto abierto sólo porque empieza un chat nuevo. Reanudar desde el JSON canónico y el estado de outreach."
+  ],
+  "findings": [],
+  "canonicalEditUrl": "https://github.com/simondalmasso/the-iAffice/edit/main/data/gpt-local.json",
+  "canonicalRawUrl": "https://raw.githubusercontent.com/simondalmasso/the-iAffice/main/data/gpt-local.json",
+  "gitlabMirrorUrl": "https://gitlab.com/simondalmasso/jobas/-/blob/main/data/gpt-local.json",
+  "legacyJobasUrl": "https://github.com/simondalmasso/jobas/blob/main/data/gpt-local.json",
+  "migration": {
+    "from": "simondalmasso/jobas",
+    "to": "simondalmasso/the-iAffice",
+    "migratedAt": "2026-10-01",
+    "status": "active",
+    "note": "iAffice es el hogar operativo nuevo. Mantener continuidad de prospectos y no resetear estado entre sesiones."
+  }
+}
