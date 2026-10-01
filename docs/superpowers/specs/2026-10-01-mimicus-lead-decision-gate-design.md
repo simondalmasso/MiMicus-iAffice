@@ -195,6 +195,7 @@ Minimum fields:
 - `scam_risk`
 - `setter_score`
 - `outreach_status`
+- `outreach_channel`
 - `published_at`
 - `verified_at`
 - `contacted_at`
