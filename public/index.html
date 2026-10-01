@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0e1213">
+  <title>Mimicus iAffice</title>
+  <meta name="description" content="Mimicus iAffice — autonomous swarm cockpit">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand" aria-label="Mimicus">
+        <div class="brand-cube" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div class="brand-name">Mimicus</div>
+      </div>
+      <div class="status-row">
+        <span class="pill ok"><i></i>Operativo</span>
+        <span class="pill">API <b id="apiLatency">42ms</b></span>
+        <span class="pill">Server <i class="dim"></i></span>
+      </div>
+    </header>
+
+    <section class="metric-panel" aria-label="Métricas principales">
+      <article><span>Active Agents</span><strong id="mAgents">6/6</strong></article>
+      <article><span>Leads / Día</span><strong id="mLeads">14.578</strong></article>
+      <article><span>Conversion</span><strong id="mConv">75%</strong></article>
+      <article><span>CPU / RAM</span><strong id="mCpu">9%</strong></article>
+      <article><span>Pipeline Total</span><strong id="mPipeline">$312.3M</strong></article>
+      <article><span>Pipeline Total</span><strong id="mPipeline2">$312.3M</strong></article>
+      <article><span>Total Collected</span><strong id="mCollected">USD 22.70M</strong></article>
+    </section>
+
+    <section class="swarm-stage" aria-label="Mapa del swarm">
+      <div class="ambient ambient-a"></div>
+      <div class="ambient ambient-b"></div>
+      <svg class="links" viewBox="0 0 1000 560" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="linkGlow" x1="0" x2="1">
+            <stop offset="0" stop-color="#5e696d"/>
+            <stop offset=".52" stop-color="#c3d3d2"/>
+            <stop offset="1" stop-color="#5e696d"/>
+          </linearGradient>
+          <filter id="softGlow"><feGaussianBlur stdDeviation="5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        <path class="link l1" d="M500 287 C420 205 345 115 235 103"/>
+        <path class="link l2" d="M500 287 C420 276 300 250 116 248"/>
+        <path class="link l3" d="M500 287 C420 335 360 430 212 455"/>
+        <path class="link l4" d="M500 287 C575 210 610 110 716 105"/>
+        <path class="link l5" d="M500 287 C620 286 720 279 858 278"/>
+        <path class="link l6" d="M500 287 C565 375 680 448 790 453"/>
+        <path class="pulse p1" d="M500 287 C420 205 345 115 235 103"/>
+        <path class="pulse p2" d="M500 287 C575 210 610 110 716 105"/>
+        <path class="pulse p3" d="M500 287 C620 286 720 279 858 278"/>
+      </svg>
+
+      <button class="agent node spy-a" data-agent="ESPÍA">
+        <span class="node-icon">◈</span><span class="node-label">ESPÍA</span>
+      </button>
+      <button class="agent node spy-b" data-agent="ESPÍA">
+        <span class="node-icon">●</span><span class="node-label">ESPÍA</span>
+      </button>
+      <button class="agent node hunter" data-agent="CAZADOR">
+        <span class="node-icon">⌾</span><span class="node-label">CAZADOR</span>
+      </button>
+      <button class="agent node setter" data-agent="SETTER">
+        <span class="node-icon">◴</span><span class="node-label">SETTER</span>
+      </button>
+      <button class="agent node logistics" data-agent="LOGÍSTICO">
+        <span class="node-icon">⬡</span><span class="node-label">LOGÍSTICO</span>
+      </button>
+      <button class="agent node extraction" data-agent="EXTRACCIÓN">
+        <span class="node-icon">♨</span><span class="node-label">EXTRACCIÓN</span>
+      </button>
+
+      <button class="agent node laya" data-agent="LAYA" aria-label="LAYA supervisor">
+        <span class="mimicus-mark" aria-hidden="true"><b></b><b></b><b></b></span>
+        <span class="node-label">LAYA</span>
+      </button>
+    </section>
+
+    <section class="agent-panel">
+      <div class="panel-heading">
+        <span>Agent</span>
+        <label class="autopilot">Autopilot <b>SIM</b>
+          <input id="autopilot" type="checkbox" checked>
+          <span class="switch"></span>
+        </label>
+      </div>
+      <div class="agent-table" role="table" aria-label="Agentes y actividad">
+        <div class="trow thead" role="row">
+          <span>Agent</span><span>Leads/Día</span><span>Conversiones</span><span>Tasks & Activity</span>
+        </div>
+        <div class="trow"><span>◈ Espía</span><span>14.578</span><span>75%</span><span>134</span></div>
+        <div class="trow"><span>⌾ Cazador</span><span>46</span><span>76%</span><span>2.480</span></div>
+        <div class="trow"><span>◴ Setter</span><span>46</span><span>76%</span><span>2.480</span></div>
+        <div class="trow"><span>⬡ Logístico</span><span>312</span><span>91%</span><span>2.480</span></div>
+        <div class="trow"><span>♨ Extracción</span><span>$20.4M</span><span>75%</span><span>0</span></div>
+      </div>
+    </section>
+
+    <section class="activity-panel" aria-label="Activity Stream">
+      <div class="activity-head">
+        <span>Activity Stream</span>
+        <button id="pauseStream" type="button">PAUSE</button>
+      </div>
+      <div id="activityStream" class="activity-stream" aria-live="polite"></div>
+    </section>
+
+    <footer>
+      <span>MIMICUS iAFFICE</span>
+      <span>IMMUNE SWARM CORE · <code>565407e</code></span>
+      <span id="runtimeStatus">SIMULATION SAFE</span>
+    </footer>
+  </main>
+  <script src="/app.js" defer></script>
+</body>
+</html>
