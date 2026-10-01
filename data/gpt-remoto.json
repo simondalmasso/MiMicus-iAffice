@@ -1,0 +1,622 @@
+{
+  "schemaVersion": 1,
+  "lane": "REMOTO",
+  "updatedAt": "2026-10-01",
+  "curator": "GPT BUSQ REMOTO",
+  "writeContract": "CANONICAL WRITE TARGET: GitHub simondalmasso/the-iAffice main. Al iniciar: leer este JSON y data/gpt-prospectos.json, reverificar estado actual, preservar cambios ajenos y escribir en iAffice. JOBAS queda como origen/legacy durante la transición; no usarlo como autoridad de escritura.",
+  "findingSchema": {
+    "id": "string único y estable",
+    "title": "string",
+    "company": "string",
+    "location": "string",
+    "description": "string breve y factual",
+    "category": "customer-success | support | travel | admin-va | operations | sales | marketing | ecommerce-crm | content-social | data-ai | tech | finance | other",
+    "sourceName": "string",
+    "sourceUrl": "https://...",
+    "applyUrl": "https://... enlace directo a postulación/trabajo",
+    "publishedAt": "ISO-8601 o null",
+    "verifiedAt": "ISO-8601",
+    "active": "boolean",
+    "argentinaEligible": "boolean | null",
+    "workerFee": "false para no-pay-to-apply; true si exige pago; null si no se pudo verificar",
+    "salary": {
+      "raw": "texto salarial original o No publicado",
+      "monthlyMin": "number | null",
+      "monthlyMax": "number | null",
+      "currency": "USD | ARS | otra"
+    },
+    "scamRisk": "low | medium | high",
+    "rank": {
+      "score": "0-100",
+      "reason": "justificación factual y breve"
+    },
+    "evidence": [
+      "URLs primarias o evidencias de verificación"
+    ]
+  },
+  "rules": [
+    "Solo oportunidades reales y verificadas.",
+    "Priorizar Argentina / LATAM / worldwide con cobro real desde Argentina.",
+    "No incluir pay-to-apply ni fuentes con señales fuertes de scam.",
+    "Verificar que la vacante siga activa antes de agregarla.",
+    "Usar applyUrl directo cuando exista.",
+    "rank.score debe ser 0-100 y estar justificado en rank.reason.",
+    "No inventar salario: si no está publicado usar null y conservar salary.raw.",
+    "MODO PROSPECTOR ESPADA: priorizar demanda directa del comprador y microjobs concretos; no confundir con ofertas laborales genéricas ni autopromoción de proveedores.",
+    "Antes de contactar, investigar solo información pública/profesional relevante del solicitante, negocio y proyecto; identificar el dolor real y cualquier contexto verificable que permita una respuesta específica.",
+    "OUTREACH: no vender años de experiencia ni tirar portfolio/WhatsApp de entrada. Abrir demostrando comprensión del problema, aportar una observación o diagnóstico útil, bajar riesgo y terminar con un próximo paso o pregunta concreta.",
+    "OUTREACH: 1-4 frases cuando sea posible, humano, específico, sin corporate fluff, sin mencionar IA, sin afirmaciones inventadas y sin regalar precio antes de entender alcance.",
+    "RADAR MICROJOBS: aceptar como fresco solo pedido real + comprador + timestamp individual verificable <=48h + enlace directo + contacto posible; si no cumple, marcarlo como no verificado o descartarlo.",
+    "SETTER CORE: la tarea no termina al encontrar prospectos. Primero revisar con lupa todos los prospectos abiertos y conversaciones pendientes; solo después buscar nuevos.",
+    "SECUENCIA OBLIGATORIA: OPEN LEADS -> reverificar publicación/mensaje/respuesta/cierre -> actualizar estado -> preparar siguiente paso -> recién después NEW PROSPECTING.",
+    "ESTADO COMPARTIDO: data/gpt-prospectos.json es el ledger común de ambos setters para microjobs/prospectos. Leerlo al inicio y persistir cada cambio material inmediatamente.",
+    "CONCURRENCIA: antes de escribir, volver a leer la versión actual del archivo y su SHA; fusionar cambios y nunca pisar findings ajenos.",
+    "FOLLOW-UP: un prospecto validado puede seguirse aunque ya haya superado 48h. El límite <=48h aplica a la admisión de prospectos NUEVOS, no al seguimiento de abiertos.",
+    "OUTREACH STYLE: cuanto más corto mejor si conserva diagnóstico. En español usar '?' solo al final de la pregunta, sin '¿'. Una pregunta concreta por mensaje cuando alcance.",
+    "NO RESET: nunca descartar contexto abierto sólo porque empieza un chat nuevo. Reanudar desde el JSON canónico y el estado de outreach."
+  ],
+  "findings": [
+    {
+      "id": "morean-ai-operations-specialist",
+      "title": "AI Operations Specialist",
+      "company": "MOREAN",
+      "location": "Remote · Argentina",
+      "description": "Implementación y adopción de IA, automatización y analytics para Operations; dashboards, documentación, capacitación y mejora de procesos.",
+      "category": "operations",
+      "sourceName": "Viterbit / MOREAN Careers",
+      "sourceUrl": "https://morean.viterbit.net/ai-operations-specialist-lMwLh2xTQYUV/",
+      "applyUrl": "https://morean.viterbit.site/ai-operations-specialist-lMwLh2xTQYUV/apply/",
+      "publishedAt": null,
+      "verifiedAt": "2026-09-23T14:11:36-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "workerFee": false,
+      "salary": {
+        "raw": "No publicado",
+        "monthlyMin": null,
+        "monthlyMax": null,
+        "currency": "USD"
+      },
+      "scamRisk": "low",
+      "rank": {
+        "score": 94,
+        "reason": "Fit excepcional por Operations+CRM/reporting+automatización+IA aplicada y capacitación interna. Brechas principales: SQL requerido y Zapier exacto; Python/JS son deseables."
+      },
+      "evidence": [
+        "https://morean.viterbit.net/ai-operations-specialist-lMwLh2xTQYUV/",
+        "https://morean.viterbit.site/ai-operations-specialist-lMwLh2xTQYUV/apply/",
+        "https://ar.linkedin.com/jobs/view/ai-operations-specialist-at-morean-4468038382"
+      ]
+    },
+    {
+      "id": "backblaze-ai-workflow-engineer-latam",
+      "title": "AI Workflow Engineer | LATAM",
+      "company": "Backblaze",
+      "location": "Remote · Argentina / Colombia / Costa Rica / Mexico",
+      "description": "Construcción de workflows de IA, automatizaciones, integraciones API, prototipos y adopción en equipos de negocio no técnicos.",
+      "category": "data-ai",
+      "sourceName": "Greenhouse / Backblaze",
+      "sourceUrl": "https://job-boards.greenhouse.io/backblaze/jobs/5287532008",
+      "applyUrl": "https://job-boards.greenhouse.io/backblaze/jobs/5287532008",
+      "publishedAt": null,
+      "verifiedAt": "2026-09-23T14:11:36-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "workerFee": false,
+      "salary": {
+        "raw": "No publicado",
+        "monthlyMin": null,
+        "monthlyMax": null,
+        "currency": "USD"
+      },
+      "scamRisk": "low",
+      "rank": {
+        "score": 92,
+        "reason": "Muy alineado con experiencia business-facing, automatización, IA aplicada y mejora de procesos. Brechas: RAG/agent frameworks y capacidad de llevar builds a estado deployable de forma independiente."
+      },
+      "evidence": [
+        "https://job-boards.greenhouse.io/backblaze/jobs/5287532008"
+      ]
+    },
+    {
+      "id": "agencia-empuje-paid-media-google-meta",
+      "title": "Paid Media: Especialista en Google y Meta Ads",
+      "company": "Agencia Empuje",
+      "location": "100% remoto · Argentina",
+      "description": "Paid Media para e-commerce y generación de leads: planificación, ejecución y optimización de Meta/Google Ads, reporting, proyecciones y propuestas de mejora.",
+      "category": "marketing",
+      "sourceName": "LinkedIn / Agencia Empuje",
+      "sourceUrl": "https://www.linkedin.com/jobs/view/4469760535/",
+      "applyUrl": "https://www.linkedin.com/jobs/view/4469760535/",
+      "publishedAt": "2026-09-24T00:00:00-03:00",
+      "verifiedAt": "2026-09-25T21:39:00-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "workerFee": false,
+      "salary": {
+        "raw": "Compensación competitiva (monto no publicado)",
+        "monthlyMin": null,
+        "monthlyMax": null,
+        "currency": "ARS"
+      },
+      "scamRisk": "low",
+      "rank": {
+        "score": 91,
+        "reason": "Match muy alto con Google Ads, Meta Ads, GA4/Analytics, GTM, Looker Studio, e-commerce, generación de leads y reporting. Única cautela: pide 3 años en agencia ejecutando Meta+Google como requisito excluyente."
+      },
+      "evidence": [
+        "https://www.linkedin.com/jobs/view/4469760535/",
+        "https://ar.linkedin.com/company/agencia-empuje",
+        "https://www.publipega.com/empleos/paid-media-especialista-en-google-y-meta-ads/"
+      ]
+    },
+    {
+      "id": "ryz-labs-digital-marketing-specialist",
+      "title": "Digital Marketing Specialist",
+      "company": "RYZ Labs",
+      "location": "Remote · Argentina",
+      "description": "Operaciones de marketing digital, supervisión de paid search, análisis de ROAS/calidad de leads, dashboards, vendor management y automatización con IA.",
+      "category": "marketing",
+      "sourceName": "Lever / RYZ Labs",
+      "sourceUrl": "https://jobs.lever.co/RyzLabs/38fca784-bc93-4e71-ab96-f512a2baae57",
+      "applyUrl": "https://jobs.lever.co/RyzLabs/38fca784-bc93-4e71-ab96-f512a2baae57",
+      "publishedAt": null,
+      "verifiedAt": "2026-09-23T14:11:36-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "workerFee": false,
+      "salary": {
+        "raw": "No publicado",
+        "monthlyMin": null,
+        "monthlyMax": null,
+        "currency": "USD"
+      },
+      "scamRisk": "low",
+      "rank": {
+        "score": 90,
+        "reason": "Fuerte match con Google Ads, reporting, KPIs, análisis de conversión, vendor oversight e IA. Brechas: Local Services Ads, Google Business Profile y local SEO específicos."
+      },
+      "evidence": [
+        "https://jobs.lever.co/RyzLabs/38fca784-bc93-4e71-ab96-f512a2baae57"
+      ]
+    },
+    {
+      "id": "ruvixx-marketing-operations-assistant",
+      "title": "Marketing Operations Assistant",
+      "company": "Ruvixx",
+      "location": "Remote · LATAM (Argentina listada)",
+      "description": "Marketing Ops con CRM, automatización, data audits, dashboards, seguimiento de pipeline, ClickUp y SOPs.",
+      "category": "ecommerce-crm",
+      "sourceName": "Breezy / Ruvixx",
+      "sourceUrl": "https://ruvixx.breezy.hr/p/6fa6c030f858-marketing-operations-assistant-argentina-listed-for-platform-purposes",
+      "applyUrl": "https://ruvixx.breezy.hr/p/6fa6c030f858-marketing-operations-assistant-argentina-listed-for-platform-purposes/apply",
+      "publishedAt": null,
+      "verifiedAt": "2026-09-23T14:11:36-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "workerFee": false,
+      "salary": {
+        "raw": "USD 800/mes durante trial de 3 meses; hasta USD 1.200/mes después",
+        "monthlyMin": 800,
+        "monthlyMax": 1200,
+        "currency": "USD"
+      },
+      "scamRisk": "low",
+      "rank": {
+        "score": 88,
+        "reason": "Muy buen match operativo por Salesforce/CRM, reporting, data quality y procesos. Brechas: Marketo y Dynamics 365; pide CV en inglés pero no declara nivel oral avanzado."
+      },
+      "evidence": [
+        "https://ruvixx.breezy.hr/p/6fa6c030f858-marketing-operations-assistant-argentina-listed-for-platform-purposes",
+        "https://ruvixx.breezy.hr/p/6fa6c030f858-marketing-operations-assistant-argentina-listed-for-platform-purposes/apply"
+      ]
+    },
+    {
+      "id": "rehire-paid-media-growth-specialist",
+      "title": "Paid Media & Growth Specialist",
+      "company": "Rehire",
+      "location": "Remote · Argentina",
+      "description": "Paid Media, growth, SEO/GEO, contenido, web básica, IA aplicada y reporting de performance para marca de viajes.",
+      "category": "marketing",
+      "sourceName": "Ashby / Rehire",
+      "sourceUrl": "https://jobs.ashbyhq.com/rehire/d82d6d43-e8b2-401f-8c76-71647a7f7fa6",
+      "applyUrl": "https://jobs.ashbyhq.com/rehire/d82d6d43-e8b2-401f-8c76-71647a7f7fa6",
+      "publishedAt": "2026-08-24T00:00:00-03:00",
+      "verifiedAt": "2026-09-23T14:11:36-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "workerFee": false,
+      "salary": {
+        "raw": "No publicado",
+        "monthlyMin": null,
+        "monthlyMax": null,
+        "currency": "USD"
+      },
+      "scamRisk": "low",
+      "rank": {
+        "score": 87,
+        "reason": "Encaja muy bien con Google/Meta Ads, SEO, reporting, Adobe y uso de IA. Requiere 4+ años y experiencia específica adicional en TikTok/Pinterest que conviene validar contra el CV."
+      },
+      "evidence": [
+        "https://jobs.ashbyhq.com/rehire/d82d6d43-e8b2-401f-8c76-71647a7f7fa6"
+      ]
+    },
+    {
+      "id": "scale-army-marketing-associate",
+      "title": "Marketing Associate",
+      "company": "Scale Army Careers",
+      "location": "Remote · LATAM incluida Argentina",
+      "description": "Soporte de marketing operations, contenido, CMS, email marketing, coordinación de vendors y activos digitales para cliente de real estate.",
+      "category": "marketing",
+      "sourceName": "Ashby / Scale Army Careers",
+      "sourceUrl": "https://jobs.ashbyhq.com/scale%20army%20careers/57191548-3ef0-4f80-9b92-3685d63facc0",
+      "applyUrl": "https://jobs.ashbyhq.com/scale%20army%20careers/57191548-3ef0-4f80-9b92-3685d63facc0",
+      "publishedAt": "2026-07-13T00:00:00-03:00",
+      "verifiedAt": "2026-09-23T14:11:36-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "workerFee": false,
+      "salary": {
+        "raw": "USD 1.800/mes",
+        "monthlyMin": 1800,
+        "monthlyMax": 1800,
+        "currency": "USD"
+      },
+      "scamRisk": "low",
+      "rank": {
+        "score": 86,
+        "reason": "Match sólido con marketing operativo, contenido, CMS, email, Canva/Adobe y coordinación. Contra: horario 9–17 PST y proceso exige video de presentación."
+      },
+      "evidence": [
+        "https://jobs.ashbyhq.com/scale%20army%20careers/57191548-3ef0-4f80-9b92-3685d63facc0"
+      ]
+    },
+    {
+      "id": "evox-growth-marketing-analyst-ssr",
+      "title": "Growth Marketing Analyst Semi-Senior",
+      "company": "Evox",
+      "location": "100% remoto · Argentina",
+      "description": "Growth experimentation, paid media, análisis de embudo, reportería y optimización basada en métricas.",
+      "category": "marketing",
+      "sourceName": "Evox Careers",
+      "sourceUrl": "https://careers.evox.com.uy/es/jobs/growth-marketing-analyst-semi-senior-1057c07e",
+      "applyUrl": "https://careers.evox.com.uy/es/jobs/growth-marketing-analyst-semi-senior-1057c07e",
+      "publishedAt": "2026-08-14T00:00:00-03:00",
+      "verifiedAt": "2026-09-23T14:11:36-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "workerFee": false,
+      "salary": {
+        "raw": "A convenir",
+        "monthlyMin": null,
+        "monthlyMax": null,
+        "currency": "ARS"
+      },
+      "scamRisk": "low",
+      "rank": {
+        "score": 85,
+        "reason": "Buen encaje con performance, funnels, reporting y autonomía. La principal brecha es demostrar experimentación/A-B testing formal y resultados cuantificados."
+      },
+      "evidence": [
+        "https://careers.evox.com.uy/es/jobs/growth-marketing-analyst-semi-senior-1057c07e"
+      ]
+    },
+    {
+      "id": "universia-argentina-analista-marketing-digital",
+      "title": "Analista de Marketing Digital",
+      "company": "Universia Argentina",
+      "location": "Greater Buenos Aires · modalidad remota no confirmada",
+      "description": "Administración de shop y sitios web, SEO/GEO, campañas en Google Ads, Meta Ads, LinkedIn Ads y TikTok Ads, y producción de piezas gráficas/audiovisuales.",
+      "category": "marketing",
+      "sourceName": "LinkedIn / Universia Argentina",
+      "sourceUrl": "https://www.linkedin.com/jobs/view/4469930750/",
+      "applyUrl": "https://www.linkedin.com/jobs/view/4469930750/",
+      "publishedAt": "2026-09-24T00:00:00-03:00",
+      "verifiedAt": "2026-09-25T21:39:00-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "workerFee": false,
+      "salary": {
+        "raw": "No publicado",
+        "monthlyMin": null,
+        "monthlyMax": null,
+        "currency": "ARS"
+      },
+      "scamRisk": "low",
+      "rank": {
+        "score": 84,
+        "reason": "Fit funcional muy alto con paid media, SEO/GEO, web y piezas audiovisuales. Se mantiene debajo del TOP porque la fuente actual no confirma modalidad remota desde Santa Fe."
+      },
+      "evidence": [
+        "https://www.linkedin.com/jobs/view/4469930750/"
+      ]
+    },
+    {
+      "id": "thesoul-social-media-platform-operations-specialist-latam",
+      "title": "Social Media Platform Operations Specialist (LATAM)",
+      "company": "TheSoul Group",
+      "location": "Remote · Argentina / Brasil / Chile / Colombia / México / Uruguay",
+      "description": "Operaciones de Meta/YouTube, onboarding, troubleshooting, monetización, reconciliaciones, reporting y documentación operativa.",
+      "category": "operations",
+      "sourceName": "Workable / TheSoul Group",
+      "sourceUrl": "https://apply.workable.com/thesoul-publishing-1/j/072F943753/",
+      "applyUrl": "https://apply.workable.com/thesoul-publishing-1/j/072F943753/",
+      "publishedAt": null,
+      "verifiedAt": "2026-09-23T14:11:36-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "workerFee": false,
+      "salary": {
+        "raw": "No publicado",
+        "monthlyMin": null,
+        "monthlyMax": null,
+        "currency": "USD"
+      },
+      "scamRisk": "low",
+      "rank": {
+        "score": 83,
+        "reason": "Buen match con Meta, reporting, soporte digital, procesos y AI tools. Brechas: monetización/payouts de plataformas y pide inglés escrito/verbal claro."
+      },
+      "evidence": [
+        "https://apply.workable.com/thesoul-publishing-1/j/072F943753/",
+        "https://stillopen.work/job/169184-thesoul-group-social-media-platform-operations-specialist-latam"
+      ]
+    },
+    {
+      "id": "tgtc-growth-acquisition-marketing-manager",
+      "title": "Growth & Acquisition Marketing Manager",
+      "company": "The Global Talent Co.",
+      "location": "Remote · LATAM (Argentina incluida)",
+      "description": "Adquisición paga multicanal, agencia, presupuesto, reporting, CAC/ROAS/MER y coordinación con lifecycle/e-commerce.",
+      "category": "marketing",
+      "sourceName": "Ashby / The Global Talent Co.",
+      "sourceUrl": "https://jobs.ashbyhq.com/the-global-talent-co/d0c6584b-0905-4830-b891-2c1915abf2e2",
+      "applyUrl": "https://jobs.ashbyhq.com/the-global-talent-co/d0c6584b-0905-4830-b891-2c1915abf2e2",
+      "publishedAt": "2026-09-05T00:00:00-03:00",
+      "verifiedAt": "2026-09-23T14:11:36-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "workerFee": false,
+      "salary": {
+        "raw": "No publicado",
+        "monthlyMin": null,
+        "monthlyMax": null,
+        "currency": "USD"
+      },
+      "scamRisk": "low",
+      "rank": {
+        "score": 82,
+        "reason": "Alineado con paid media, GA4, reporting y funnels; baja por seniority/ownership de presupuesto y preferencia fuerte por DTC/Shopify/CPG."
+      },
+      "evidence": [
+        "https://jobs.ashbyhq.com/the-global-talent-co/d0c6584b-0905-4830-b891-2c1915abf2e2",
+        "https://himalayas.app/companies/the-global-talent-co/jobs/growth-acquisition-marketing-manager"
+      ]
+    },
+    {
+      "id": "anyone-ai-data-operations-specialist",
+      "title": "Data & Operations Specialist",
+      "company": "Anyone AI",
+      "location": "Remote · Argentina",
+      "description": "Automatización de procesos y data workflows con HubSpot, Google Sheets, dashboards, APIs y herramientas no-code/low-code.",
+      "category": "operations",
+      "sourceName": "Ashby / Anyone AI",
+      "sourceUrl": "https://jobs.ashbyhq.com/anyone-ai/ea7b9c45-d0f4-4873-8877-963c297c3478",
+      "applyUrl": "https://jobs.ashbyhq.com/anyone-ai/ea7b9c45-d0f4-4873-8877-963c297c3478",
+      "publishedAt": "2026-07-08T00:00:00-03:00",
+      "verifiedAt": "2026-09-23T14:11:36-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "workerFee": false,
+      "salary": {
+        "raw": "No publicado",
+        "monthlyMin": null,
+        "monthlyMax": null,
+        "currency": "USD"
+      },
+      "scamRisk": "low",
+      "rank": {
+        "score": 81,
+        "reason": "Muy buen overlap en automatización, HubSpot, Looker y operaciones. Brechas relevantes: Zapier/AppScripts/APIs como experiencia fuerte, SQL/Supabase y comunicación efectiva en inglés/español."
+      },
+      "evidence": [
+        "https://jobs.ashbyhq.com/anyone-ai/ea7b9c45-d0f4-4873-8877-963c297c3478"
+      ]
+    },
+    {
+      "id": "remote-talent-latam-marketing-assistant-89009",
+      "title": "Marketing Assistant | Remote | LATAM Only | 89009",
+      "company": "Remote Talent LATAM",
+      "location": "Remote · LATAM (Argentina elegible)",
+      "description": "Marketing digital operativo con contenido, GoHighLevel, email, Google Business Profile, automatizaciones y workflows recurrentes.",
+      "category": "marketing",
+      "sourceName": "Workable / Remote Talent LATAM",
+      "sourceUrl": "https://apply.workable.com/remote-talent-latam/j/18C9B03C78/apply/",
+      "applyUrl": "https://apply.workable.com/remote-talent-latam/j/18C9B03C78/apply/",
+      "publishedAt": "2026-09-17T00:00:00-03:00",
+      "verifiedAt": "2026-09-23T14:11:36-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "workerFee": false,
+      "salary": {
+        "raw": "USD 1.200/mes",
+        "monthlyMin": 1200,
+        "monthlyMax": 1200,
+        "currency": "USD"
+      },
+      "scamRisk": "low",
+      "rank": {
+        "score": 80,
+        "reason": "Buen match con marketing digital, contenido, automatización y herramientas visuales. Baja por GoHighLevel obligatorio y por inglés fluido escrito/hablado no negociable."
+      },
+      "evidence": [
+        "https://apply.workable.com/remote-talent-latam/j/18C9B03C78/apply/",
+        "https://dailyremote.com/remote-job/marketing-assistant-remote-latam-only-89009-5621207"
+      ]
+    },
+    {
+      "id": "wing-digital-marketing-assistant-latam",
+      "title": "Digital Marketing Assistant (Latin America)",
+      "company": "Wing Assistant",
+      "location": "Remote · Argentina",
+      "description": "Campañas digitales, KPIs, contenidos, SEO/keywords, reporting y soporte administrativo de marketing.",
+      "category": "marketing",
+      "sourceName": "Lever / Wing Assistant",
+      "sourceUrl": "https://jobs.lever.co/getwingapp/b2175bd2-2524-454c-a58f-9c4a3c4c1452",
+      "applyUrl": "https://jobs.lever.co/getwingapp/b2175bd2-2524-454c-a58f-9c4a3c4c1452",
+      "publishedAt": null,
+      "verifiedAt": "2026-09-23T14:11:36-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "workerFee": false,
+      "salary": {
+        "raw": "No publicado en el ATS primario actual",
+        "monthlyMin": null,
+        "monthlyMax": null,
+        "currency": "USD"
+      },
+      "scamRisk": "low",
+      "rank": {
+        "score": 79,
+        "reason": "Fit funcional alto en marketing digital, KPIs, SEO y reporting; exige inglés B2 escrito/verbal y horario de EE.UU., ambos explícitos."
+      },
+      "evidence": [
+        "https://jobs.lever.co/getwingapp/b2175bd2-2524-454c-a58f-9c4a3c4c1452",
+        "https://jobs.lever.co/getwingapp?location=Argentina"
+      ]
+    },
+    {
+      "id": "padsplit-lifecycle-marketing-automation-specialist",
+      "title": "Lifecycle Marketing Automation Specialist",
+      "company": "PadSplit",
+      "location": "Remote · South America",
+      "description": "Lifecycle/marketing automation con journeys, segmentación, Salesforce, Iterable/Pardot/SFMC, APIs/webhooks y testing.",
+      "category": "ecommerce-crm",
+      "sourceName": "Lever / PadSplit",
+      "sourceUrl": "https://jobs.lever.co/padsplit/2acd0cdd-75df-4ecd-8a0c-f5b6ee199067",
+      "applyUrl": "https://jobs.lever.co/padsplit/2acd0cdd-75df-4ecd-8a0c-f5b6ee199067/apply",
+      "publishedAt": null,
+      "verifiedAt": "2026-09-23T14:11:36-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "workerFee": false,
+      "salary": {
+        "raw": "USD 25.000–30.000/año",
+        "monthlyMin": 2083.33,
+        "monthlyMax": 2500,
+        "currency": "USD"
+      },
+      "scamRisk": "low",
+      "rank": {
+        "score": 77,
+        "reason": "Rol muy atractivo por CRM/automation y salario publicado, pero hay brechas técnicas concretas: Iterable/Pardot/SFMC, SQL, APIs/webhooks y scripting; inglés oral también se evalúa."
+      },
+      "evidence": [
+        "https://jobs.lever.co/padsplit/2acd0cdd-75df-4ecd-8a0c-f5b6ee199067",
+        "https://jobs.lever.co/padsplit/2acd0cdd-75df-4ecd-8a0c-f5b6ee199067/apply"
+      ]
+    },
+    {
+      "id": "ultimate-jet-vacations-marketing-operations-specialist",
+      "title": "Marketing Operations Specialist",
+      "company": "Ultimate Jet Vacations",
+      "location": "Remote · LATAM (Argentina incluida)",
+      "description": "Marketing Ops, campaign planning, dashboards, attribution, HubSpot, GA4, UTMs, SOPs y automatización/IA para eficiencia.",
+      "category": "marketing",
+      "sourceName": "Ashby / Ultimate Jet Vacations",
+      "sourceUrl": "https://jobs.ashbyhq.com/ujv/3ffa4b1d-d9f5-4c75-a778-8007b71df80b",
+      "applyUrl": "https://jobs.ashbyhq.com/ujv/3ffa4b1d-d9f5-4c75-a778-8007b71df80b",
+      "publishedAt": null,
+      "verifiedAt": "2026-09-23T14:11:36-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "workerFee": false,
+      "salary": {
+        "raw": "No publicado",
+        "monthlyMin": null,
+        "monthlyMax": null,
+        "currency": "USD"
+      },
+      "scamRisk": "low",
+      "rank": {
+        "score": 75,
+        "reason": "Excelente afinidad funcional con reporting, GA4, procesos y AI, pero exige HubSpot avanzado, Tableau/BI y full professional English escrito y verbal."
+      },
+      "evidence": [
+        "https://jobs.ashbyhq.com/ujv/3ffa4b1d-d9f5-4c75-a778-8007b71df80b"
+      ]
+    },
+    {
+      "id": "turfresh-growth-marketing-operations-manager",
+      "title": "Growth & Marketing Operations Manager",
+      "company": "TurFresh",
+      "location": "Remote · Argentina y otros países LATAM",
+      "description": "Marketing performance, CRM/automation, attribution, dashboards, paid media, SEO, coordinación de vendors y Sales-Marketing alignment.",
+      "category": "marketing",
+      "sourceName": "Lever / TurFresh",
+      "sourceUrl": "https://jobs.lever.co/chipping-concrete/9814756b-88b6-48c2-b2f9-a86dc340defc",
+      "applyUrl": "https://jobs.lever.co/chipping-concrete/9814756b-88b6-48c2-b2f9-a86dc340defc",
+      "publishedAt": null,
+      "verifiedAt": "2026-09-23T14:11:36-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "workerFee": false,
+      "salary": {
+        "raw": "No publicado",
+        "monthlyMin": null,
+        "monthlyMax": null,
+        "currency": "USD"
+      },
+      "scamRisk": "low",
+      "rank": {
+        "score": 74,
+        "reason": "Gran overlap en CRM, GA4, KPIs, reporting y mejora de procesos; baja por seniority aproximado de 5–8+ años, ownership ejecutivo y amplitud de paid/SEO/local search."
+      },
+      "evidence": [
+        "https://jobs.lever.co/chipping-concrete/9814756b-88b6-48c2-b2f9-a86dc340defc"
+      ]
+    },
+    {
+      "id": "veta-virtual-ecommerce-paid-media-manager",
+      "title": "Ecommerce Paid Media Manager",
+      "company": "Veta Virtual",
+      "location": "100% remoto · LATAM / Europa",
+      "description": "Ownership full-funnel de Meta y Google Ads, atribución, reporting, Klaviyo email/SMS, lifecycle y optimización de performance para e-commerce.",
+      "category": "marketing",
+      "sourceName": "Breezy / Veta Virtual",
+      "sourceUrl": "https://veta-virtual-inc.breezy.hr/p/0d3e3643dcae-ecommerce-paid-media-manager",
+      "applyUrl": "https://veta-virtual-inc.breezy.hr/p/0d3e3643dcae-ecommerce-paid-media-manager",
+      "publishedAt": "2026-09-02T00:00:00-03:00",
+      "verifiedAt": "2026-09-25T21:39:00-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "workerFee": false,
+      "salary": {
+        "raw": "Competitive Base + Significant Performance Pay in USD",
+        "monthlyMin": null,
+        "monthlyMax": null,
+        "currency": "USD"
+      },
+      "scamRisk": "low",
+      "rank": {
+        "score": 61,
+        "reason": "La geografía y el stack base son compatibles, pero exige 8–10 años, 5+ en e-commerce, ownership personal de USD 1M+ anual en Meta y experiencia obligatoria con Klaviyo/atribución avanzada."
+      },
+      "evidence": [
+        "https://veta-virtual-inc.breezy.hr/p/0d3e3643dcae-ecommerce-paid-media-manager",
+        "https://www.linkedin.com/jobs/view/4461391448/"
+      ]
+    }
+  ],
+  "canonicalEditUrl": "https://github.com/simondalmasso/the-iAffice/edit/main/data/gpt-remoto.json",
+  "canonicalRawUrl": "https://raw.githubusercontent.com/simondalmasso/the-iAffice/main/data/gpt-remoto.json",
+  "gitlabMirrorUrl": "https://gitlab.com/simondalmasso/jobas/-/blob/main/data/gpt-remoto.json",
+  "legacyJobasUrl": "https://github.com/simondalmasso/jobas/blob/main/data/gpt-remoto.json",
+  "migration": {
+    "from": "simondalmasso/jobas",
+    "to": "simondalmasso/the-iAffice",
+    "migratedAt": "2026-10-01",
+    "status": "active",
+    "note": "iAffice es el hogar operativo nuevo. Mantener continuidad de prospectos y no resetear estado entre sesiones."
+  }
+}
