@@ -3,10 +3,11 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 from pathlib import Path
+from threading import Event, Thread
 
 import pytest
 
-from mimicus.commercial.models import LeadDecisionPolicy
+from mimicus.commercial.models import CommercialTraceEvent, LeadDecisionPolicy
 from mimicus.commercial.observer import (
     ActivityBuffer,
     CommercialObserver,
@@ -157,3 +158,68 @@ def test_url_source_requires_public_https_and_can_use_injected_fetcher() -> None
         fetch_bytes=lambda _url, _timeout: json.dumps({"findings": []}).encode(),
     )
     assert source.read() == {"findings": []}
+
+
+
+def test_trace_is_visible_while_laya_decision_is_still_in_flight(tmp_path: Path) -> None:
+    ledger = tmp_path / "ledger.json"
+    _write(ledger, {"findings": [_finding("lead-live", status="replied", score=95)]})
+
+    emitted = Event()
+    release = Event()
+
+    class BlockingEngine:
+        def triage_prospects(
+            self,
+            payload: dict[str, object],
+            *,
+            policy: LeadDecisionPolicy,
+            as_of: datetime,
+            trace_sink: object = None,
+        ) -> object:
+            del payload, policy
+            assert callable(trace_sink)
+            trace_sink(
+                CommercialTraceEvent(
+                    sequence=1,
+                    event="lead_ingested",
+                    as_of=as_of,
+                    prospect_id="lead-live",
+                    lane="facebook",
+                    source_name="Facebook",
+                    outreach_status="replied",
+                    setter_score=95,
+                    scam_risk="low",
+                    active=True,
+                )
+            )
+            emitted.set()
+            assert release.wait(timeout=5)
+            raise RuntimeError("test stop after visible trace")
+
+    buffer = ActivityBuffer(max_events=32)
+    observer = CommercialObserver(
+        engine=BlockingEngine(),  # type: ignore[arg-type]
+        source=FileLedgerSource(ledger),
+        policy=_policy(),
+        buffer=buffer,
+        clock=lambda: AS_OF,
+    )
+
+    result: list[bool] = []
+    worker = Thread(target=lambda: result.append(observer.refresh()), daemon=True)
+    worker.start()
+    assert emitted.wait(timeout=5)
+    try:
+        snapshot = buffer.since(0)
+        assert [row["event"] for row in snapshot["events"]] == ["lead_ingested"]
+        assert worker.is_alive()
+    finally:
+        release.set()
+        worker.join(timeout=5)
+
+    assert result == [False]
+    assert [row["event"] for row in buffer.since(0)["events"]] == [
+        "lead_ingested",
+        "observer_error",
+    ]
