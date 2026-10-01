@@ -46,19 +46,24 @@ Secuencia:
 1–4 frases. Menos si alcanza.
 
 ## Pendientes Reddit actuales
-1. **u/AmatuerTech** — `prepared`
+1. **u/InternationalSun4095** — `prepared` — score 91
+   - https://www.reddit.com/r/slavelabour/comments/1wubotj/task_graphic_designer_needed_for/
+   - Paid ASAP para marca de suplementos/ecommerce; buyer history consistente; r/slavelabour exige $bid antes de contactar.
+2. **u/mydogs22** — `prepared` — score 88
+   - https://www.reddit.com/r/DesignJobs/comments/1wv2797/hiring_halloween_poster_needs_to_be_designed/
+   - USD 50–75, PSD/AI editable, cuenta antigua y post muy fresco.
+3. **u/AmatuerTech** — `prepared` — score 72
    - https://www.reddit.com/r/smallbusiness/comments/1wu6sfw/best_alternative_to_shopify_for_a_small_business/
-   - Dolor: varios sitios catálogo/quote; resolver repetibilidad antes del builder.
-   - Buyer intent: medio. Negocio real, el Shopify actual ya generó pedidos y quiere lanzar varios sitios, pero no expresó contratación directa todavía.
-   - Siguiente movimiento listo: preguntar si los sitios comparten campos de producto y flujo de consulta.
+   - Buyer intent medio; varios sitios catálogo/quote, sin contratación explícita todavía.
 
-### Cerrados en la última revisión
-- **u/TownEvening7180** — `closed`: consulta de plataforma sin señal de pago; hilo saturado y el ataque no agregaba información nueva.
-- **u/monowyrm** — `closed`: dolor real, pero sin evidencia de intención de pagar; ya recibió una oferta concreta de implementación y el historial público elevó el riesgo.
+### Cerrados en revisión
+- **u/TownEvening7180** — `closed`: sin señal de pago suficiente.
+- **u/monowyrm** — `closed`: dolor real pero sin intención de pagar y competencia concreta ya presente.
 
 ### Discovery
-- WIP activo: **1/3**.
-- Último barrido no agregó leads nuevos: el mejor candidato pago/urgente no tuvo timestamp exacto consistente entre fuentes públicas, así que no fue admitido.
+- WIP activo: **3/3**.
+- No abrir más casos hasta mover/cerrar alguno.
+- Chrome autenticado validado vía SentinelX/CDP en 127.0.0.1:9222; usar esa sesión para timestamps, comentarios, perfiles y reglas cuando mejore evidencia.
 
 No envíes sin autorización activa del usuario en esa sesión.
 
