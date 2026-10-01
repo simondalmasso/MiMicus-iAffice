@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
 from pydantic import ConfigDict, Field, model_validator
 
-from mimicus.commercial.models import LeadDecisionBatch, LeadDecisionPolicy
+from mimicus.commercial.models import CommercialTraceEvent, LeadDecisionBatch, LeadDecisionPolicy
 from mimicus.commercial.prospect_ingest import normalize_ledger
 from mimicus.orchestration.legacy_engine import (
     MiMicusEngine as LegacyMiMicusEngine,
@@ -91,12 +92,77 @@ class MiMicusEngine(LegacyMiMicusEngine):
         *,
         policy: LeadDecisionPolicy,
         as_of: datetime,
+        trace_sink: Callable[[CommercialTraceEvent], None] | None = None,
     ) -> LeadDecisionBatch:
         candidates = normalize_ledger(payload)
+        sequence = 0
+
+        def emit(event: CommercialTraceEvent) -> None:
+            if trace_sink is None:
+                return
+            try:
+                trace_sink(event)
+            except Exception:
+                # Observability is explicitly non-authoritative. A broken viewer
+                # cannot block or alter the commercial decision.
+                return
+
+        for candidate in candidates:
+            sequence += 1
+            emit(
+                CommercialTraceEvent(
+                    sequence=sequence,
+                    event="lead_ingested",
+                    as_of=as_of,
+                    prospect_id=candidate.prospect_id,
+                    lane=candidate.lane,
+                    source_name=candidate.source_name,
+                    outreach_status=candidate.outreach_status,
+                    setter_score=candidate.setter_score,
+                    scam_risk=candidate.scam_risk,
+                    active=candidate.active,
+                )
+            )
+            sequence += 1
+            emit(
+                CommercialTraceEvent(
+                    sequence=sequence,
+                    event="laya_reading",
+                    as_of=as_of,
+                    prospect_id=candidate.prospect_id,
+                    lane=candidate.lane,
+                    source_name=candidate.source_name,
+                    outreach_status=candidate.outreach_status,
+                    setter_score=candidate.setter_score,
+                    scam_risk=candidate.scam_risk,
+                    active=candidate.active,
+                    policy_version=policy.version,
+                )
+            )
+
         service = self.services.lead_decision
         if service is None:
             raise RuntimeError("lead decision service is not mounted")
-        return service.decide(candidates, policy, as_of=as_of)
+        batch = service.decide(candidates, policy, as_of=as_of)
+
+        for decision in batch.decisions:
+            sequence += 1
+            emit(
+                CommercialTraceEvent(
+                    sequence=sequence,
+                    event="decision_emitted",
+                    as_of=as_of,
+                    prospect_id=decision.prospect_id,
+                    lane=decision.lane,
+                    policy_version=policy.version,
+                    disposition=decision.disposition,
+                    stage=decision.stage,
+                    rank_position=decision.rank_position,
+                    reasons=decision.reasons,
+                    data_quality_issues=decision.data_quality_issues,
+                )
+            )
+        return batch
 
     async def run_async(self, request: LegacyRunRequest) -> RunResult:
         core_request = request if isinstance(request, RunRequest) else RunRequest.model_validate(request.model_dump(mode="json"))
