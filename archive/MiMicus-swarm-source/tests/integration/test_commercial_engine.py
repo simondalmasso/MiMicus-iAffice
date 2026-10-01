@@ -81,3 +81,38 @@ def test_engine_triage_has_no_provider_calls_or_telemetry_mutation(tmp_path: Pat
 
     assert provider.total_calls == 0
     assert engine.services.telemetry.snapshot() == before == {}
+
+
+def test_engine_trace_observer_cannot_change_authoritative_decision(tmp_path: Path) -> None:
+    engine = MiMicusEngine(f"sqlite:///{tmp_path / 'trace.db'}")
+    payload = {"findings": [_finding("immutable-trace", status="replied", score=77)]}
+    policy = _policy()
+
+    baseline = engine.triage_prospects(payload, policy=policy, as_of=AS_OF)
+    observed: list[object] = []
+
+    def sink(event: object) -> None:
+        observed.append(event)
+
+    traced = engine.triage_prospects(payload, policy=policy, as_of=AS_OF, trace_sink=sink)
+
+    assert traced == baseline
+    assert traced.batch_hash == baseline.batch_hash
+    assert len(observed) == 3
+
+
+def test_engine_trace_sink_failure_does_not_gain_control_authority(tmp_path: Path) -> None:
+    engine = MiMicusEngine(f"sqlite:///{tmp_path / 'trace-fail.db'}")
+    payload = {"findings": [_finding("trace-failure", status="prepared", score=80)]}
+
+    def broken_sink(_event: object) -> None:
+        raise RuntimeError("observer unavailable")
+
+    batch = engine.triage_prospects(
+        payload,
+        policy=_policy(),
+        as_of=AS_OF,
+        trace_sink=broken_sink,
+    )
+
+    assert batch.selected_by_lane["facebook"] == ("trace-failure",)
