@@ -46,12 +46,16 @@ Secuencia:
 1–4 frases. Menos si alcanza.
 
 ## Pendientes Reddit actuales
-1. **u/InternationalSun4095** — `prepared` — score 91
+1. **u/InternationalSun4095** — `contacted` — score 91
    - https://www.reddit.com/r/slavelabour/comments/1wubotj/task_graphic_designer_needed_for/
-   - Paid ASAP para marca de suplementos/ecommerce; buyer history consistente; r/slavelabour exige $bid antes de contactar.
-2. **u/mydogs22** — `prepared` — score 88
+   - Comentario publicado: https://www.reddit.com/r/slavelabour/comments/1wubotj/comment/pd8jcfj/
+   - Buyer intent: trabajo pago ASAP para marca de suplementos/ecommerce.
+   - Próximo movimiento: lupa sobre reply/DM; no segundo toque inmediato.
+2. **u/mydogs22** — `contacted` — score 88
    - https://www.reddit.com/r/DesignJobs/comments/1wv2797/hiring_halloween_poster_needs_to_be_designed/
-   - USD 50–75, PSD/AI editable, cuenta antigua y post muy fresco.
+   - Comentario publicado: https://www.reddit.com/r/DesignJobs/comments/1wv2797/comment/pd8l7nd/
+   - Buyer intent: USD 50–75, PSD/AI editable.
+   - Próximo movimiento: lupa sobre reply/DM; competencia alta en hilo.
 3. **u/AmatuerTech** — `prepared` — score 72
    - https://www.reddit.com/r/smallbusiness/comments/1wu6sfw/best_alternative_to_shopify_for_a_small_business/
    - Buyer intent medio; varios sitios catálogo/quote, sin contratación explícita todavía.
@@ -60,12 +64,15 @@ Secuencia:
 - **u/TownEvening7180** — `closed`: sin señal de pago suficiente.
 - **u/monowyrm** — `closed`: dolor real pero sin intención de pagar y competencia concreta ya presente.
 
-### Discovery
+### Discovery / seguimiento
 - WIP activo: **3/3**.
-- No abrir más casos hasta mover/cerrar alguno.
-- Chrome autenticado validado vía SentinelX/CDP en 127.0.0.1:9222; usar esa sesión para timestamps, comentarios, perfiles y reglas cuando mejore evidencia.
+- Prioridad actual: **CONTACTED > PREPARED > discovery**.
+- No abrir más Reddit WIP hasta mover/cerrar alguno.
+- Chrome autenticado operativo vía SentinelX + Chrome DevTools MCP en `127.0.0.1:9222`.
+- Ambos comentarios live verificados el 2026-10-01.
+- En la primera comprobación posterior no había reply visible del OP en el lead de Halloween; continuar con lupa, sin perseguir.
 
-No envíes sin autorización activa del usuario en esa sesión.
+No envíes un segundo toque sin nueva evidencia o autorización activa del usuario en esa sesión.
 
 ## Herramientas
 - GitHub: CANON.
