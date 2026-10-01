@@ -590,6 +590,49 @@
         "message": "I’d keep the artwork and text fully separated so you can reuse the PSD/AI later without rebuilding the poster. If last year’s version already had the right information hierarchy, I’d use that as the layout baseline and push the Halloween atmosphere harder. Can you send that reference and the final print size?",
         "contactedAt": null
       }
+    },
+    {
+      "id": "fb-kamii-leo-a2p-4410670232529361",
+      "prospectType": "microjob",
+      "title": "Diagnóstico y corrección de rechazo A2P 10DLC en GoHighLevel",
+      "company": "Kamii Leo / GoHighLevel account",
+      "buyer": "Kamii Leo",
+      "location": "Sialkot, Pakistan",
+      "description": "Brand A2P aprobado pero campaña rechazada. Las capturas adjuntas muestran dos causas remediables separadas: error 30896 (opt-in insuficiente/no verificable) y 30893 (sample messages inconsistentes con el use case). Está respondiendo comentarios y preparando resubmission, por lo que la necesidad sigue activa.",
+      "category": "crm",
+      "sourceName": "Facebook",
+      "sourceUrl": "https://www.facebook.com/groups/agencybusinessowners/posts/4410670232529361/",
+      "directUrl": "https://www.facebook.com/kamii.leo.1",
+      "publishedAt": "2026-09-30T13:09:48-03:00",
+      "verifiedAt": "2026-10-01T12:46:00-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "applicationMode": "direct",
+      "workerFee": false,
+      "salary": {
+        "raw": "Presupuesto no indicado",
+        "monthlyMin": null,
+        "monthlyMax": null,
+        "currency": "USD"
+      },
+      "scamRisk": "low",
+      "rank": {
+        "score": 87,
+        "reason": "Dolor técnico concreto, buyer identificable, post <24h al detectar, actividad reciente y solución acotable antes de tocar producción. No hay presupuesto explícito, pero el buyer está en fase activa de resubmission y los errores adjuntos permiten aportar información específica en el primer contacto."
+      },
+      "evidence": [
+        "https://www.facebook.com/groups/agencybusinessowners/posts/4410670232529361/",
+        "Facebook embedded story data: post_id 4410670232529361; creation_time 1790784588 = 2026-09-30T13:09:48-03:00",
+        "Attached rejection screenshots: 30896 Opt-in Error; 30893 Invalid Sample Message Use Case",
+        "https://www.twilio.com/docs/api/errors/30896",
+        "https://www.twilio.com/docs/api/errors/30893"
+      ],
+      "outreach": {
+        "status": "prepared",
+        "channel": "messenger",
+        "message": "Kamii, your screenshots show two separate rejection reasons: 30896 (opt-in) and 30893 (sample-message/use-case mismatch). I wouldn’t change the sending method yet. I’d fix the opt-in proof/message flow first, then make the samples match the declared use case with brand + opt-out. Want me to mark exactly what I’d change before you resubmit?",
+        "contactedAt": null
+      }
     }
   ],
   "canonicalEditUrl": "https://github.com/simondalmasso/the-iAffice/edit/main/data/gpt-prospectos.json",
