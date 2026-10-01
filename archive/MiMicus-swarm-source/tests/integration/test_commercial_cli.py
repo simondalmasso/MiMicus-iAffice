@@ -131,3 +131,54 @@ def test_cli_triage_requires_explicit_timezone(
                 "2026-10-01T15:34:00",
             ]
         )
+
+
+def test_cli_triage_trace_jsonl_streams_laya_pipeline(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setenv("MIMICUS_DATABASE_URL", "sqlite:///:memory:")
+    ledger = tmp_path / "ledger.json"
+    policy = tmp_path / "policy.json"
+    _write_json(
+        ledger,
+        {"findings": [_finding("live-lead", status="replied", score=91)]},
+    )
+    _write_json(
+        policy,
+        {
+            "version": "operator-live-v1",
+            "max_work_per_lane": 3,
+            "follow_up_after_hours": {"messenger": 24},
+        },
+    )
+
+    rc = main(
+        [
+            "triage",
+            "--ledger-file",
+            str(ledger),
+            "--policy-file",
+            str(policy),
+            "--as-of",
+            "2026-10-01T15:34:00-03:00",
+            "--trace-jsonl",
+        ]
+    )
+
+    assert rc == 0
+    rows = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
+    assert [row["event"] for row in rows] == [
+        "lead_ingested",
+        "laya_reading",
+        "decision_emitted",
+        "batch_complete",
+    ]
+    assert rows[0]["prospect_id"] == "live-lead"
+    assert rows[1]["policy_version"] == "operator-live-v1"
+    assert rows[2]["disposition"] == "WORK_NOW"
+    assert rows[2]["stage"] == "replied"
+    assert rows[2]["reasons"] == ["stage:replied", "within_lane_wip"]
+    assert rows[3]["selected_by_lane"]["facebook"] == ["live-lead"]
+    assert rows[3]["batch_hash"]
