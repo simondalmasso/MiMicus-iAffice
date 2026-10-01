@@ -5,10 +5,11 @@ import json
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from threading import Event, Thread
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
-from mimicus.commercial.observer import ActivityBuffer
+from mimicus.commercial.observer import ActivityBuffer, CommercialObserver
 
 
 class ObserverHTTPServer(ThreadingHTTPServer):
@@ -128,3 +129,41 @@ def create_observer_server(
 
     handler = _handler_factory(buffer, root)
     return ObserverHTTPServer((host, port), handler)
+
+
+
+def run_commercial_observer(
+    *,
+    observer: CommercialObserver,
+    cockpit_dir: str | Path,
+    host: str = "127.0.0.1",
+    port: int = 8788,
+    poll_seconds: float = 5.0,
+) -> None:
+    if poll_seconds <= 0:
+        raise ValueError("poll_seconds must be positive")
+
+    server = create_observer_server(
+        buffer=observer.buffer,
+        cockpit_dir=cockpit_dir,
+        host=host,
+        port=port,
+    )
+    stop = Event()
+
+    # Populate the first snapshot before the browser connects. A failed source
+    # read becomes an observer_error event and never blocks the read-only UI.
+    observer.refresh()
+
+    def poll_loop() -> None:
+        while not stop.wait(poll_seconds):
+            observer.refresh()
+
+    poller = Thread(target=poll_loop, name="mimicus-commercial-observer", daemon=True)
+    poller.start()
+    try:
+        server.serve_forever(poll_interval=0.25)
+    finally:
+        stop.set()
+        server.server_close()
+        poller.join(timeout=6.0)
