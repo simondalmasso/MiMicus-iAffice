@@ -1,0 +1,10 @@
+{
+  "blocked_after_restart": true,
+  "blocked_memory_id": "2e2735fa-2a3c-47c4-aa92-392178349604",
+  "cross_agent_and_retrieval_gates_observed": true,
+  "pass": true,
+  "persistent_memory_reused": [
+    "c5b77674-6941-4d4d-bc1f-169953cf7a03"
+  ],
+  "trusted_memory_id": "c5b77674-6941-4d4d-bc1f-169953cf7a03"
+}

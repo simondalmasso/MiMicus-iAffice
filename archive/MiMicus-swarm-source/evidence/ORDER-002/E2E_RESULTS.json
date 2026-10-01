@@ -1,0 +1,124 @@
+{
+  "clean_temp_db_per_scenario": true,
+  "order": "ORDER-002",
+  "passed": true,
+  "process_level": true,
+  "scenarios": [
+    {
+      "coalition_size": 1,
+      "ledger_head": "d88fd0dd6c641f2083e01d2a0f674df886bfdc2d218215e2e1f3c3bb078c8f95",
+      "pass": true,
+      "primitive": "numeric_invariant",
+      "run_id": "2162162b-d937-4231-b7c5-d039e34cba28",
+      "scenario": "01_tam_12x"
+    },
+    {
+      "memory_promotion_blocked": true,
+      "pass": true,
+      "primitive": "source_independence",
+      "run_id": "5a0700d9-7030-49ca-a72c-012d85a1d262",
+      "scenario": "02_source_echo"
+    },
+    {
+      "pass": true,
+      "primitive": "freshness",
+      "run_id": "afda253f-fb2b-4d10-b3b8-690649d52cde",
+      "scenario": "03_freshness"
+    },
+    {
+      "pass": true,
+      "primitive": "citation_entailment",
+      "run_id": "0650c388-403d-4254-92d4-95b6d1c5c156",
+      "scenario": "04_citation_entailment"
+    },
+    {
+      "pass": true,
+      "primitive": "counterexample_search",
+      "run_id": "9cbf2af1-3a5e-4e2c-a092-e67e47f33f38",
+      "scenario": "05_counterexample"
+    },
+    {
+      "failure_streak": 3,
+      "pass": true,
+      "recovery_requires_audition": true,
+      "scenario": "06_bankruptcy"
+    },
+    {
+      "clone_correlation": 0.75,
+      "clone_marginal": 0.3999999999999999,
+      "distinct_correlation": 0.0,
+      "distinct_marginal": 1.0,
+      "pass": true,
+      "scenario": "07_clone_correlation"
+    },
+    {
+      "ground_truth_pinned": true,
+      "parent_hash": "70723980fce09fad9eb891385d274cc1c7a088dc82689cff95a64edad380cfe4",
+      "parent_preserved": true,
+      "pass": true,
+      "promoted_candidate_hash": "538646c7ca8f8c4fb7bbc65fb1c151e270a2a5cff910a713519155efc9250edd",
+      "promoted_decision": "PROMOTE",
+      "promoted_metrics": {
+        "critical_regressions": 0,
+        "fn": 0,
+        "fnr": 0.0,
+        "fp": 0,
+        "fpr": 0.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "tested": 20,
+        "tn": 10,
+        "tp": 10
+      },
+      "rejected_candidate_hash": "ee1f6163de28730eb85ad29645b5e99b262402d2d20f7af1b6ce8e6d1c34f0c7",
+      "rejected_decision": "REJECT",
+      "rejected_metrics": {
+        "critical_regressions": 0,
+        "fn": 0,
+        "fnr": 0.0,
+        "fp": 0,
+        "fpr": 0.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "tested": 20,
+        "tn": 10,
+        "tp": 10
+      },
+      "relevant_fossils": 20,
+      "scenario": "08_germinal",
+      "triggering_snapshot_hash": "8635ba7e45ccc006118240685080415265e88a68d9f95b346e14d155d5896ca0"
+    },
+    {
+      "authority_chain": [
+        0.1,
+        0.1,
+        0.1
+      ],
+      "pass": true,
+      "promotion_blocked": true,
+      "scenario": "09_memory_laundering"
+    },
+    {
+      "pass": true,
+      "report_count_alone_promotes": false,
+      "scenario": "10_evasion_farming"
+    },
+    {
+      "event_tamper_detected": true,
+      "original_head": "e05426fd9663cf7c4a65e0088ef87c264ca6c667801802889f91eaebcc6bcced",
+      "pass": true,
+      "scenario": "11_tamper_replay",
+      "snapshot_mismatch_detected": true,
+      "spec_tamper_detected": true
+    },
+    {
+      "openai_key_required": false,
+      "pass": true,
+      "path": "/mcp",
+      "replay_verified": true,
+      "run_id": "52ec4f27-55c9-4b73-bdd0-65f40eddb56d",
+      "scenario": "12_mcp_transport",
+      "transport": "streamable-http"
+    }
+  ]
+}

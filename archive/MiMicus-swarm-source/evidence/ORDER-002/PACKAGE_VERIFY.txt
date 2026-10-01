@@ -1,0 +1,622 @@
+ORDER_002_PACKAGE_VERIFY
+* Creating isolated environment: venv+pip...
+* Installing packages in isolated environment:
+  - setuptools==82.0.1
+* Getting build dependencies for sdist...
+running egg_info
+writing src/mimicus_swarm.egg-info/PKG-INFO
+writing dependency_links to src/mimicus_swarm.egg-info/dependency_links.txt
+writing entry points to src/mimicus_swarm.egg-info/entry_points.txt
+writing requirements to src/mimicus_swarm.egg-info/requires.txt
+writing top-level names to src/mimicus_swarm.egg-info/top_level.txt
+reading manifest file 'src/mimicus_swarm.egg-info/SOURCES.txt'
+adding license file 'LICENSE'
+writing manifest file 'src/mimicus_swarm.egg-info/SOURCES.txt'
+* Building sdist...
+running sdist
+running egg_info
+writing src/mimicus_swarm.egg-info/PKG-INFO
+writing dependency_links to src/mimicus_swarm.egg-info/dependency_links.txt
+writing entry points to src/mimicus_swarm.egg-info/entry_points.txt
+writing requirements to src/mimicus_swarm.egg-info/requires.txt
+writing top-level names to src/mimicus_swarm.egg-info/top_level.txt
+reading manifest file 'src/mimicus_swarm.egg-info/SOURCES.txt'
+adding license file 'LICENSE'
+writing manifest file 'src/mimicus_swarm.egg-info/SOURCES.txt'
+running check
+creating mimicus_swarm-0.1.0
+creating mimicus_swarm-0.1.0/src/mimicus
+creating mimicus_swarm-0.1.0/src/mimicus/agents
+creating mimicus_swarm-0.1.0/src/mimicus/claims
+creating mimicus_swarm-0.1.0/src/mimicus/coalition
+creating mimicus_swarm-0.1.0/src/mimicus/events
+creating mimicus_swarm-0.1.0/src/mimicus/falsifiers
+creating mimicus_swarm-0.1.0/src/mimicus/germinal
+creating mimicus_swarm-0.1.0/src/mimicus/interfaces
+creating mimicus_swarm-0.1.0/src/mimicus/memory
+creating mimicus_swarm-0.1.0/src/mimicus/orchestration
+creating mimicus_swarm-0.1.0/src/mimicus/plugins
+creating mimicus_swarm-0.1.0/src/mimicus/providers
+creating mimicus_swarm-0.1.0/src/mimicus/storage
+creating mimicus_swarm-0.1.0/src/mimicus/validation
+creating mimicus_swarm-0.1.0/src/mimicus_swarm.egg-info
+copying files to mimicus_swarm-0.1.0...
+copying LICENSE -> mimicus_swarm-0.1.0
+copying README.md -> mimicus_swarm-0.1.0
+copying pyproject.toml -> mimicus_swarm-0.1.0
+copying src/mimicus/__init__.py -> mimicus_swarm-0.1.0/src/mimicus
+copying src/mimicus/benchmark.py -> mimicus_swarm-0.1.0/src/mimicus
+copying src/mimicus/canonical.py -> mimicus_swarm-0.1.0/src/mimicus
+copying src/mimicus/config.py -> mimicus_swarm-0.1.0/src/mimicus
+copying src/mimicus/security.py -> mimicus_swarm-0.1.0/src/mimicus
+copying src/mimicus/types.py -> mimicus_swarm-0.1.0/src/mimicus
+copying src/mimicus/agents/__init__.py -> mimicus_swarm-0.1.0/src/mimicus/agents
+copying src/mimicus/agents/auditions.py -> mimicus_swarm-0.1.0/src/mimicus/agents
+copying src/mimicus/agents/bankruptcy.py -> mimicus_swarm-0.1.0/src/mimicus/agents
+copying src/mimicus/agents/calibration.py -> mimicus_swarm-0.1.0/src/mimicus/agents
+copying src/mimicus/agents/fingerprints.py -> mimicus_swarm-0.1.0/src/mimicus/agents
+copying src/mimicus/agents/phenotypes.py -> mimicus_swarm-0.1.0/src/mimicus/agents
+copying src/mimicus/claims/__init__.py -> mimicus_swarm-0.1.0/src/mimicus/claims
+copying src/mimicus/claims/graph.py -> mimicus_swarm-0.1.0/src/mimicus/claims
+copying src/mimicus/claims/models.py -> mimicus_swarm-0.1.0/src/mimicus/claims
+copying src/mimicus/coalition/__init__.py -> mimicus_swarm-0.1.0/src/mimicus/coalition
+copying src/mimicus/coalition/selector.py -> mimicus_swarm-0.1.0/src/mimicus/coalition
+copying src/mimicus/coalition/sparse_comm.py -> mimicus_swarm-0.1.0/src/mimicus/coalition
+copying src/mimicus/coalition/threat_profile.py -> mimicus_swarm-0.1.0/src/mimicus/coalition
+copying src/mimicus/coalition/topology.py -> mimicus_swarm-0.1.0/src/mimicus/coalition
+copying src/mimicus/events/__init__.py -> mimicus_swarm-0.1.0/src/mimicus/events
+copying src/mimicus/events/bus.py -> mimicus_swarm-0.1.0/src/mimicus/events
+copying src/mimicus/events/ledger.py -> mimicus_swarm-0.1.0/src/mimicus/events
+copying src/mimicus/falsifiers/__init__.py -> mimicus_swarm-0.1.0/src/mimicus/falsifiers
+copying src/mimicus/falsifiers/builtins.py -> mimicus_swarm-0.1.0/src/mimicus/falsifiers
+copying src/mimicus/falsifiers/k3_compat.py -> mimicus_swarm-0.1.0/src/mimicus/falsifiers
+copying src/mimicus/falsifiers/market.py -> mimicus_swarm-0.1.0/src/mimicus/falsifiers
+copying src/mimicus/falsifiers/primitives.py -> mimicus_swarm-0.1.0/src/mimicus/falsifiers
+copying src/mimicus/falsifiers/registry.py -> mimicus_swarm-0.1.0/src/mimicus/falsifiers
+copying src/mimicus/falsifiers/spec.py -> mimicus_swarm-0.1.0/src/mimicus/falsifiers
+copying src/mimicus/germinal/__init__.py -> mimicus_swarm-0.1.0/src/mimicus/germinal
+copying src/mimicus/germinal/center.py -> mimicus_swarm-0.1.0/src/mimicus/germinal
+copying src/mimicus/germinal/fossils.py -> mimicus_swarm-0.1.0/src/mimicus/germinal
+copying src/mimicus/germinal/mutate.py -> mimicus_swarm-0.1.0/src/mimicus/germinal
+copying src/mimicus/germinal/promote.py -> mimicus_swarm-0.1.0/src/mimicus/germinal
+copying src/mimicus/interfaces/__init__.py -> mimicus_swarm-0.1.0/src/mimicus/interfaces
+copying src/mimicus/interfaces/cli.py -> mimicus_swarm-0.1.0/src/mimicus/interfaces
+copying src/mimicus/interfaces/mcp_server.py -> mimicus_swarm-0.1.0/src/mimicus/interfaces
+copying src/mimicus/memory/__init__.py -> mimicus_swarm-0.1.0/src/mimicus/memory
+copying src/mimicus/memory/gates.py -> mimicus_swarm-0.1.0/src/mimicus/memory
+copying src/mimicus/memory/models.py -> mimicus_swarm-0.1.0/src/mimicus/memory
+copying src/mimicus/memory/provenance.py -> mimicus_swarm-0.1.0/src/mimicus/memory
+copying src/mimicus/memory/retrieval.py -> mimicus_swarm-0.1.0/src/mimicus/memory
+copying src/mimicus/orchestration/__init__.py -> mimicus_swarm-0.1.0/src/mimicus/orchestration
+copying src/mimicus/orchestration/attribution.py -> mimicus_swarm-0.1.0/src/mimicus/orchestration
+copying src/mimicus/orchestration/engine.py -> mimicus_swarm-0.1.0/src/mimicus/orchestration
+copying src/mimicus/orchestration/progress_ledger.py -> mimicus_swarm-0.1.0/src/mimicus/orchestration
+copying src/mimicus/orchestration/replay.py -> mimicus_swarm-0.1.0/src/mimicus/orchestration
+copying src/mimicus/orchestration/task_ledger.py -> mimicus_swarm-0.1.0/src/mimicus/orchestration
+copying src/mimicus/plugins/__init__.py -> mimicus_swarm-0.1.0/src/mimicus/plugins
+copying src/mimicus/plugins/api.py -> mimicus_swarm-0.1.0/src/mimicus/plugins
+copying src/mimicus/plugins/builtin.py -> mimicus_swarm-0.1.0/src/mimicus/plugins
+copying src/mimicus/plugins/loader.py -> mimicus_swarm-0.1.0/src/mimicus/plugins
+copying src/mimicus/plugins/manifests.py -> mimicus_swarm-0.1.0/src/mimicus/plugins
+copying src/mimicus/plugins/profiles.py -> mimicus_swarm-0.1.0/src/mimicus/plugins
+copying src/mimicus/plugins/registry.py -> mimicus_swarm-0.1.0/src/mimicus/plugins
+copying src/mimicus/providers/__init__.py -> mimicus_swarm-0.1.0/src/mimicus/providers
+copying src/mimicus/providers/base.py -> mimicus_swarm-0.1.0/src/mimicus/providers
+copying src/mimicus/providers/openai_agents.py -> mimicus_swarm-0.1.0/src/mimicus/providers
+copying src/mimicus/providers/scripted.py -> mimicus_swarm-0.1.0/src/mimicus/providers
+copying src/mimicus/storage/__init__.py -> mimicus_swarm-0.1.0/src/mimicus/storage
+copying src/mimicus/storage/migrations_adapter.py -> mimicus_swarm-0.1.0/src/mimicus/storage
+copying src/mimicus/storage/models.py -> mimicus_swarm-0.1.0/src/mimicus/storage
+copying src/mimicus/storage/postgres_compat.py -> mimicus_swarm-0.1.0/src/mimicus/storage
+copying src/mimicus/storage/repository.py -> mimicus_swarm-0.1.0/src/mimicus/storage
+copying src/mimicus/validation/__init__.py -> mimicus_swarm-0.1.0/src/mimicus/validation
+copying src/mimicus/validation/e2e.py -> mimicus_swarm-0.1.0/src/mimicus/validation
+copying src/mimicus/validation/worker.py -> mimicus_swarm-0.1.0/src/mimicus/validation
+copying src/mimicus_swarm.egg-info/PKG-INFO -> mimicus_swarm-0.1.0/src/mimicus_swarm.egg-info
+copying src/mimicus_swarm.egg-info/SOURCES.txt -> mimicus_swarm-0.1.0/src/mimicus_swarm.egg-info
+copying src/mimicus_swarm.egg-info/dependency_links.txt -> mimicus_swarm-0.1.0/src/mimicus_swarm.egg-info
+copying src/mimicus_swarm.egg-info/entry_points.txt -> mimicus_swarm-0.1.0/src/mimicus_swarm.egg-info
+copying src/mimicus_swarm.egg-info/requires.txt -> mimicus_swarm-0.1.0/src/mimicus_swarm.egg-info
+copying src/mimicus_swarm.egg-info/top_level.txt -> mimicus_swarm-0.1.0/src/mimicus_swarm.egg-info
+copying src/mimicus_swarm.egg-info/SOURCES.txt -> mimicus_swarm-0.1.0/src/mimicus_swarm.egg-info
+Writing mimicus_swarm-0.1.0/setup.cfg
+Creating tar archive
+removing 'mimicus_swarm-0.1.0' (and everything under it)
+* Building wheel from sdist
+* Creating isolated environment: venv+pip...
+* Installing packages in isolated environment:
+  - setuptools==82.0.1
+* Getting build dependencies for wheel...
+running egg_info
+writing src/mimicus_swarm.egg-info/PKG-INFO
+writing dependency_links to src/mimicus_swarm.egg-info/dependency_links.txt
+writing entry points to src/mimicus_swarm.egg-info/entry_points.txt
+writing requirements to src/mimicus_swarm.egg-info/requires.txt
+writing top-level names to src/mimicus_swarm.egg-info/top_level.txt
+reading manifest file 'src/mimicus_swarm.egg-info/SOURCES.txt'
+adding license file 'LICENSE'
+writing manifest file 'src/mimicus_swarm.egg-info/SOURCES.txt'
+* Building wheel...
+running bdist_wheel
+running build
+running build_py
+creating build/lib/mimicus
+copying src/mimicus/__init__.py -> build/lib/mimicus
+copying src/mimicus/benchmark.py -> build/lib/mimicus
+copying src/mimicus/config.py -> build/lib/mimicus
+copying src/mimicus/types.py -> build/lib/mimicus
+copying src/mimicus/security.py -> build/lib/mimicus
+copying src/mimicus/canonical.py -> build/lib/mimicus
+creating build/lib/mimicus/germinal
+copying src/mimicus/germinal/__init__.py -> build/lib/mimicus/germinal
+copying src/mimicus/germinal/mutate.py -> build/lib/mimicus/germinal
+copying src/mimicus/germinal/center.py -> build/lib/mimicus/germinal
+copying src/mimicus/germinal/promote.py -> build/lib/mimicus/germinal
+copying src/mimicus/germinal/fossils.py -> build/lib/mimicus/germinal
+creating build/lib/mimicus/providers
+copying src/mimicus/providers/__init__.py -> build/lib/mimicus/providers
+copying src/mimicus/providers/scripted.py -> build/lib/mimicus/providers
+copying src/mimicus/providers/openai_agents.py -> build/lib/mimicus/providers
+copying src/mimicus/providers/base.py -> build/lib/mimicus/providers
+creating build/lib/mimicus/agents
+copying src/mimicus/agents/__init__.py -> build/lib/mimicus/agents
+copying src/mimicus/agents/auditions.py -> build/lib/mimicus/agents
+copying src/mimicus/agents/calibration.py -> build/lib/mimicus/agents
+copying src/mimicus/agents/bankruptcy.py -> build/lib/mimicus/agents
+copying src/mimicus/agents/fingerprints.py -> build/lib/mimicus/agents
+copying src/mimicus/agents/phenotypes.py -> build/lib/mimicus/agents
+creating build/lib/mimicus/coalition
+copying src/mimicus/coalition/__init__.py -> build/lib/mimicus/coalition
+copying src/mimicus/coalition/topology.py -> build/lib/mimicus/coalition
+copying src/mimicus/coalition/selector.py -> build/lib/mimicus/coalition
+copying src/mimicus/coalition/threat_profile.py -> build/lib/mimicus/coalition
+copying src/mimicus/coalition/sparse_comm.py -> build/lib/mimicus/coalition
+creating build/lib/mimicus/falsifiers
+copying src/mimicus/falsifiers/__init__.py -> build/lib/mimicus/falsifiers
+copying src/mimicus/falsifiers/builtins.py -> build/lib/mimicus/falsifiers
+copying src/mimicus/falsifiers/spec.py -> build/lib/mimicus/falsifiers
+copying src/mimicus/falsifiers/primitives.py -> build/lib/mimicus/falsifiers
+copying src/mimicus/falsifiers/market.py -> build/lib/mimicus/falsifiers
+copying src/mimicus/falsifiers/registry.py -> build/lib/mimicus/falsifiers
+copying src/mimicus/falsifiers/k3_compat.py -> build/lib/mimicus/falsifiers
+creating build/lib/mimicus/orchestration
+copying src/mimicus/orchestration/__init__.py -> build/lib/mimicus/orchestration
+copying src/mimicus/orchestration/task_ledger.py -> build/lib/mimicus/orchestration
+copying src/mimicus/orchestration/attribution.py -> build/lib/mimicus/orchestration
+copying src/mimicus/orchestration/progress_ledger.py -> build/lib/mimicus/orchestration
+copying src/mimicus/orchestration/replay.py -> build/lib/mimicus/orchestration
+copying src/mimicus/orchestration/engine.py -> build/lib/mimicus/orchestration
+creating build/lib/mimicus/plugins
+copying src/mimicus/plugins/__init__.py -> build/lib/mimicus/plugins
+copying src/mimicus/plugins/api.py -> build/lib/mimicus/plugins
+copying src/mimicus/plugins/manifests.py -> build/lib/mimicus/plugins
+copying src/mimicus/plugins/builtin.py -> build/lib/mimicus/plugins
+copying src/mimicus/plugins/profiles.py -> build/lib/mimicus/plugins
+copying src/mimicus/plugins/registry.py -> build/lib/mimicus/plugins
+copying src/mimicus/plugins/loader.py -> build/lib/mimicus/plugins
+creating build/lib/mimicus/memory
+copying src/mimicus/memory/__init__.py -> build/lib/mimicus/memory
+copying src/mimicus/memory/retrieval.py -> build/lib/mimicus/memory
+copying src/mimicus/memory/gates.py -> build/lib/mimicus/memory
+copying src/mimicus/memory/models.py -> build/lib/mimicus/memory
+copying src/mimicus/memory/provenance.py -> build/lib/mimicus/memory
+creating build/lib/mimicus/events
+copying src/mimicus/events/__init__.py -> build/lib/mimicus/events
+copying src/mimicus/events/ledger.py -> build/lib/mimicus/events
+copying src/mimicus/events/bus.py -> build/lib/mimicus/events
+creating build/lib/mimicus/interfaces
+copying src/mimicus/interfaces/__init__.py -> build/lib/mimicus/interfaces
+copying src/mimicus/interfaces/mcp_server.py -> build/lib/mimicus/interfaces
+copying src/mimicus/interfaces/cli.py -> build/lib/mimicus/interfaces
+creating build/lib/mimicus/claims
+copying src/mimicus/claims/__init__.py -> build/lib/mimicus/claims
+copying src/mimicus/claims/models.py -> build/lib/mimicus/claims
+copying src/mimicus/claims/graph.py -> build/lib/mimicus/claims
+creating build/lib/mimicus/validation
+copying src/mimicus/validation/__init__.py -> build/lib/mimicus/validation
+copying src/mimicus/validation/e2e.py -> build/lib/mimicus/validation
+copying src/mimicus/validation/worker.py -> build/lib/mimicus/validation
+creating build/lib/mimicus/storage
+copying src/mimicus/storage/__init__.py -> build/lib/mimicus/storage
+copying src/mimicus/storage/models.py -> build/lib/mimicus/storage
+copying src/mimicus/storage/postgres_compat.py -> build/lib/mimicus/storage
+copying src/mimicus/storage/repository.py -> build/lib/mimicus/storage
+copying src/mimicus/storage/migrations_adapter.py -> build/lib/mimicus/storage
+running egg_info
+writing src/mimicus_swarm.egg-info/PKG-INFO
+writing dependency_links to src/mimicus_swarm.egg-info/dependency_links.txt
+writing entry points to src/mimicus_swarm.egg-info/entry_points.txt
+writing requirements to src/mimicus_swarm.egg-info/requires.txt
+writing top-level names to src/mimicus_swarm.egg-info/top_level.txt
+reading manifest file 'src/mimicus_swarm.egg-info/SOURCES.txt'
+adding license file 'LICENSE'
+writing manifest file 'src/mimicus_swarm.egg-info/SOURCES.txt'
+installing to build/bdist.linux-x86_64/wheel
+running install
+running install_lib
+creating build/bdist.linux-x86_64/wheel
+creating build/bdist.linux-x86_64/wheel/mimicus
+copying build/lib/mimicus/__init__.py -> build/bdist.linux-x86_64/wheel/./mimicus
+copying build/lib/mimicus/benchmark.py -> build/bdist.linux-x86_64/wheel/./mimicus
+creating build/bdist.linux-x86_64/wheel/mimicus/germinal
+copying build/lib/mimicus/germinal/__init__.py -> build/bdist.linux-x86_64/wheel/./mimicus/germinal
+copying build/lib/mimicus/germinal/mutate.py -> build/bdist.linux-x86_64/wheel/./mimicus/germinal
+copying build/lib/mimicus/germinal/center.py -> build/bdist.linux-x86_64/wheel/./mimicus/germinal
+copying build/lib/mimicus/germinal/promote.py -> build/bdist.linux-x86_64/wheel/./mimicus/germinal
+copying build/lib/mimicus/germinal/fossils.py -> build/bdist.linux-x86_64/wheel/./mimicus/germinal
+creating build/bdist.linux-x86_64/wheel/mimicus/providers
+copying build/lib/mimicus/providers/__init__.py -> build/bdist.linux-x86_64/wheel/./mimicus/providers
+copying build/lib/mimicus/providers/scripted.py -> build/bdist.linux-x86_64/wheel/./mimicus/providers
+copying build/lib/mimicus/providers/openai_agents.py -> build/bdist.linux-x86_64/wheel/./mimicus/providers
+copying build/lib/mimicus/providers/base.py -> build/bdist.linux-x86_64/wheel/./mimicus/providers
+creating build/bdist.linux-x86_64/wheel/mimicus/agents
+copying build/lib/mimicus/agents/__init__.py -> build/bdist.linux-x86_64/wheel/./mimicus/agents
+copying build/lib/mimicus/agents/auditions.py -> build/bdist.linux-x86_64/wheel/./mimicus/agents
+copying build/lib/mimicus/agents/calibration.py -> build/bdist.linux-x86_64/wheel/./mimicus/agents
+copying build/lib/mimicus/agents/bankruptcy.py -> build/bdist.linux-x86_64/wheel/./mimicus/agents
+copying build/lib/mimicus/agents/fingerprints.py -> build/bdist.linux-x86_64/wheel/./mimicus/agents
+copying build/lib/mimicus/agents/phenotypes.py -> build/bdist.linux-x86_64/wheel/./mimicus/agents
+creating build/bdist.linux-x86_64/wheel/mimicus/coalition
+copying build/lib/mimicus/coalition/__init__.py -> build/bdist.linux-x86_64/wheel/./mimicus/coalition
+copying build/lib/mimicus/coalition/topology.py -> build/bdist.linux-x86_64/wheel/./mimicus/coalition
+copying build/lib/mimicus/coalition/selector.py -> build/bdist.linux-x86_64/wheel/./mimicus/coalition
+copying build/lib/mimicus/coalition/threat_profile.py -> build/bdist.linux-x86_64/wheel/./mimicus/coalition
+copying build/lib/mimicus/coalition/sparse_comm.py -> build/bdist.linux-x86_64/wheel/./mimicus/coalition
+creating build/bdist.linux-x86_64/wheel/mimicus/falsifiers
+copying build/lib/mimicus/falsifiers/__init__.py -> build/bdist.linux-x86_64/wheel/./mimicus/falsifiers
+copying build/lib/mimicus/falsifiers/builtins.py -> build/bdist.linux-x86_64/wheel/./mimicus/falsifiers
+copying build/lib/mimicus/falsifiers/spec.py -> build/bdist.linux-x86_64/wheel/./mimicus/falsifiers
+copying build/lib/mimicus/falsifiers/primitives.py -> build/bdist.linux-x86_64/wheel/./mimicus/falsifiers
+copying build/lib/mimicus/falsifiers/market.py -> build/bdist.linux-x86_64/wheel/./mimicus/falsifiers
+copying build/lib/mimicus/falsifiers/registry.py -> build/bdist.linux-x86_64/wheel/./mimicus/falsifiers
+copying build/lib/mimicus/falsifiers/k3_compat.py -> build/bdist.linux-x86_64/wheel/./mimicus/falsifiers
+creating build/bdist.linux-x86_64/wheel/mimicus/orchestration
+copying build/lib/mimicus/orchestration/__init__.py -> build/bdist.linux-x86_64/wheel/./mimicus/orchestration
+copying build/lib/mimicus/orchestration/task_ledger.py -> build/bdist.linux-x86_64/wheel/./mimicus/orchestration
+copying build/lib/mimicus/orchestration/attribution.py -> build/bdist.linux-x86_64/wheel/./mimicus/orchestration
+copying build/lib/mimicus/orchestration/progress_ledger.py -> build/bdist.linux-x86_64/wheel/./mimicus/orchestration
+copying build/lib/mimicus/orchestration/replay.py -> build/bdist.linux-x86_64/wheel/./mimicus/orchestration
+copying build/lib/mimicus/orchestration/engine.py -> build/bdist.linux-x86_64/wheel/./mimicus/orchestration
+creating build/bdist.linux-x86_64/wheel/mimicus/plugins
+copying build/lib/mimicus/plugins/__init__.py -> build/bdist.linux-x86_64/wheel/./mimicus/plugins
+copying build/lib/mimicus/plugins/api.py -> build/bdist.linux-x86_64/wheel/./mimicus/plugins
+copying build/lib/mimicus/plugins/manifests.py -> build/bdist.linux-x86_64/wheel/./mimicus/plugins
+copying build/lib/mimicus/plugins/builtin.py -> build/bdist.linux-x86_64/wheel/./mimicus/plugins
+copying build/lib/mimicus/plugins/profiles.py -> build/bdist.linux-x86_64/wheel/./mimicus/plugins
+copying build/lib/mimicus/plugins/registry.py -> build/bdist.linux-x86_64/wheel/./mimicus/plugins
+copying build/lib/mimicus/plugins/loader.py -> build/bdist.linux-x86_64/wheel/./mimicus/plugins
+copying build/lib/mimicus/config.py -> build/bdist.linux-x86_64/wheel/./mimicus
+creating build/bdist.linux-x86_64/wheel/mimicus/memory
+copying build/lib/mimicus/memory/__init__.py -> build/bdist.linux-x86_64/wheel/./mimicus/memory
+copying build/lib/mimicus/memory/retrieval.py -> build/bdist.linux-x86_64/wheel/./mimicus/memory
+copying build/lib/mimicus/memory/gates.py -> build/bdist.linux-x86_64/wheel/./mimicus/memory
+copying build/lib/mimicus/memory/models.py -> build/bdist.linux-x86_64/wheel/./mimicus/memory
+copying build/lib/mimicus/memory/provenance.py -> build/bdist.linux-x86_64/wheel/./mimicus/memory
+creating build/bdist.linux-x86_64/wheel/mimicus/events
+copying build/lib/mimicus/events/__init__.py -> build/bdist.linux-x86_64/wheel/./mimicus/events
+copying build/lib/mimicus/events/ledger.py -> build/bdist.linux-x86_64/wheel/./mimicus/events
+copying build/lib/mimicus/events/bus.py -> build/bdist.linux-x86_64/wheel/./mimicus/events
+copying build/lib/mimicus/types.py -> build/bdist.linux-x86_64/wheel/./mimicus
+creating build/bdist.linux-x86_64/wheel/mimicus/interfaces
+copying build/lib/mimicus/interfaces/__init__.py -> build/bdist.linux-x86_64/wheel/./mimicus/interfaces
+copying build/lib/mimicus/interfaces/mcp_server.py -> build/bdist.linux-x86_64/wheel/./mimicus/interfaces
+copying build/lib/mimicus/interfaces/cli.py -> build/bdist.linux-x86_64/wheel/./mimicus/interfaces
+copying build/lib/mimicus/security.py -> build/bdist.linux-x86_64/wheel/./mimicus
+creating build/bdist.linux-x86_64/wheel/mimicus/claims
+copying build/lib/mimicus/claims/__init__.py -> build/bdist.linux-x86_64/wheel/./mimicus/claims
+copying build/lib/mimicus/claims/models.py -> build/bdist.linux-x86_64/wheel/./mimicus/claims
+copying build/lib/mimicus/claims/graph.py -> build/bdist.linux-x86_64/wheel/./mimicus/claims
+creating build/bdist.linux-x86_64/wheel/mimicus/validation
+copying build/lib/mimicus/validation/__init__.py -> build/bdist.linux-x86_64/wheel/./mimicus/validation
+copying build/lib/mimicus/validation/e2e.py -> build/bdist.linux-x86_64/wheel/./mimicus/validation
+copying build/lib/mimicus/validation/worker.py -> build/bdist.linux-x86_64/wheel/./mimicus/validation
+copying build/lib/mimicus/canonical.py -> build/bdist.linux-x86_64/wheel/./mimicus
+creating build/bdist.linux-x86_64/wheel/mimicus/storage
+copying build/lib/mimicus/storage/__init__.py -> build/bdist.linux-x86_64/wheel/./mimicus/storage
+copying build/lib/mimicus/storage/models.py -> build/bdist.linux-x86_64/wheel/./mimicus/storage
+copying build/lib/mimicus/storage/postgres_compat.py -> build/bdist.linux-x86_64/wheel/./mimicus/storage
+copying build/lib/mimicus/storage/repository.py -> build/bdist.linux-x86_64/wheel/./mimicus/storage
+copying build/lib/mimicus/storage/migrations_adapter.py -> build/bdist.linux-x86_64/wheel/./mimicus/storage
+running install_egg_info
+Copying src/mimicus_swarm.egg-info to build/bdist.linux-x86_64/wheel/./mimicus_swarm-0.1.0-py3.12.egg-info
+running install_scripts
+creating build/bdist.linux-x86_64/wheel/mimicus_swarm-0.1.0.dist-info/WHEEL
+creating '/home/runner/work/MiMicus-swarm/MiMicus-swarm/dist/.tmp-rlhoutid/mimicus_swarm-0.1.0-py3-none-any.whl' and adding 'build/bdist.linux-x86_64/wheel' to it
+adding 'mimicus/__init__.py'
+adding 'mimicus/benchmark.py'
+adding 'mimicus/canonical.py'
+adding 'mimicus/config.py'
+adding 'mimicus/security.py'
+adding 'mimicus/types.py'
+adding 'mimicus/agents/__init__.py'
+adding 'mimicus/agents/auditions.py'
+adding 'mimicus/agents/bankruptcy.py'
+adding 'mimicus/agents/calibration.py'
+adding 'mimicus/agents/fingerprints.py'
+adding 'mimicus/agents/phenotypes.py'
+adding 'mimicus/claims/__init__.py'
+adding 'mimicus/claims/graph.py'
+adding 'mimicus/claims/models.py'
+adding 'mimicus/coalition/__init__.py'
+adding 'mimicus/coalition/selector.py'
+adding 'mimicus/coalition/sparse_comm.py'
+adding 'mimicus/coalition/threat_profile.py'
+adding 'mimicus/coalition/topology.py'
+adding 'mimicus/events/__init__.py'
+adding 'mimicus/events/bus.py'
+adding 'mimicus/events/ledger.py'
+adding 'mimicus/falsifiers/__init__.py'
+adding 'mimicus/falsifiers/builtins.py'
+adding 'mimicus/falsifiers/k3_compat.py'
+adding 'mimicus/falsifiers/market.py'
+adding 'mimicus/falsifiers/primitives.py'
+adding 'mimicus/falsifiers/registry.py'
+adding 'mimicus/falsifiers/spec.py'
+adding 'mimicus/germinal/__init__.py'
+adding 'mimicus/germinal/center.py'
+adding 'mimicus/germinal/fossils.py'
+adding 'mimicus/germinal/mutate.py'
+adding 'mimicus/germinal/promote.py'
+adding 'mimicus/interfaces/__init__.py'
+adding 'mimicus/interfaces/cli.py'
+adding 'mimicus/interfaces/mcp_server.py'
+adding 'mimicus/memory/__init__.py'
+adding 'mimicus/memory/gates.py'
+adding 'mimicus/memory/models.py'
+adding 'mimicus/memory/provenance.py'
+adding 'mimicus/memory/retrieval.py'
+adding 'mimicus/orchestration/__init__.py'
+adding 'mimicus/orchestration/attribution.py'
+adding 'mimicus/orchestration/engine.py'
+adding 'mimicus/orchestration/progress_ledger.py'
+adding 'mimicus/orchestration/replay.py'
+adding 'mimicus/orchestration/task_ledger.py'
+adding 'mimicus/plugins/__init__.py'
+adding 'mimicus/plugins/api.py'
+adding 'mimicus/plugins/builtin.py'
+adding 'mimicus/plugins/loader.py'
+adding 'mimicus/plugins/manifests.py'
+adding 'mimicus/plugins/profiles.py'
+adding 'mimicus/plugins/registry.py'
+adding 'mimicus/providers/__init__.py'
+adding 'mimicus/providers/base.py'
+adding 'mimicus/providers/openai_agents.py'
+adding 'mimicus/providers/scripted.py'
+adding 'mimicus/storage/__init__.py'
+adding 'mimicus/storage/migrations_adapter.py'
+adding 'mimicus/storage/models.py'
+adding 'mimicus/storage/postgres_compat.py'
+adding 'mimicus/storage/repository.py'
+adding 'mimicus/validation/__init__.py'
+adding 'mimicus/validation/e2e.py'
+adding 'mimicus/validation/worker.py'
+adding 'mimicus_swarm-0.1.0.dist-info/licenses/LICENSE'
+adding 'mimicus_swarm-0.1.0.dist-info/METADATA'
+adding 'mimicus_swarm-0.1.0.dist-info/WHEEL'
+adding 'mimicus_swarm-0.1.0.dist-info/entry_points.txt'
+adding 'mimicus_swarm-0.1.0.dist-info/top_level.txt'
+adding 'mimicus_swarm-0.1.0.dist-info/RECORD'
+removing build/bdist.linux-x86_64/wheel
+Successfully built mimicus_swarm-0.1.0.tar.gz and mimicus_swarm-0.1.0-py3-none-any.whl
+Collecting alembic==1.18.4 (from -r requirements.lock (line 1))
+  Using cached alembic-1.18.4-py3-none-any.whl.metadata (7.2 kB)
+Collecting annotated-types==0.8.0 (from -r requirements.lock (line 2))
+  Using cached annotated_types-0.8.0-py3-none-any.whl.metadata (15 kB)
+Collecting anyio==4.14.2 (from -r requirements.lock (line 3))
+  Using cached anyio-4.14.2-py3-none-any.whl.metadata (4.6 kB)
+Collecting ast_serialize==0.8.0 (from -r requirements.lock (line 4))
+  Using cached ast_serialize-0.8.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (1.4 kB)
+Collecting attrs==26.1.0 (from -r requirements.lock (line 5))
+  Using cached attrs-26.1.0-py3-none-any.whl.metadata (8.8 kB)
+Collecting build==1.5.0 (from -r requirements.lock (line 6))
+  Using cached build-1.5.0-py3-none-any.whl.metadata (5.7 kB)
+Collecting certifi==2026.7.22 (from -r requirements.lock (line 7))
+  Using cached certifi-2026.7.22-py3-none-any.whl.metadata (2.5 kB)
+Collecting cffi==2.1.1 (from -r requirements.lock (line 8))
+  Using cached cffi-2.1.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (2.5 kB)
+Collecting charset-normalizer==3.5.1 (from -r requirements.lock (line 9))
+  Using cached charset_normalizer-3.5.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (45 kB)
+Collecting click==8.4.2 (from -r requirements.lock (line 10))
+  Using cached click-8.4.2-py3-none-any.whl.metadata (2.6 kB)
+Collecting coverage==7.15.4 (from -r requirements.lock (line 11))
+  Using cached coverage-7.15.4-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (8.6 kB)
+Collecting cryptography==50.0.0 (from -r requirements.lock (line 12))
+  Using cached cryptography-50.0.0-cp311-abi3-manylinux_2_34_x86_64.whl.metadata (4.3 kB)
+Collecting distro==1.9.0 (from -r requirements.lock (line 13))
+  Using cached distro-1.9.0-py3-none-any.whl.metadata (6.8 kB)
+Collecting greenlet==3.5.5 (from -r requirements.lock (line 14))
+  Using cached greenlet-3.5.5-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (3.8 kB)
+Collecting griffelib==2.2.0 (from -r requirements.lock (line 15))
+  Using cached griffelib-2.2.0-py3-none-any.whl.metadata (1.3 kB)
+Collecting h11==0.16.0 (from -r requirements.lock (line 16))
+  Using cached h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+Collecting httpcore2==2.10.0 (from -r requirements.lock (line 17))
+  Using cached httpcore2-2.10.0-py3-none-any.whl.metadata (25 kB)
+Collecting httpx2==2.10.0 (from -r requirements.lock (line 18))
+  Using cached httpx2-2.10.0-py3-none-any.whl.metadata (10 kB)
+Collecting idna==3.18 (from -r requirements.lock (line 19))
+  Using cached idna-3.18-py3-none-any.whl.metadata (6.1 kB)
+Collecting iniconfig==2.3.0 (from -r requirements.lock (line 20))
+  Using cached iniconfig-2.3.0-py3-none-any.whl.metadata (2.5 kB)
+Collecting jiter==0.16.0 (from -r requirements.lock (line 21))
+  Using cached jiter-0.16.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (5.2 kB)
+Collecting jsonschema==4.26.0 (from -r requirements.lock (line 22))
+  Using cached jsonschema-4.26.0-py3-none-any.whl.metadata (7.6 kB)
+Collecting jsonschema-specifications==2025.9.1 (from -r requirements.lock (line 23))
+  Using cached jsonschema_specifications-2025.9.1-py3-none-any.whl.metadata (2.9 kB)
+Collecting librt==0.15.0 (from -r requirements.lock (line 24))
+  Using cached librt-0.15.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (1.3 kB)
+Collecting Mako==1.4.1 (from -r requirements.lock (line 25))
+  Using cached mako-1.4.1-py3-none-any.whl.metadata (2.9 kB)
+Collecting MarkupSafe==3.0.3 (from -r requirements.lock (line 26))
+  Using cached markupsafe-3.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.7 kB)
+Collecting mcp==2.0.0 (from -r requirements.lock (line 27))
+  Using cached mcp-2.0.0-py3-none-any.whl.metadata (7.7 kB)
+Collecting mcp-types==2.0.0 (from -r requirements.lock (line 28))
+  Using cached mcp_types-2.0.0-py3-none-any.whl.metadata (1.9 kB)
+Collecting mypy==2.3.0 (from -r requirements.lock (line 29))
+  Using cached mypy-2.3.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.4 kB)
+Collecting mypy_extensions==1.1.0 (from -r requirements.lock (line 30))
+  Using cached mypy_extensions-1.1.0-py3-none-any.whl.metadata (1.1 kB)
+Collecting openai==3.1.0 (from -r requirements.lock (line 31))
+  Using cached openai-3.1.0-py3-none-any.whl.metadata (39 kB)
+Collecting openai-agents==0.21.1 (from -r requirements.lock (line 32))
+  Using cached openai_agents-0.21.1-py3-none-any.whl.metadata (11 kB)
+Collecting opentelemetry-api==1.44.0 (from -r requirements.lock (line 33))
+  Using cached opentelemetry_api-1.44.0-py3-none-any.whl.metadata (1.4 kB)
+Collecting packaging==26.3 (from -r requirements.lock (line 34))
+  Using cached packaging-26.3-py3-none-any.whl.metadata (3.5 kB)
+Collecting pathspec==1.1.1 (from -r requirements.lock (line 35))
+  Using cached pathspec-1.1.1-py3-none-any.whl.metadata (14 kB)
+Collecting pluggy==1.6.0 (from -r requirements.lock (line 36))
+  Using cached pluggy-1.6.0-py3-none-any.whl.metadata (4.8 kB)
+Collecting pycparser==3.0 (from -r requirements.lock (line 37))
+  Using cached pycparser-3.0-py3-none-any.whl.metadata (8.2 kB)
+Collecting pydantic==2.13.4 (from -r requirements.lock (line 38))
+  Using cached pydantic-2.13.4-py3-none-any.whl.metadata (109 kB)
+Collecting pydantic_core==2.46.4 (from -r requirements.lock (line 39))
+  Using cached pydantic_core-2.46.4-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (6.6 kB)
+Collecting Pygments==2.21.0 (from -r requirements.lock (line 40))
+  Using cached pygments-2.21.0-py3-none-any.whl.metadata (2.5 kB)
+Collecting PyJWT==2.13.0 (from -r requirements.lock (line 41))
+  Using cached pyjwt-2.13.0-py3-none-any.whl.metadata (3.4 kB)
+Collecting pyproject_hooks==1.2.0 (from -r requirements.lock (line 42))
+  Using cached pyproject_hooks-1.2.0-py3-none-any.whl.metadata (1.3 kB)
+Collecting pytest==9.0.2 (from -r requirements.lock (line 43))
+  Using cached pytest-9.0.2-py3-none-any.whl.metadata (7.6 kB)
+Collecting pytest-cov==7.0.0 (from -r requirements.lock (line 44))
+  Using cached pytest_cov-7.0.0-py3-none-any.whl.metadata (31 kB)
+Collecting python-multipart==0.0.32 (from -r requirements.lock (line 45))
+  Using cached python_multipart-0.0.32-py3-none-any.whl.metadata (2.1 kB)
+Collecting referencing==0.37.0 (from -r requirements.lock (line 46))
+  Using cached referencing-0.37.0-py3-none-any.whl.metadata (2.8 kB)
+Collecting requests==2.34.2 (from -r requirements.lock (line 47))
+  Using cached requests-2.34.2-py3-none-any.whl.metadata (4.8 kB)
+Collecting rpds-py==2026.6.3 (from -r requirements.lock (line 48))
+  Using cached rpds_py-2026.6.3-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.1 kB)
+Collecting ruff==0.16.3 (from -r requirements.lock (line 49))
+  Using cached ruff-0.16.3-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (26 kB)
+Collecting sniffio==1.3.1 (from -r requirements.lock (line 50))
+  Using cached sniffio-1.3.1-py3-none-any.whl.metadata (3.9 kB)
+Collecting SQLAlchemy==2.0.50 (from -r requirements.lock (line 51))
+  Using cached sqlalchemy-2.0.50-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (9.5 kB)
+Collecting sse-starlette==3.4.8 (from -r requirements.lock (line 52))
+  Using cached sse_starlette-3.4.8-py3-none-any.whl.metadata (15 kB)
+Collecting starlette==1.6.0 (from -r requirements.lock (line 53))
+  Using cached starlette-1.6.0-py3-none-any.whl.metadata (6.4 kB)
+Collecting tqdm==4.70.0 (from -r requirements.lock (line 54))
+  Using cached tqdm-4.70.0-py3-none-any.whl.metadata (57 kB)
+Collecting truststore==0.10.4 (from -r requirements.lock (line 55))
+  Using cached truststore-0.10.4-py3-none-any.whl.metadata (4.4 kB)
+Collecting typing-inspection==0.4.4 (from -r requirements.lock (line 56))
+  Using cached typing_inspection-0.4.4-py3-none-any.whl.metadata (2.6 kB)
+Collecting typing_extensions==4.16.0 (from -r requirements.lock (line 57))
+  Using cached typing_extensions-4.16.0-py3-none-any.whl.metadata (3.3 kB)
+Collecting urllib3==2.7.0 (from -r requirements.lock (line 58))
+  Using cached urllib3-2.7.0-py3-none-any.whl.metadata (6.9 kB)
+Collecting uvicorn==0.52.3 (from -r requirements.lock (line 59))
+  Using cached uvicorn-0.52.3-py3-none-any.whl.metadata (6.6 kB)
+Collecting websockets==16.1.1 (from -r requirements.lock (line 60))
+  Using cached websockets-16.1.1-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (6.8 kB)
+Using cached alembic-1.18.4-py3-none-any.whl (263 kB)
+Using cached annotated_types-0.8.0-py3-none-any.whl (13 kB)
+Using cached anyio-4.14.2-py3-none-any.whl (125 kB)
+Using cached ast_serialize-0.8.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (1.3 MB)
+Using cached attrs-26.1.0-py3-none-any.whl (67 kB)
+Using cached build-1.5.0-py3-none-any.whl (26 kB)
+Using cached certifi-2026.7.22-py3-none-any.whl (136 kB)
+Using cached cffi-2.1.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (221 kB)
+Using cached charset_normalizer-3.5.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (248 kB)
+Using cached click-8.4.2-py3-none-any.whl (119 kB)
+Using cached coverage-7.15.4-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (257 kB)
+Using cached cryptography-50.0.0-cp311-abi3-manylinux_2_34_x86_64.whl (4.7 MB)
+Using cached distro-1.9.0-py3-none-any.whl (20 kB)
+Using cached greenlet-3.5.5-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (621 kB)
+Using cached griffelib-2.2.0-py3-none-any.whl (166 kB)
+Using cached h11-0.16.0-py3-none-any.whl (37 kB)
+Using cached httpcore2-2.10.0-py3-none-any.whl (83 kB)
+Using cached httpx2-2.10.0-py3-none-any.whl (94 kB)
+Using cached idna-3.18-py3-none-any.whl (65 kB)
+Using cached iniconfig-2.3.0-py3-none-any.whl (7.5 kB)
+Using cached jiter-0.16.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (343 kB)
+Using cached jsonschema-4.26.0-py3-none-any.whl (90 kB)
+Using cached jsonschema_specifications-2025.9.1-py3-none-any.whl (18 kB)
+Using cached librt-0.15.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (531 kB)
+Using cached mako-1.4.1-py3-none-any.whl (80 kB)
+Using cached markupsafe-3.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (22 kB)
+Using cached mcp-2.0.0-py3-none-any.whl (349 kB)
+Using cached mcp_types-2.0.0-py3-none-any.whl (69 kB)
+Using cached mypy-2.3.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (15.3 MB)
+Using cached mypy_extensions-1.1.0-py3-none-any.whl (5.0 kB)
+Using cached openai-3.1.0-py3-none-any.whl (1.7 MB)
+Using cached openai_agents-0.21.1-py3-none-any.whl (1.1 MB)
+Using cached opentelemetry_api-1.44.0-py3-none-any.whl (60 kB)
+Using cached packaging-26.3-py3-none-any.whl (129 kB)
+Using cached pathspec-1.1.1-py3-none-any.whl (57 kB)
+Using cached pluggy-1.6.0-py3-none-any.whl (20 kB)
+Using cached pycparser-3.0-py3-none-any.whl (48 kB)
+Using cached pydantic-2.13.4-py3-none-any.whl (472 kB)
+Using cached pydantic_core-2.46.4-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.1 MB)
+Using cached pygments-2.21.0-py3-none-any.whl (1.3 MB)
+Using cached pyjwt-2.13.0-py3-none-any.whl (31 kB)
+Using cached pyproject_hooks-1.2.0-py3-none-any.whl (10 kB)
+Using cached pytest-9.0.2-py3-none-any.whl (374 kB)
+Using cached pytest_cov-7.0.0-py3-none-any.whl (22 kB)
+Using cached python_multipart-0.0.32-py3-none-any.whl (30 kB)
+Using cached referencing-0.37.0-py3-none-any.whl (26 kB)
+Using cached requests-2.34.2-py3-none-any.whl (73 kB)
+Using cached rpds_py-2026.6.3-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (366 kB)
+Using cached ruff-0.16.3-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (11.1 MB)
+Using cached sniffio-1.3.1-py3-none-any.whl (10 kB)
+Using cached sqlalchemy-2.0.50-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (3.4 MB)
+Using cached sse_starlette-3.4.8-py3-none-any.whl (16 kB)
+Using cached starlette-1.6.0-py3-none-any.whl (75 kB)
+Using cached tqdm-4.70.0-py3-none-any.whl (80 kB)
+Using cached truststore-0.10.4-py3-none-any.whl (18 kB)
+Using cached typing_inspection-0.4.4-py3-none-any.whl (14 kB)
+Using cached typing_extensions-4.16.0-py3-none-any.whl (45 kB)
+Using cached urllib3-2.7.0-py3-none-any.whl (131 kB)
+Using cached uvicorn-0.52.3-py3-none-any.whl (79 kB)
+Using cached websockets-16.1.1-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (187 kB)
+Installing collected packages: websockets, urllib3, typing_extensions, truststore, tqdm, sniffio, ruff, rpds-py, python-multipart, pyproject_hooks, PyJWT, Pygments, pycparser, pluggy, pathspec, packaging, mypy_extensions, MarkupSafe, librt, jiter, iniconfig, idna, h11, griffelib, greenlet, distro, coverage, click, charset-normalizer, certifi, attrs, ast_serialize, annotated-types, uvicorn, typing-inspection, SQLAlchemy, requests, referencing, pytest, pydantic_core, opentelemetry-api, mypy, Mako, httpcore2, cffi, build, anyio, starlette, pytest-cov, pydantic, jsonschema-specifications, httpx2, cryptography, alembic, sse-starlette, openai, mcp-types, jsonschema, mcp, openai-agents
+Successfully installed Mako-1.4.1 MarkupSafe-3.0.3 PyJWT-2.13.0 Pygments-2.21.0 SQLAlchemy-2.0.50 alembic-1.18.4 annotated-types-0.8.0 anyio-4.14.2 ast_serialize-0.8.0 attrs-26.1.0 build-1.5.0 certifi-2026.7.22 cffi-2.1.1 charset-normalizer-3.5.1 click-8.4.2 coverage-7.15.4 cryptography-50.0.0 distro-1.9.0 greenlet-3.5.5 griffelib-2.2.0 h11-0.16.0 httpcore2-2.10.0 httpx2-2.10.0 idna-3.18 iniconfig-2.3.0 jiter-0.16.0 jsonschema-4.26.0 jsonschema-specifications-2025.9.1 librt-0.15.0 mcp-2.0.0 mcp-types-2.0.0 mypy-2.3.0 mypy_extensions-1.1.0 openai-3.1.0 openai-agents-0.21.1 opentelemetry-api-1.44.0 packaging-26.3 pathspec-1.1.1 pluggy-1.6.0 pycparser-3.0 pydantic-2.13.4 pydantic_core-2.46.4 pyproject_hooks-1.2.0 pytest-9.0.2 pytest-cov-7.0.0 python-multipart-0.0.32 referencing-0.37.0 requests-2.34.2 rpds-py-2026.6.3 ruff-0.16.3 sniffio-1.3.1 sse-starlette-3.4.8 starlette-1.6.0 tqdm-4.70.0 truststore-0.10.4 typing-inspection-0.4.4 typing_extensions-4.16.0 urllib3-2.7.0 uvicorn-0.52.3 websockets-16.1.1
+
+[notice] A new release of pip is available: 25.0.1 -> 26.2.1
+[notice] To update, run: python -m pip install --upgrade pip
+Processing ./dist/mimicus_swarm-0.1.0-py3-none-any.whl
+Installing collected packages: mimicus-swarm
+Successfully installed mimicus-swarm-0.1.0
+
+[notice] A new release of pip is available: 25.0.1 -> 26.2.1
+[notice] To update, run: python -m pip install --upgrade pip
+{
+  "database_reachable": true,
+  "mcp_version": "2.0.0",
+  "plugin_order": [
+    "agents.phenotypes",
+    "coalition.mimicus",
+    "communication.sparse",
+    "falsifiers.safe",
+    "memory.immune",
+    "sandbox.local",
+    "storage.sqlite",
+    "telemetry.ledger",
+    "model.scripted"
+  ],
+  "plugin_services": {
+    "agent_factory": "agents.phenotypes",
+    "coalition": "coalition.mimicus",
+    "communication": "communication.sparse",
+    "falsifiers": "falsifiers.safe",
+    "memory": "memory.immune",
+    "model_provider": "model.scripted",
+    "sandbox": "sandbox.local",
+    "storage": "storage.sqlite",
+    "telemetry": "telemetry.ledger"
+  },
+  "profile": "offline",
+  "provider_live_credential_present": false,
+  "provider_ready": true,
+  "secrets_printed": false,
+  "version": "0.1.0"
+}

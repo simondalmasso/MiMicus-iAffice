@@ -1,0 +1,40 @@
+{
+  "false_zero_cost": false,
+  "known_insufficient": {
+    "degraded_before_execution": true,
+    "preflight": {
+      "configured_budget_usd": 0.01,
+      "estimated_max_cost_per_call": 0.01,
+      "executed_members": [
+        "dd75f58e83306b93f5bc6e4399d75774db2c2e5780693f2438814099431f710b"
+      ],
+      "planned_members": [
+        "dd75f58e83306b93f5bc6e4399d75774db2c2e5780693f2438814099431f710b",
+        "61ea8ec1d8d1bb92098b1e8a49efc50f33c0b7596b9182afe76feb5a483b428f",
+        "cb499f6e8cf3cdc3448c9c2bfe84ddd05be8f16068e08fcef0624eca6dda95de"
+      ],
+      "planned_paid_calls": 3,
+      "reason": "insufficient_preflight_budget",
+      "status": "DEGRADED_BEFORE_EXECUTION"
+    },
+    "provider_calls": 1
+  },
+  "pass": true,
+  "unknown_cost": {
+    "partial_swarm_executed": false,
+    "preflight": {
+      "configured_budget_usd": 1.0,
+      "estimated_max_cost_per_call": null,
+      "executed_members": [],
+      "planned_members": [
+        "dd75f58e83306b93f5bc6e4399d75774db2c2e5780693f2438814099431f710b",
+        "61ea8ec1d8d1bb92098b1e8a49efc50f33c0b7596b9182afe76feb5a483b428f",
+        "cb499f6e8cf3cdc3448c9c2bfe84ddd05be8f16068e08fcef0624eca6dda95de"
+      ],
+      "planned_paid_calls": 3,
+      "reason": "pricing_preflight_required",
+      "status": "PRICING_PREFLIGHT_REQUIRED"
+    },
+    "provider_calls": 0
+  }
+}

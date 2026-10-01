@@ -1,0 +1,12 @@
+{
+  "cli_downgrade_exit_code": 1,
+  "cli_downgrade_rejected": true,
+  "pass": true,
+  "python_rejections": [
+    "normal runtime cannot disable swarm-core semantics",
+    "fixture material is not accepted in normal runtime; use explicit source_mode=fixture compatibility lane"
+  ],
+  "runtime_morphology": "paired_verify",
+  "runtime_run_id": "701e3904-5615-43e2-b7ce-1b1899446751",
+  "runtime_source_mode": "runtime"
+}

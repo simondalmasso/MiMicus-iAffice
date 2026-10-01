@@ -1,0 +1,13 @@
+{
+  "cancelled_nodes": [
+    "slow"
+  ],
+  "cancelled_observed": true,
+  "failed_nodes": [
+    "fast"
+  ],
+  "fast_status": "FAILED",
+  "pass": true,
+  "post_cancel_side_effect": false,
+  "slow_status": "CANCELLED"
+}

@@ -1,0 +1,11 @@
+{
+  "command": [
+    "python",
+    "-m",
+    "pytest",
+    "tests/unit/test_order008_f040.py::test_one_active_origin_and_promotion_cascade_revocation",
+    "-vv"
+  ],
+  "pass": true,
+  "returncode": 0
+}

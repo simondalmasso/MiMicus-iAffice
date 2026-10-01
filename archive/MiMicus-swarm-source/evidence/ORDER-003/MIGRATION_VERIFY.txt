@@ -1,0 +1,16 @@
+ORDER_003_MIGRATION_VERIFY
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_order002, ORDER-002 initial portable schema.
+INFO  [alembic.runtime.migration] Running upgrade 0001_order002 -> 0002_order003, ORDER-003 persistent swarm runtime state.
+{"database": "upgraded", "url_scheme": "sqlite"}
+CLEAN_DB_UPGRADE=PASS
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_order002, ORDER-002 initial portable schema.
+ORDER002_BASELINE_CREATED=PASS
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade 0001_order002 -> 0002_order003, ORDER-003 persistent swarm runtime state.
+ORDER002_TO_ORDER003_UPGRADE=PASS
+POSTGRESQL_SCHEMA_COMPILE=PASS

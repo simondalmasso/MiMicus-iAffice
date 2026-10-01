@@ -1,0 +1,49 @@
+{
+  "pass": true,
+  "persistent_state_after_restart": {
+    "bankruptcy": [],
+    "communications": [],
+    "falsifiers": [],
+    "lineages": [
+      {
+        "fingerprint": "3192cda8633411aeedf0f783e28f2b2b0c0e3f721a25594b56988a4613099d8b",
+        "lineage_id": "dd6d51fa118c0e390ca4416f654062a955309e4672e3ea2e8efd0146572ae59f"
+      },
+      {
+        "fingerprint": "7b75f300aa38dc3acadf4af6607b63a3706c4a8406e73fb577bb091693eb84f1",
+        "lineage_id": "07b1fa1d6862b9798dba265b22ef7f147b9062af104360fa85eb257a53d49fec"
+      },
+      {
+        "fingerprint": "982531512096a6d40414b8a21cc41d4646e8bb208fe2f0a4f549725f097fede6",
+        "lineage_id": "0a877d4b4f463fcf9019dee089b9b66e8b97df875e849bfc71987d57e95ffd92"
+      },
+      {
+        "fingerprint": "62a1f164974f29ec065615746fb844b007763490e73fe2455bb8f39e2acc3b9e",
+        "lineage_id": "dc460e97fd8ebd3187662071e17b940b7716108d3d5bcd4460f4327d79e6a92c"
+      },
+      {
+        "fingerprint": "b63e14e70e1da3b91c19f50a8de059bf61b547cafe0c6eb131c2d809792b8f61",
+        "lineage_id": "3cb1763bd3bb42c16f56436b44fb2657d3eda39c74004c9f4c73c1fd79022a72"
+      }
+    ],
+    "memory": [
+      {
+        "domain": "finance",
+        "memory_id": "c5b77674-6941-4d4d-bc1f-169953cf7a03",
+        "status": "shared_verified"
+      },
+      {
+        "domain": "finance",
+        "memory_id": "2e2735fa-2a3c-47c4-aa92-392178349604",
+        "status": "quarantined"
+      }
+    ],
+    "run_count": 2
+  },
+  "process_restart": true,
+  "reuse_ledger_head": "5ecdfb2bdc5766d754b228aaf600a308759c9648f8ee6f8f050863505dabe106",
+  "reuse_run_id": "4cc45ea1-1d12-4abc-a339-3f26f450af3e",
+  "same_database": "memory.db",
+  "seed_ledger_head": "23cf87d2c241c1d8f82aa16f76645605a7eba005bce008200c89399b88262ee0",
+  "seed_run_id": "2ed8844a-1709-4975-a21c-ef49eac5f92c"
+}

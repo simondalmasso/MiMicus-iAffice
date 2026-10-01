@@ -1,0 +1,67 @@
+{
+  "pass": true,
+  "probes": [
+    {
+      "evidence_missing_event": true,
+      "falsifier_verdicts": [
+        "INCONCLUSIVE"
+      ],
+      "pass": true,
+      "provider_input_evidence_hashes": [],
+      "run_id": "231b3c89-d6a5-4e61-8b2d-93be012d82de",
+      "source_mode": "runtime",
+      "status": "inconclusive",
+      "task": "TAM numeric price revenue 12x mismatch"
+    },
+    {
+      "evidence_missing_event": true,
+      "falsifier_verdicts": [
+        "INCONCLUSIVE"
+      ],
+      "pass": true,
+      "provider_input_evidence_hashes": [],
+      "run_id": "9169c14a-55c7-47c4-aee1-d7c965e4c748",
+      "source_mode": "runtime",
+      "status": "inconclusive",
+      "task": "fresh current stale date evidence"
+    },
+    {
+      "evidence_missing_event": true,
+      "falsifier_verdicts": [
+        "INCONCLUSIVE"
+      ],
+      "pass": true,
+      "provider_input_evidence_hashes": [],
+      "run_id": "ba927e2e-e795-495c-a019-33e3a7e6aa43",
+      "source_mode": "runtime",
+      "status": "inconclusive",
+      "task": "source echo origin citation report"
+    },
+    {
+      "evidence_missing_event": true,
+      "falsifier_verdicts": [
+        "INCONCLUSIVE",
+        "INCONCLUSIVE"
+      ],
+      "pass": true,
+      "provider_input_evidence_hashes": [],
+      "run_id": "667576ec-5703-48ac-ba5a-71f3a67fda51",
+      "source_mode": "runtime",
+      "status": "inconclusive",
+      "task": "citation figure entailment mismatch"
+    },
+    {
+      "evidence_missing_event": true,
+      "falsifier_verdicts": [
+        "INCONCLUSIVE"
+      ],
+      "pass": true,
+      "provider_input_evidence_hashes": [],
+      "run_id": "6cadba9f-47c8-43a5-82cd-9294409f9b27",
+      "source_mode": "runtime",
+      "status": "inconclusive",
+      "task": "absence counterexample none exist registry"
+    }
+  ],
+  "task_word_fixture_activation": false
+}

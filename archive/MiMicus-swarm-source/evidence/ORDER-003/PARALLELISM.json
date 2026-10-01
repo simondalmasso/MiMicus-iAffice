@@ -1,0 +1,57 @@
+{
+  "metrics": {
+    "avoidable_serialization_count": 0,
+    "critical_path_ms": 250.56632400000467,
+    "critical_steps": 3,
+    "observed_wall_ms": 250.87446899999577,
+    "parallel_efficiency": 0.9986213623037676,
+    "parallel_speedup_estimate": 1.9972427246075353,
+    "peak_concurrency": 2,
+    "serial_work_ms": 501.0572080000202,
+    "subtask_finish_rate": 1.0,
+    "work_steps": 3
+  },
+  "output_hashes": {
+    "join": "efa52b357ab279ce47ba33352538394fc0b804a93ad3437304a571046d61acf8",
+    "left": "efdd1fef775d82f95d7f5236cfb8b9296ff233b5c499b91f6e8bdc16ce77af58",
+    "right": "0af9c65856dc32f66f1fc3950cf5d634acbb527d8c9bab86e116635f3b289994",
+    "root": "ace9288a3ff79a9132b9ddf621bc19354ffb04b3eacb17486ad6dc4d51303961"
+  },
+  "pass": true,
+  "schedule": [
+    {
+      "batch_wall_ms": 250.7150220000085,
+      "duration_ms": 250.4908840000155,
+      "kind": "AGENT_TASK",
+      "node_id": "left",
+      "output_hash": "efdd1fef775d82f95d7f5236cfb8b9296ff233b5c499b91f6e8bdc16ce77af58",
+      "prerequisites": [
+        "root"
+      ]
+    },
+    {
+      "batch_wall_ms": 250.7150220000085,
+      "duration_ms": 250.54792000000248,
+      "kind": "AGENT_TASK",
+      "node_id": "right",
+      "output_hash": "0af9c65856dc32f66f1fc3950cf5d634acbb527d8c9bab86e116635f3b289994",
+      "prerequisites": [
+        "root"
+      ]
+    },
+    {
+      "batch_wall_ms": 0.11518499999851883,
+      "duration_ms": 0.018404000002192333,
+      "kind": "JOIN",
+      "node_id": "join",
+      "output_hash": "efa52b357ab279ce47ba33352538394fc0b804a93ad3437304a571046d61acf8",
+      "prerequisites": [
+        "left",
+        "right"
+      ]
+    }
+  ],
+  "stage": "parallel",
+  "threshold_ms": 425.0,
+  "wall_ms": 251.52633599998353
+}

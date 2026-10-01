@@ -1,0 +1,22 @@
+{
+  "legacy_escape_fields_exposed": [],
+  "pass": true,
+  "path": "/mcp",
+  "policy_persisted": true,
+  "restart_after_revocation": {
+    "new_receipt_active": true,
+    "old_receipt_inactive": true,
+    "revoked_memory_excluded": true,
+    "semantic_replay_verified": true
+  },
+  "restart_before_revocation": {
+    "receipt_persisted_active": true,
+    "verified_memory_reused": true
+  },
+  "supersession": {
+    "accepted": true,
+    "memory_revoked": true,
+    "removal_revoked": true
+  },
+  "transport": "streamable-http"
+}

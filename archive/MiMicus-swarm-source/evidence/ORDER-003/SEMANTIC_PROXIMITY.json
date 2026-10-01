@@ -1,0 +1,24 @@
+{
+  "clone": {
+    "evidence_overlap": 1.0,
+    "feature_overlap": 0.75,
+    "marginal_novelty": 0.1499999999999999,
+    "primitive_overlap": 0.0,
+    "reason": "demoted as redundant",
+    "score": 0.8500000000000001,
+    "token_similarity": 1.0,
+    "useful_contradiction": false
+  },
+  "contradiction": {
+    "evidence_overlap": 0.0,
+    "feature_overlap": 0.75,
+    "marginal_novelty": 0.8075,
+    "primitive_overlap": 0.0,
+    "reason": "retained: lexical overlap carries contradictory falsifiable direction/value",
+    "score": 0.55,
+    "token_similarity": 0.8,
+    "useful_contradiction": true
+  },
+  "pass": true,
+  "stage": "proximity"
+}

@@ -1,0 +1,114 @@
+{
+  "claims": [
+    {
+      "as_of": null,
+      "claim_hash": "84c65e5ec1b64b40e5e7a1dc33fb62daa4ca52e7159e6e90133207b88c650034",
+      "claim_id": "ff020399-1de8-41a2-a8b7-8677ccd6e7c3",
+      "claim_type": "numeric",
+      "contributor_capabilities": [
+        "numeric"
+      ],
+      "contributor_fingerprint": "7b92ac4afcb66cec6a35dac51f59eb4f75770b47ca7ccb251214a1d53192a950",
+      "contributor_test_families": [
+        "numeric_verified_task"
+      ],
+      "domain": "research",
+      "evidence_refs": [],
+      "probability": 0.52,
+      "provider_trace_id": "6eb3c4c9-0268-55b8-9216-71f5f5a6f241",
+      "statement": "numeric-1:Evaluate the numeric subproblem using only its structured evidence scope; return a bounded claim.",
+      "status": "proposed",
+      "units": null
+    },
+    {
+      "as_of": null,
+      "claim_hash": "196242f82efb67184cdaf83c0704760370d0b8fde68cdd368eeb4604811cb577",
+      "claim_id": "26160b37-28ab-4974-8844-3ea1051f09c3",
+      "claim_type": "temporal",
+      "contributor_capabilities": [
+        "freshness"
+      ],
+      "contributor_fingerprint": "80a000258b170af551f709b97b71de71fa3611d0007354e55741b5dd6b2c44b0",
+      "contributor_test_families": [
+        "freshness_verified_task"
+      ],
+      "domain": "research",
+      "evidence_refs": [],
+      "probability": 0.88,
+      "provider_trace_id": "cd9ba0e9-1dc3-5249-a192-6d7fdf28c892",
+      "statement": "source-1:Evaluate the freshness subproblem using only its structured evidence scope; return a bounded claim.",
+      "status": "inconclusive",
+      "units": null
+    }
+  ],
+  "distinct_target_specs": 2,
+  "executions": [
+    {
+      "cost": 0.0,
+      "evidence": {
+        "age_days": 1.0,
+        "max_age_days": 30
+      },
+      "execution_snapshot_hash": "f41d9d46c0cae17d3dc2cc1b60b1032a63631076a4b18b5b6d9ef014c0479b1c",
+      "id": "F2.freshness",
+      "latency_ms": 1.0,
+      "persistent_reuse": false,
+      "primitive": "freshness",
+      "reason": null,
+      "selection_reason": "claim-aware applicability=1.00; uncertainty=0.24; disagreement=0.36",
+      "spec_hash": "ce535f8f3a7353d022c9596a897c87d1ca0504591fa63fe1df4bf2df708f98dc",
+      "target_claim_hashes": [
+        "196242f82efb67184cdaf83c0704760370d0b8fde68cdd368eeb4604811cb577"
+      ],
+      "verdict": "PASS"
+    },
+    {
+      "cost": 0.0,
+      "evidence": {
+        "claimed": 1200.0,
+        "expected": 1200.0,
+        "normalized_period": "annual",
+        "relative_error": 0.0,
+        "tolerance": 0.05
+      },
+      "execution_snapshot_hash": "5713d0a7a030c66ddc13cc564bd0704fdbf2a274e47d394acea61bb347956246",
+      "id": "F1.numeric_invariant",
+      "latency_ms": 1.0,
+      "persistent_reuse": false,
+      "primitive": "numeric_invariant",
+      "reason": null,
+      "selection_reason": "claim-aware applicability=1.00; uncertainty=0.96; disagreement=0.36",
+      "spec_hash": "ce6a8b96e60e9d93b7b7f00414aba2e338169748f2027984b0dd1f7be8aa51a2",
+      "target_claim_hashes": [
+        "84c65e5ec1b64b40e5e7a1dc33fb62daa4ca52e7159e6e90133207b88c650034"
+      ],
+      "verdict": "PASS"
+    }
+  ],
+  "pass": true,
+  "run_id": "7a6c5144-b539-4b33-bd48-bb17559f8b87",
+  "selected_bids": [
+    {
+      "applicability": 1.0,
+      "disagreement": 0.36,
+      "evidence_quality": 1.0,
+      "expected_information_gain": 0.8784,
+      "selection_reason": "claim-aware applicability=1.00; uncertainty=0.96; disagreement=0.36",
+      "spec_hash": "ce6a8b96e60e9d93b7b7f00414aba2e338169748f2027984b0dd1f7be8aa51a2",
+      "target_claim_hash": "84c65e5ec1b64b40e5e7a1dc33fb62daa4ca52e7159e6e90133207b88c650034",
+      "uncertainty": 0.96,
+      "utility": 87839.99999999999
+    },
+    {
+      "applicability": 1.0,
+      "disagreement": 0.36,
+      "evidence_quality": 1.0,
+      "expected_information_gain": 0.6516,
+      "selection_reason": "claim-aware applicability=1.00; uncertainty=0.24; disagreement=0.36",
+      "spec_hash": "ce535f8f3a7353d022c9596a897c87d1ca0504591fa63fe1df4bf2df708f98dc",
+      "target_claim_hash": "196242f82efb67184cdaf83c0704760370d0b8fde68cdd368eeb4604811cb577",
+      "uncertainty": 0.24,
+      "utility": 65159.99999999999
+    }
+  ]
+}

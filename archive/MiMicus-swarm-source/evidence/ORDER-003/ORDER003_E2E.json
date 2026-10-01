@@ -1,0 +1,17 @@
+{
+  "gates": {
+    "bankruptcy_lineage": true,
+    "critical_path_metrics": true,
+    "germinal_integrated": true,
+    "mcp_restart": true,
+    "memory_reuse": true,
+    "morphology_dag": true,
+    "parallel_execution": true,
+    "persistence_restart": true,
+    "semantic_proximity": true,
+    "sparse_communication_real": true
+  },
+  "order": "ORDER-003",
+  "passed": true,
+  "process_level": true
+}

@@ -1,0 +1,76 @@
+{
+  "accepted_receipt_hash": "ed1ba58b2ae001d210c73009e1b115ad62f2531a6e66cbc5cdb4b9ac2428ecd6",
+  "active_verified_attempts_after_supersession": 1,
+  "bogus_hash_rejection": "evidence_hash_not_bound_to_run",
+  "duplicate_same_origin_blocked": true,
+  "forged_rejection": "verifier_not_authorized",
+  "pass": true,
+  "policy": {
+    "active": true,
+    "authority_class": "deterministic_oracle",
+    "policy_hash": "f4fa3e59b93cf9110e7b8a4867d195d37f76d569d6752cc4c2d1fd2c7863e2ba",
+    "source_cluster": "order007-authority-registry-v1",
+    "verification_method": "run_bound_token",
+    "verifier_id": "oracle:order007-authority"
+  },
+  "restart_policy_count": 1,
+  "restart_receipts": [
+    {
+      "accepted": true,
+      "appeal_of_receipt_hash": null,
+      "authority_class": "deterministic_oracle",
+      "claim_hash": "c7243c41e3aa112649221aa155281fbd049126ab88cbc57a528ec7e5cc40928f",
+      "created_at": "2026-08-18T17:00:33.812940Z",
+      "evidence_hashes": [
+        "58a4f973a2be209e5a14736cbe116a197f2b6f576c6ba66f60318d1ac0f430e5"
+      ],
+      "learning_active": false,
+      "observed_at": "2026-08-18T16:00:00Z",
+      "origin_key_hash": "f9998ad6ae5fd9016e8cb610dfb4ce3e0ab8cbe250b1a4a2dd7a0bda93c7deac",
+      "receipt_hash": "ed1ba58b2ae001d210c73009e1b115ad62f2531a6e66cbc5cdb4b9ac2428ecd6",
+      "receipt_id": "c32cfd7e-641a-5c3d-8144-ccf53e793744",
+      "rejection_reason": null,
+      "run_id": "047291f5-3ee4-45f1-8feb-02ed657becd9",
+      "snapshot_hashes": [
+        "6f7bae866c419498c5a566ec8743eaddd98d360045ca40f78d2d73d6fe04c1e0"
+      ],
+      "source_independence_cluster": "order007-authority-registry-v1",
+      "superseded_by_hash": "48f0d9a6d353a3265e112eb1d4353d4508eb186a3f3d657a5d92f3ba1a6bd048",
+      "supersedes_receipt_hash": null,
+      "verification_method": "run_bound_token",
+      "verified_status": "FALSIFIED",
+      "verifier_id": "oracle:order007-authority",
+      "verifier_policy_hash": "f4fa3e59b93cf9110e7b8a4867d195d37f76d569d6752cc4c2d1fd2c7863e2ba"
+    },
+    {
+      "accepted": true,
+      "appeal_of_receipt_hash": null,
+      "authority_class": "deterministic_oracle",
+      "claim_hash": "c7243c41e3aa112649221aa155281fbd049126ab88cbc57a528ec7e5cc40928f",
+      "created_at": "2026-08-18T17:00:33.902841Z",
+      "evidence_hashes": [
+        "58a4f973a2be209e5a14736cbe116a197f2b6f576c6ba66f60318d1ac0f430e5"
+      ],
+      "learning_active": true,
+      "observed_at": "2026-08-18T18:00:00Z",
+      "origin_key_hash": "452967632075dfdbb08a1d5492cf3cf1b09b98429581073d785b435a7f7a0c8d",
+      "receipt_hash": "48f0d9a6d353a3265e112eb1d4353d4508eb186a3f3d657a5d92f3ba1a6bd048",
+      "receipt_id": "ddefdbc2-a1c1-5749-9afc-73f7cebc2b5b",
+      "rejection_reason": null,
+      "run_id": "047291f5-3ee4-45f1-8feb-02ed657becd9",
+      "snapshot_hashes": [
+        "6f7bae866c419498c5a566ec8743eaddd98d360045ca40f78d2d73d6fe04c1e0"
+      ],
+      "source_independence_cluster": "order007-authority-registry-v1",
+      "superseded_by_hash": null,
+      "supersedes_receipt_hash": "ed1ba58b2ae001d210c73009e1b115ad62f2531a6e66cbc5cdb4b9ac2428ecd6",
+      "verification_method": "run_bound_token",
+      "verified_status": "SUPPORTED",
+      "verifier_id": "oracle:order007-authority",
+      "verifier_policy_hash": "f4fa3e59b93cf9110e7b8a4867d195d37f76d569d6752cc4c2d1fd2c7863e2ba"
+    }
+  ],
+  "run_id": "047291f5-3ee4-45f1-8feb-02ed657becd9",
+  "superseded_history_preserved": true,
+  "superseding_receipt_hash": "48f0d9a6d353a3265e112eb1d4353d4508eb186a3f3d657a5d92f3ba1a6bd048"
+}

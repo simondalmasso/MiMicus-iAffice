@@ -1,0 +1,85 @@
+{
+  "fingerprint": "6f14d0521c48348ef462f99f960749805da60fdfc3777f95c109f047ea25f0dc",
+  "fingerprint_matches_manifest": true,
+  "forged_fingerprint_rejected": true,
+  "inspection": {
+    "fingerprint": "6f14d0521c48348ef462f99f960749805da60fdfc3777f95c109f047ea25f0dc",
+    "fingerprint_matches_manifest": true,
+    "lineage_id": "b55712acb5297f46fe975c532fbd1a3e96235d3d47bb1f02e9cda0babaeaa6a3",
+    "material_manifest": {
+      "phenotype": "numeric-1",
+      "phenotype_version": "numeric-verifier-v2.1",
+      "policy_hash": "3d5ca464eaf5e1ae2e7b97b3fcde0b59082c0f87703f2a833bcf63b795953df1",
+      "provider_adapter_version": "unknown",
+      "runtime_model_id": "fixture-v2",
+      "runtime_model_version": "2",
+      "runtime_provider_id": "scripted",
+      "system_prompt_hash": "1dd65cffa3411a5daefb2cb532d6f541987a081a2270f155c8b346b8b26bc2cb",
+      "tool_manifest_hash": "ed8191398f6e4c4087bc2b7e58108f0dcbc7e90e35ca940d72b2ec02fb7923ce"
+    },
+    "model_family": "fixture-v2",
+    "parent_fingerprint": null,
+    "phenotype": "numeric-1",
+    "phenotype_version": "numeric-verifier-v2.1",
+    "policy_hash": "3d5ca464eaf5e1ae2e7b97b3fcde0b59082c0f87703f2a833bcf63b795953df1",
+    "provider": "scripted",
+    "provider_adapter_version": "unknown",
+    "recomputed_fingerprint": "6f14d0521c48348ef462f99f960749805da60fdfc3777f95c109f047ea25f0dc",
+    "revision_provenance": "source-controlled builtin",
+    "runtime_model_version": "2",
+    "system_prompt_hash": "1dd65cffa3411a5daefb2cb532d6f541987a081a2270f155c8b346b8b26bc2cb",
+    "tool_manifest_hash": "ed8191398f6e4c4087bc2b7e58108f0dcbc7e90e35ca940d72b2ec02fb7923ce",
+    "tool_policy_hash": "ed8191398f6e4c4087bc2b7e58108f0dcbc7e90e35ca940d72b2ec02fb7923ce"
+  },
+  "material_manifest": {
+    "phenotype": "numeric-1",
+    "phenotype_version": "numeric-verifier-v2.1",
+    "policy_hash": "3d5ca464eaf5e1ae2e7b97b3fcde0b59082c0f87703f2a833bcf63b795953df1",
+    "provider_adapter_version": "unknown",
+    "runtime_model_id": "fixture-v2",
+    "runtime_model_version": "2",
+    "runtime_provider_id": "scripted",
+    "system_prompt_hash": "1dd65cffa3411a5daefb2cb532d6f541987a081a2270f155c8b346b8b26bc2cb",
+    "tool_manifest_hash": "ed8191398f6e4c4087bc2b7e58108f0dcbc7e90e35ca940d72b2ec02fb7923ce"
+  },
+  "material_mutations": {
+    "phenotype": {
+      "changed": true,
+      "fingerprint": "50a6f44732ffad2e42bb150f7f6c314390cfe78bca146a0915c21ef85a31bc8e"
+    },
+    "phenotype_version": {
+      "changed": true,
+      "fingerprint": "26d1d2118e0d0a96d610dd5490083a1043b30be62389128468a4a32ce0f90fb0"
+    },
+    "policy_hash": {
+      "changed": true,
+      "fingerprint": "159ecbd785e0938556f2fa4481450338c3b7b2f03c9aa36f1546cda42a0c4a81"
+    },
+    "provider_adapter_version": {
+      "changed": true,
+      "fingerprint": "84d72b2c1cefa346c9d3520eef90747748f164e9feedd7d8c15ef9b152d6778e"
+    },
+    "runtime_model_id": {
+      "changed": true,
+      "fingerprint": "d92618443d4368dffffd738b1b6dee9c2cf111a576f1ce0b9cc37df3ed531496"
+    },
+    "runtime_model_version": {
+      "changed": true,
+      "fingerprint": "45a3f9c7727afc41e533adec459ce0d8b9a437d2ac5743462e9185b1865d2c28"
+    },
+    "runtime_provider_id": {
+      "changed": true,
+      "fingerprint": "c9157f1f724a7cddef5498e10fef349dfd1000b4d40eb6cc48fdcf4546b821cf"
+    },
+    "system_prompt_hash": {
+      "changed": true,
+      "fingerprint": "3abfbdd5e4aad9dffa458bf90881efcb7bb8f7e6624038615e18126825eac9be"
+    },
+    "tool_manifest_hash": {
+      "changed": true,
+      "fingerprint": "38ecec4b393b1e0acf2f7de614a62ddbfc2f404e2e90b45c57f1d215d4630cd7"
+    }
+  },
+  "pass": true,
+  "recomputed_fingerprint": "6f14d0521c48348ef462f99f960749805da60fdfc3777f95c109f047ea25f0dc"
+}

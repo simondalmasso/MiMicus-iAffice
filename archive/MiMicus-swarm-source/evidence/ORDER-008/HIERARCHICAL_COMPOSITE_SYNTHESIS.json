@@ -1,0 +1,11 @@
+{
+  "command": [
+    "python",
+    "-m",
+    "pytest",
+    "tests/unit/test_order008_f039.py",
+    "-vv"
+  ],
+  "pass": true,
+  "returncode": 0
+}

@@ -1,0 +1,33 @@
+{
+  "fingerprint": "387552d55743b83e12975fbb5134569a7edf7720d654d41a2f6bda52b53d0a91",
+  "identity_manifest": {
+    "phenotype": "numeric-1",
+    "phenotype_version": "numeric-verifier-v2.1",
+    "policy_hash": "13398da3c9d4b489d15e801c713d1d1a2939059c6671f6f38dfea53e1c1b1127",
+    "provider_adapter_version": "scripted-adapter-v2.1",
+    "runtime_model_id": "runtime-model",
+    "runtime_model_version": "fixture-v2",
+    "runtime_provider_id": "runtime-provider",
+    "system_prompt_hash": "1dd65cffa3411a5daefb2cb532d6f541987a081a2270f155c8b346b8b26bc2cb",
+    "tool_manifest_hash": "c12aef43d6a5fd6602459b4ef3d1e89823d976a70913cf169e06b20d05a58bbb"
+  },
+  "material_change_changes_fingerprint": true,
+  "material_change_fingerprint": "c63aa359345098ab14fa9549af4119dd688d915761f0c29fdddbcdbbb8efc96a",
+  "pass": true,
+  "provider_capabilities": {
+    "adapter_version": "scripted-adapter-v2.1",
+    "cancellation": "asyncio-native",
+    "estimated_max_cost_per_call": 0.0,
+    "known_zero_cost": true,
+    "model_id": "runtime-model",
+    "pricing_metadata_authoritative": true,
+    "provider_id": "runtime-provider",
+    "supports_async": true,
+    "supports_structured_output": true,
+    "supports_tools": false,
+    "usage_metadata_available": true,
+    "version": "fixture-v2"
+  },
+  "same_runtime_model_correlation": 0.6000000000000001,
+  "same_runtime_model_penalized": true
+}

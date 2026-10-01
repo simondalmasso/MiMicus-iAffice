@@ -1,0 +1,61 @@
+{
+  "failed_pair": [
+    "a3c62f28a1074a8b7f2fcbc3f839ff5a49085d01f54b4ca768b027150dcfb4c0",
+    "e913f00ad07659c12061e5027cc2593ae90fae44b185d84c010439268796b7e7"
+  ],
+  "future_members": [
+    "65073534ef01e24ba404b144f816b58aa461d23be278c7894b30488512a21f93",
+    "a3c62f28a1074a8b7f2fcbc3f839ff5a49085d01f54b4ca768b027150dcfb4c0"
+  ],
+  "future_names": [
+    "synth-c",
+    "synth-a"
+  ],
+  "learned_state": {
+    "marginal_value": [
+      {
+        "capability": "synthesize",
+        "cost_sum": 0.0,
+        "decisive_test_count": 0,
+        "domain": "general",
+        "failures": 5,
+        "fingerprint": "a3c62f28a1074a8b7f2fcbc3f839ff5a49085d01f54b4ca768b027150dcfb4c0",
+        "marginal_sum": -5.0,
+        "successes": 0,
+        "verified_episodes": 5
+      },
+      {
+        "capability": "synthesize",
+        "cost_sum": 0.0,
+        "decisive_test_count": 0,
+        "domain": "general",
+        "failures": 5,
+        "fingerprint": "e913f00ad07659c12061e5027cc2593ae90fae44b185d84c010439268796b7e7",
+        "marginal_sum": -5.0,
+        "successes": 0,
+        "verified_episodes": 5
+      }
+    ],
+    "pairwise_cofailure": [
+      {
+        "agent_a": "a3c62f28a1074a8b7f2fcbc3f839ff5a49085d01f54b4ca768b027150dcfb4c0",
+        "agent_b": "e913f00ad07659c12061e5027cc2593ae90fae44b185d84c010439268796b7e7",
+        "capability": "synthesize",
+        "cofailures": 5,
+        "confidence": 0.5,
+        "domain": "general",
+        "verified_episodes": 5
+      }
+    ]
+  },
+  "pass": true,
+  "restart_run_id": "e71d8bce-7a7a-4af6-a119-e5768964d63b",
+  "selection_changed_after_restart": true,
+  "verified_episode_run_ids": [
+    "f4d9fbd9-fd7e-41c7-b65e-fc6d0d67d67c",
+    "f113998e-8368-4cdd-ab8d-b500192347ee",
+    "7231c2ac-6bd2-4a50-9964-6176adc667ba",
+    "2cc81095-d58d-4537-b202-075f5ddbe69b",
+    "5764d8ca-0c30-45a3-82aa-759f774b584f"
+  ]
+}

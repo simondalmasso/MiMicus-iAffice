@@ -1,0 +1,144 @@
+{
+  "challenge_suppressed": {
+    "budget": {
+      "actual_usd": 0.01,
+      "by_category": {
+        "agent_generation": {
+          "actual_known_usd": 0.01,
+          "cancelled_or_released_calls": 0,
+          "estimated_max_usd": 0.01,
+          "reconciled_calls": 2,
+          "reserved_usd": 0.0,
+          "unknown_cost_calls": 0
+        },
+        "falsifier": {
+          "actual_known_usd": 0.0,
+          "cancelled_or_released_calls": 0,
+          "estimated_max_usd": 0.0,
+          "reconciled_calls": 2,
+          "reserved_usd": 0.0,
+          "unknown_cost_calls": 0
+        }
+      },
+      "estimated_or_reserved_usd": 0.01,
+      "fail_closed": false,
+      "known_actual_usd": 0.01,
+      "latency_ms": 2.0,
+      "limit_usd": 0.01,
+      "max_concurrency": 4,
+      "max_tests": 3,
+      "outstanding_reserved_usd": 0,
+      "provider_overrun_usd": 0.0,
+      "remaining_usd": 0.0,
+      "reserved_usd": 0.01,
+      "spent_usd": 0.01,
+      "unknown_cost_reserved_usd": 0.0
+    },
+    "challenge_calls": 0,
+    "generate_calls": 2,
+    "status": "inconclusive"
+  },
+  "ledger_cases": {
+    "race": {
+      "actual_usd": 0.0,
+      "by_category": {
+        "agent_generation": {
+          "actual_known_usd": 0.0,
+          "cancelled_or_released_calls": 0,
+          "estimated_max_usd": 1.0,
+          "reconciled_calls": 0,
+          "reserved_usd": 1.0,
+          "unknown_cost_calls": 0
+        }
+      },
+      "estimated_or_reserved_usd": 1.0,
+      "fail_closed": false,
+      "known_actual_usd": 0.0,
+      "limit_usd": 1.0,
+      "outstanding_reserved_usd": 1.0,
+      "provider_overrun_usd": 0.0,
+      "remaining_usd": 0.0,
+      "reserved_usd": 1.0,
+      "spent_usd": 0.0,
+      "unknown_cost_reserved_usd": 0.0
+    },
+    "race_winners": 1,
+    "release": {
+      "actual_usd": 0.0,
+      "by_category": {
+        "agent_generation": {
+          "actual_known_usd": 0.0,
+          "cancelled_or_released_calls": 1,
+          "estimated_max_usd": 0.5,
+          "reconciled_calls": 0,
+          "reserved_usd": 0.0,
+          "unknown_cost_calls": 0
+        }
+      },
+      "estimated_or_reserved_usd": 0.0,
+      "fail_closed": false,
+      "known_actual_usd": 0.0,
+      "limit_usd": 1.0,
+      "outstanding_reserved_usd": 0,
+      "provider_overrun_usd": 0.0,
+      "remaining_usd": 1.0,
+      "reserved_usd": 0.0,
+      "spent_usd": 0.0,
+      "unknown_cost_reserved_usd": 0.0
+    },
+    "unknown": {
+      "actual_usd": "UNKNOWN",
+      "by_category": {
+        "agent_generation": {
+          "actual_known_usd": 0.0,
+          "cancelled_or_released_calls": 0,
+          "estimated_max_usd": 0.6,
+          "reconciled_calls": 1,
+          "reserved_usd": 0.0,
+          "unknown_cost_calls": 1
+        }
+      },
+      "estimated_or_reserved_usd": 0.6,
+      "fail_closed": false,
+      "known_actual_usd": 0.0,
+      "limit_usd": 1.0,
+      "outstanding_reserved_usd": 0,
+      "provider_overrun_usd": 0.0,
+      "remaining_usd": 0.4,
+      "reserved_usd": 0.6,
+      "spent_usd": 0.0,
+      "unknown_cost_reserved_usd": 0.6
+    }
+  },
+  "pass": true,
+  "zero_budget": {
+    "budget": {
+      "actual_usd": 0.0,
+      "by_category": {
+        "falsifier": {
+          "actual_known_usd": 0.0,
+          "cancelled_or_released_calls": 0,
+          "estimated_max_usd": 0.0,
+          "reconciled_calls": 1,
+          "reserved_usd": 0.0,
+          "unknown_cost_calls": 0
+        }
+      },
+      "estimated_or_reserved_usd": 0.0,
+      "fail_closed": false,
+      "known_actual_usd": 0.0,
+      "latency_ms": 1.0,
+      "limit_usd": 0.0,
+      "max_concurrency": 4,
+      "max_tests": 3,
+      "outstanding_reserved_usd": 0,
+      "provider_overrun_usd": 0.0,
+      "remaining_usd": 0.0,
+      "reserved_usd": 0.0,
+      "spent_usd": 0.0,
+      "unknown_cost_reserved_usd": 0.0
+    },
+    "provider_calls": 0,
+    "status": "inconclusive"
+  }
+}

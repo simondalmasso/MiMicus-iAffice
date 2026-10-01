@@ -1,0 +1,12 @@
+{
+  "command": [
+    "python",
+    "-m",
+    "pytest",
+    "tests/integration/test_order008_runtime.py::test_f038_claim_bound_numeric_snapshot_changes_with_exact_assertion",
+    "tests/unit/test_order008_f038_claim_bound.py",
+    "-vv"
+  ],
+  "pass": true,
+  "returncode": 0
+}

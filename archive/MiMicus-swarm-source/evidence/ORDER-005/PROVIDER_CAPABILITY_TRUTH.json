@@ -1,0 +1,39 @@
+{
+  "fake_web_by_prompt": false,
+  "identity_with_tools": "8fe3a5ee5772ba0b213f4a3bdbe634e027290e120ffa4f4818981780a3149bf1",
+  "identity_without_tools": "0c3710e1cfb6d2124e71d61e17393276f68e462fd5d79761f2607bbaa1d4dea2",
+  "pass": true,
+  "tool_manifest_changes_identity": true,
+  "with_tools": {
+    "adapter_version": "openai-agents-0.21.1/mimicus-adapter-v2.2",
+    "cancellation": "asyncio.wait_for",
+    "estimated_max_cost_per_call": null,
+    "evidence_acquisition_available": true,
+    "known_zero_cost": false,
+    "model_id": "gpt-test",
+    "pricing_metadata_authoritative": false,
+    "provider_id": "openai_agents",
+    "supports_async": true,
+    "supports_structured_output": true,
+    "supports_tools": true,
+    "tool_manifest_hash": "54a39867f85aa1550dc58010d9b0cafa39ce436cb14207d324999dbf15c03b8f",
+    "usage_metadata_available": true,
+    "version": "configured:gpt-test"
+  },
+  "without_tools": {
+    "adapter_version": "openai-agents-0.21.1/mimicus-adapter-v2.2",
+    "cancellation": "asyncio.wait_for",
+    "estimated_max_cost_per_call": null,
+    "evidence_acquisition_available": false,
+    "known_zero_cost": false,
+    "model_id": "gpt-test",
+    "pricing_metadata_authoritative": false,
+    "provider_id": "openai_agents",
+    "supports_async": true,
+    "supports_structured_output": true,
+    "supports_tools": false,
+    "tool_manifest_hash": "fe2f3b4ef49492d81cb350fb689bf9f9dff6cfd1817d72d6ff9fe3350e3d5e6a",
+    "usage_metadata_available": true,
+    "version": "configured:gpt-test"
+  }
+}

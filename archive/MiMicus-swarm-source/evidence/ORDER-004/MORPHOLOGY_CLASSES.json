@@ -1,0 +1,520 @@
+{
+  "all_distinct": true,
+  "classes": {
+    "hierarchical_fanout_fanin": {
+      "edges": [
+        {
+          "group": null,
+          "semantics": "dependency",
+          "source": "profile-00-a367aaa175",
+          "target": "memory_retrieve-00-59d24f80af"
+        },
+        {
+          "group": null,
+          "semantics": "dependency",
+          "source": "profile-00-a367aaa175",
+          "target": "audition-00-12d34b85ee"
+        },
+        {
+          "group": "hierarchy-root",
+          "semantics": "decomposition",
+          "source": "memory_retrieve-00-59d24f80af",
+          "target": "decompose-00-5c37611f0b"
+        },
+        {
+          "group": "hierarchy-root",
+          "semantics": "decomposition",
+          "source": "audition-00-12d34b85ee",
+          "target": "decompose-00-5c37611f0b"
+        },
+        {
+          "group": "subgroup-0",
+          "semantics": "worker_fanout",
+          "source": "decompose-00-5c37611f0b",
+          "target": "agent_task-00-04ba7ad545"
+        },
+        {
+          "group": "subgroup-1",
+          "semantics": "worker_fanout",
+          "source": "decompose-00-5c37611f0b",
+          "target": "agent_task-01-82ef73c65b"
+        },
+        {
+          "group": "subgroup-0",
+          "semantics": "worker_fanout",
+          "source": "decompose-00-5c37611f0b",
+          "target": "agent_task-02-2d2fc696f6"
+        },
+        {
+          "group": "subgroup-1",
+          "semantics": "worker_fanout",
+          "source": "decompose-00-5c37611f0b",
+          "target": "agent_task-03-5beea42d0a"
+        },
+        {
+          "group": "falsifier-fanout",
+          "semantics": "falsifier_fanout",
+          "source": "memory_retrieve-00-59d24f80af",
+          "target": "falsifier-00-dd73ce5a7c"
+        },
+        {
+          "group": "subgroup-0-fanin",
+          "semantics": "nested_fanin",
+          "source": "agent_task-00-04ba7ad545",
+          "target": "join-01-ee8b0fb945"
+        },
+        {
+          "group": "subgroup-0-fanin",
+          "semantics": "nested_fanin",
+          "source": "agent_task-02-2d2fc696f6",
+          "target": "join-01-ee8b0fb945"
+        },
+        {
+          "group": "subgroup-1-fanin",
+          "semantics": "nested_fanin",
+          "source": "agent_task-01-82ef73c65b",
+          "target": "join-02-7768599c74"
+        },
+        {
+          "group": "subgroup-1-fanin",
+          "semantics": "nested_fanin",
+          "source": "agent_task-03-5beea42d0a",
+          "target": "join-02-7768599c74"
+        },
+        {
+          "group": "hierarchy-final-fanin",
+          "semantics": "hierarchical_fanin",
+          "source": "falsifier-00-dd73ce5a7c",
+          "target": "join-00-f58df24312"
+        },
+        {
+          "group": "hierarchy-final-fanin",
+          "semantics": "hierarchical_fanin",
+          "source": "join-01-ee8b0fb945",
+          "target": "join-00-f58df24312"
+        },
+        {
+          "group": "hierarchy-final-fanin",
+          "semantics": "hierarchical_fanin",
+          "source": "join-02-7768599c74",
+          "target": "join-00-f58df24312"
+        },
+        {
+          "group": null,
+          "semantics": "dependency",
+          "source": "join-00-f58df24312",
+          "target": "synthesis-00-225e35ac94"
+        }
+      ],
+      "nodes": [
+        "PROFILE",
+        "MEMORY_RETRIEVE",
+        "AUDITION",
+        "DECOMPOSE",
+        "AGENT_TASK",
+        "AGENT_TASK",
+        "AGENT_TASK",
+        "AGENT_TASK",
+        "FALSIFIER",
+        "JOIN",
+        "JOIN",
+        "JOIN",
+        "SYNTHESIS"
+      ],
+      "plan_hash": "e78d7ea5aa009ecda3a75d44bb1b536e1e873ebe05265db08becd7d63f6f00d2",
+      "structural_signature": "0aed4076ca66175382ed1c1c0992f7710f24a30accd67fed23bf5bd4dcf22839"
+    },
+    "paired_verify": {
+      "edges": [
+        {
+          "group": null,
+          "semantics": "dependency",
+          "source": "profile-00-a367aaa175",
+          "target": "memory_retrieve-00-59d24f80af"
+        },
+        {
+          "group": null,
+          "semantics": "dependency",
+          "source": "profile-00-a367aaa175",
+          "target": "audition-00-12d34b85ee"
+        },
+        {
+          "group": "fanout",
+          "semantics": "worker_fanout",
+          "source": "memory_retrieve-00-59d24f80af",
+          "target": "agent_task-00-04ba7ad545"
+        },
+        {
+          "group": "fanout",
+          "semantics": "worker_fanout",
+          "source": "audition-00-12d34b85ee",
+          "target": "agent_task-00-04ba7ad545"
+        },
+        {
+          "group": "fanout",
+          "semantics": "worker_fanout",
+          "source": "memory_retrieve-00-59d24f80af",
+          "target": "agent_task-01-82ef73c65b"
+        },
+        {
+          "group": "fanout",
+          "semantics": "worker_fanout",
+          "source": "audition-00-12d34b85ee",
+          "target": "agent_task-01-82ef73c65b"
+        },
+        {
+          "group": "falsifier-fanout",
+          "semantics": "falsifier_fanout",
+          "source": "memory_retrieve-00-59d24f80af",
+          "target": "falsifier-00-dd73ce5a7c"
+        },
+        {
+          "group": "peer_verification",
+          "semantics": "peer_verification",
+          "source": "agent_task-00-04ba7ad545",
+          "target": "challenge-00-fbeaf20679"
+        },
+        {
+          "group": "peer_verification",
+          "semantics": "peer_verification",
+          "source": "agent_task-01-82ef73c65b",
+          "target": "challenge-00-fbeaf20679"
+        },
+        {
+          "group": "paired-verified-fanin",
+          "semantics": "fanin",
+          "source": "agent_task-00-04ba7ad545",
+          "target": "join-00-4ae3049427"
+        },
+        {
+          "group": "paired-verified-fanin",
+          "semantics": "fanin",
+          "source": "agent_task-01-82ef73c65b",
+          "target": "join-00-4ae3049427"
+        },
+        {
+          "group": "paired-verified-fanin",
+          "semantics": "fanin",
+          "source": "challenge-00-fbeaf20679",
+          "target": "join-00-4ae3049427"
+        },
+        {
+          "group": "paired-verified-fanin",
+          "semantics": "fanin",
+          "source": "falsifier-00-dd73ce5a7c",
+          "target": "join-00-4ae3049427"
+        },
+        {
+          "group": null,
+          "semantics": "dependency",
+          "source": "join-00-4ae3049427",
+          "target": "synthesis-00-225e35ac94"
+        }
+      ],
+      "nodes": [
+        "PROFILE",
+        "MEMORY_RETRIEVE",
+        "AUDITION",
+        "AGENT_TASK",
+        "AGENT_TASK",
+        "FALSIFIER",
+        "CHALLENGE",
+        "JOIN",
+        "SYNTHESIS"
+      ],
+      "plan_hash": "930f8b3afe82db45e89e3c6219ae99072d0388978adf2f8ca3e8bb9db1bf3093",
+      "structural_signature": "01563fa2126bafb69b53eeb3688975191bee532092c65bbfc43ec6981d1fd57c"
+    },
+    "parallel_fanout": {
+      "edges": [
+        {
+          "group": null,
+          "semantics": "dependency",
+          "source": "profile-00-a367aaa175",
+          "target": "memory_retrieve-00-59d24f80af"
+        },
+        {
+          "group": null,
+          "semantics": "dependency",
+          "source": "profile-00-a367aaa175",
+          "target": "audition-00-12d34b85ee"
+        },
+        {
+          "group": "fanout",
+          "semantics": "worker_fanout",
+          "source": "memory_retrieve-00-59d24f80af",
+          "target": "agent_task-00-04ba7ad545"
+        },
+        {
+          "group": "fanout",
+          "semantics": "worker_fanout",
+          "source": "audition-00-12d34b85ee",
+          "target": "agent_task-00-04ba7ad545"
+        },
+        {
+          "group": "fanout",
+          "semantics": "worker_fanout",
+          "source": "memory_retrieve-00-59d24f80af",
+          "target": "agent_task-01-82ef73c65b"
+        },
+        {
+          "group": "fanout",
+          "semantics": "worker_fanout",
+          "source": "audition-00-12d34b85ee",
+          "target": "agent_task-01-82ef73c65b"
+        },
+        {
+          "group": "fanout",
+          "semantics": "worker_fanout",
+          "source": "memory_retrieve-00-59d24f80af",
+          "target": "agent_task-02-2d2fc696f6"
+        },
+        {
+          "group": "fanout",
+          "semantics": "worker_fanout",
+          "source": "audition-00-12d34b85ee",
+          "target": "agent_task-02-2d2fc696f6"
+        },
+        {
+          "group": "falsifier-fanout",
+          "semantics": "falsifier_fanout",
+          "source": "memory_retrieve-00-59d24f80af",
+          "target": "falsifier-00-dd73ce5a7c"
+        },
+        {
+          "group": "fanin",
+          "semantics": "fanin",
+          "source": "agent_task-00-04ba7ad545",
+          "target": "join-00-73d30d800f"
+        },
+        {
+          "group": "fanin",
+          "semantics": "fanin",
+          "source": "agent_task-01-82ef73c65b",
+          "target": "join-00-73d30d800f"
+        },
+        {
+          "group": "fanin",
+          "semantics": "fanin",
+          "source": "agent_task-02-2d2fc696f6",
+          "target": "join-00-73d30d800f"
+        },
+        {
+          "group": "fanin",
+          "semantics": "fanin",
+          "source": "falsifier-00-dd73ce5a7c",
+          "target": "join-00-73d30d800f"
+        },
+        {
+          "group": null,
+          "semantics": "dependency",
+          "source": "join-00-73d30d800f",
+          "target": "synthesis-00-225e35ac94"
+        }
+      ],
+      "nodes": [
+        "PROFILE",
+        "MEMORY_RETRIEVE",
+        "AUDITION",
+        "AGENT_TASK",
+        "AGENT_TASK",
+        "AGENT_TASK",
+        "FALSIFIER",
+        "JOIN",
+        "SYNTHESIS"
+      ],
+      "plan_hash": "4f8bc94de31198f1a675e523507c4fd6d9ba81dfcd7beffed04e0bcc6c67790e",
+      "structural_signature": "12ba142615e76720ab3b3c9be7c675b767e83a419f9f09e93d096458866eec31"
+    },
+    "solo": {
+      "edges": [
+        {
+          "group": null,
+          "semantics": "dependency",
+          "source": "profile-00-a367aaa175",
+          "target": "memory_retrieve-00-59d24f80af"
+        },
+        {
+          "group": null,
+          "semantics": "dependency",
+          "source": "profile-00-a367aaa175",
+          "target": "audition-00-12d34b85ee"
+        },
+        {
+          "group": "solo",
+          "semantics": "dependency",
+          "source": "memory_retrieve-00-59d24f80af",
+          "target": "agent_task-00-04ba7ad545"
+        },
+        {
+          "group": "solo",
+          "semantics": "dependency",
+          "source": "audition-00-12d34b85ee",
+          "target": "agent_task-00-04ba7ad545"
+        },
+        {
+          "group": "falsifier-fanout",
+          "semantics": "falsifier_fanout",
+          "source": "memory_retrieve-00-59d24f80af",
+          "target": "falsifier-00-dd73ce5a7c"
+        },
+        {
+          "group": "fanin",
+          "semantics": "fanin",
+          "source": "agent_task-00-04ba7ad545",
+          "target": "join-00-4a90d02171"
+        },
+        {
+          "group": "fanin",
+          "semantics": "fanin",
+          "source": "falsifier-00-dd73ce5a7c",
+          "target": "join-00-4a90d02171"
+        },
+        {
+          "group": null,
+          "semantics": "dependency",
+          "source": "join-00-4a90d02171",
+          "target": "synthesis-00-225e35ac94"
+        }
+      ],
+      "nodes": [
+        "PROFILE",
+        "MEMORY_RETRIEVE",
+        "AUDITION",
+        "AGENT_TASK",
+        "FALSIFIER",
+        "JOIN",
+        "SYNTHESIS"
+      ],
+      "plan_hash": "50455a286392f87f47798a0d4fb34b321bf1c5f9912e7cd874cceb1f1d9334f2",
+      "structural_signature": "467ad2dfccb46781be3413c03c6222eb08c6e249bcdbcc36784c29c33e2ec675"
+    },
+    "sparse_graph": {
+      "edges": [
+        {
+          "group": null,
+          "semantics": "dependency",
+          "source": "profile-00-a367aaa175",
+          "target": "memory_retrieve-00-59d24f80af"
+        },
+        {
+          "group": null,
+          "semantics": "dependency",
+          "source": "profile-00-a367aaa175",
+          "target": "audition-00-12d34b85ee"
+        },
+        {
+          "group": "fanout",
+          "semantics": "worker_fanout",
+          "source": "memory_retrieve-00-59d24f80af",
+          "target": "agent_task-00-04ba7ad545"
+        },
+        {
+          "group": "fanout",
+          "semantics": "worker_fanout",
+          "source": "audition-00-12d34b85ee",
+          "target": "agent_task-00-04ba7ad545"
+        },
+        {
+          "group": "fanout",
+          "semantics": "worker_fanout",
+          "source": "memory_retrieve-00-59d24f80af",
+          "target": "agent_task-01-82ef73c65b"
+        },
+        {
+          "group": "fanout",
+          "semantics": "worker_fanout",
+          "source": "audition-00-12d34b85ee",
+          "target": "agent_task-01-82ef73c65b"
+        },
+        {
+          "group": "fanout",
+          "semantics": "worker_fanout",
+          "source": "memory_retrieve-00-59d24f80af",
+          "target": "agent_task-02-2d2fc696f6"
+        },
+        {
+          "group": "fanout",
+          "semantics": "worker_fanout",
+          "source": "audition-00-12d34b85ee",
+          "target": "agent_task-02-2d2fc696f6"
+        },
+        {
+          "group": "falsifier-fanout",
+          "semantics": "falsifier_fanout",
+          "source": "memory_retrieve-00-59d24f80af",
+          "target": "falsifier-00-dd73ce5a7c"
+        },
+        {
+          "group": "sparse_challenge_stage",
+          "semantics": "sparse_challenge_stage",
+          "source": "agent_task-00-04ba7ad545",
+          "target": "challenge-00-4444aed217"
+        },
+        {
+          "group": "sparse_challenge_stage",
+          "semantics": "sparse_challenge_stage",
+          "source": "agent_task-01-82ef73c65b",
+          "target": "challenge-00-4444aed217"
+        },
+        {
+          "group": "sparse_challenge_stage",
+          "semantics": "sparse_challenge_stage",
+          "source": "agent_task-02-2d2fc696f6",
+          "target": "challenge-00-4444aed217"
+        },
+        {
+          "group": "fanin",
+          "semantics": "fanin",
+          "source": "agent_task-00-04ba7ad545",
+          "target": "join-00-4ac6fb1b21"
+        },
+        {
+          "group": "fanin",
+          "semantics": "fanin",
+          "source": "agent_task-01-82ef73c65b",
+          "target": "join-00-4ac6fb1b21"
+        },
+        {
+          "group": "fanin",
+          "semantics": "fanin",
+          "source": "agent_task-02-2d2fc696f6",
+          "target": "join-00-4ac6fb1b21"
+        },
+        {
+          "group": "fanin",
+          "semantics": "fanin",
+          "source": "challenge-00-4444aed217",
+          "target": "join-00-4ac6fb1b21"
+        },
+        {
+          "group": "fanin",
+          "semantics": "fanin",
+          "source": "falsifier-00-dd73ce5a7c",
+          "target": "join-00-4ac6fb1b21"
+        },
+        {
+          "group": null,
+          "semantics": "dependency",
+          "source": "join-00-4ac6fb1b21",
+          "target": "synthesis-00-225e35ac94"
+        }
+      ],
+      "nodes": [
+        "PROFILE",
+        "MEMORY_RETRIEVE",
+        "AUDITION",
+        "AGENT_TASK",
+        "AGENT_TASK",
+        "AGENT_TASK",
+        "FALSIFIER",
+        "CHALLENGE",
+        "JOIN",
+        "SYNTHESIS"
+      ],
+      "plan_hash": "76678b30d2952d4cab5421b6a35aa9812704a6e0a3f79bb0a7575fc81e9cf6f1",
+      "structural_signature": "b203f4f9e57afbc0945627c79ab5700cd0df56994341500001ed308d3b0f9046"
+    }
+  },
+  "pass": true
+}
