@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from datetime import datetime
 from typing import Any
 
 from pydantic import ConfigDict, Field, model_validator
 
+from mimicus.commercial.models import LeadDecisionBatch, LeadDecisionPolicy
+from mimicus.commercial.prospect_ingest import normalize_ledger
 from mimicus.orchestration.legacy_engine import (
     MiMicusEngine as LegacyMiMicusEngine,
 )
@@ -82,6 +85,16 @@ class RunResult(LegacyRunResult):
 
 
 class MiMicusEngine(LegacyMiMicusEngine):
+    def triage_prospects(
+        self,
+        payload: dict[str, Any],
+        *,
+        policy: LeadDecisionPolicy,
+        as_of: datetime,
+    ) -> LeadDecisionBatch:
+        candidates = normalize_ledger(payload)
+        return self.services.lead_decision.decide(candidates, policy, as_of=as_of)
+
     async def run_async(self, request: LegacyRunRequest) -> RunResult:
         core_request = request if isinstance(request, RunRequest) else RunRequest.model_validate(request.model_dump(mode="json"))
         if core_request.source_mode != "fixture":

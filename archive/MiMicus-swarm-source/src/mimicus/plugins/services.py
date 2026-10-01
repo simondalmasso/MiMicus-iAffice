@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Protocol
 
 from mimicus.agents.identity import AgentIdentity, exact_fingerprint, make_identity
 from mimicus.canonical import sha256_obj, sha256_text
 from mimicus.coalition.selector import AgentCandidate, select_coalition
 from mimicus.coalition.threat_profile import ThreatProfile
+from mimicus.commercial.models import LeadCandidate, LeadDecisionBatch, LeadDecisionPolicy
 from mimicus.falsifiers.builtins import builtin_specs
 from mimicus.falsifiers.primitives import execute_primitive
 from mimicus.falsifiers.spec import FalsifierExecution, FalsifierSpec
@@ -34,6 +36,16 @@ class FalsifierService(Protocol):
 class MemoryService(Protocol):
     def retrieve(self, domain: str) -> list[MemoryItem]: ...
     def injectable(self, item: MemoryItem, target_fingerprint: str, domain: str) -> bool: ...
+
+
+class LeadDecisionService(Protocol):
+    def decide(
+        self,
+        candidates: list[LeadCandidate],
+        policy: LeadDecisionPolicy,
+        *,
+        as_of: datetime,
+    ) -> LeadDecisionBatch: ...
 
 
 @dataclass
@@ -169,6 +181,7 @@ class RuntimeServices:
     communication: SparseCommunicationService
     sandbox: LocalSandboxService
     telemetry: LedgerTelemetryService
+    lead_decision: LeadDecisionService
 
     @property
     def repository(self) -> Repository:

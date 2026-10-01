@@ -4,11 +4,13 @@ import os
 from dataclasses import dataclass
 from typing import cast
 
+from mimicus.commercial.decision import DeterministicLeadDecisionService
 from mimicus.plugins.builtin import BuiltinPlugin, builtin_manifest
 from mimicus.plugins.registry import PluginKernel
 from mimicus.plugins.services import (
     BuiltinAgentFactory,
     ImmuneMemoryService,
+    LeadDecisionService,
     LedgerTelemetryService,
     LocalSandboxService,
     MimicusCoalitionService,
@@ -74,6 +76,7 @@ def build_kernel(profile_name: str, database_url: str | None = None, *, provider
         BuiltinPlugin(builtin_manifest("communication.sparse", "communication_policy", ("communication",)), SparseCommunicationService()),
         BuiltinPlugin(builtin_manifest("sandbox.local", "sandbox", ("sandbox",)), LocalSandboxService()),
         BuiltinPlugin(builtin_manifest("telemetry.ledger", "telemetry", ("telemetry",)), LedgerTelemetryService()),
+        BuiltinPlugin(builtin_manifest("decision.commercial", "decision_policy", ("lead_decision",)), DeterministicLeadDecisionService()),
         BuiltinPlugin(builtin_manifest("agents.phenotypes", "agent_factory", ("agent_factory",)), factory),
     ]
     kernel = PluginKernel()
@@ -95,6 +98,7 @@ def build_runtime_services(profile_name: str, database_url: str, *, provider_ove
         communication=cast(SparseCommunicationService, kernel.services.get("communication")),
         sandbox=cast(LocalSandboxService, kernel.services.get("sandbox")),
         telemetry=cast(LedgerTelemetryService, kernel.services.get("telemetry")),
+        lead_decision=cast(LeadDecisionService, kernel.services.get("lead_decision")),
     )
     hashes = [plugin.manifest.manifest_hash for plugin in kernel.plugins.values()]
     return services, hashes, kernel
