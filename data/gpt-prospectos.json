@@ -522,7 +522,7 @@
       "sourceUrl": "https://www.reddit.com/r/slavelabour/comments/1wubotj/task_graphic_designer_needed_for/",
       "directUrl": "https://www.reddit.com/r/slavelabour/comments/1wubotj/task_graphic_designer_needed_for/",
       "publishedAt": "2026-09-30T14:49:37-03:00",
-      "verifiedAt": "2026-10-01T12:46:00-03:00",
+      "verifiedAt": "2026-10-01T13:43:01-03:00",
       "active": true,
       "argentinaEligible": true,
       "applicationMode": "direct",
@@ -544,10 +544,11 @@
         "https://www.reddit.com/r/cofounderhunt/comments/1sqb0ja/looking_for_a_marketing_co_founder_for_my_ecom/"
       ],
       "outreach": {
-        "status": "prepared",
+        "status": "contacted",
         "channel": "post-comment",
         "message": "$bid — Since the branding, product shots and references are already set, I’d lock one reusable product-visual system first so the website and social creatives don’t drift apart. How many SKUs/creatives are in the first batch?",
-        "contactedAt": null
+        "contactedAt": "2026-10-01T13:40:00-03:00",
+        "commentUrl": "https://www.reddit.com/r/slavelabour/comments/1wubotj/comment/pd8jcfj/"
       }
     },
     {
@@ -563,7 +564,7 @@
       "sourceUrl": "https://www.reddit.com/r/DesignJobs/comments/1wv2797/hiring_halloween_poster_needs_to_be_designed/",
       "directUrl": "https://www.reddit.com/r/DesignJobs/comments/1wv2797/hiring_halloween_poster_needs_to_be_designed/",
       "publishedAt": "2026-10-01T12:18:42-03:00",
-      "verifiedAt": "2026-10-01T12:46:00-03:00",
+      "verifiedAt": "2026-10-01T13:43:01-03:00",
       "active": true,
       "argentinaEligible": true,
       "applicationMode": "direct",
@@ -585,10 +586,11 @@
         "https://www.reddit.com/r/DesignJobs/about/rules/"
       ],
       "outreach": {
-        "status": "prepared",
+        "status": "contacted",
         "channel": "post-comment",
         "message": "I’d keep the artwork and text fully separated so you can reuse the PSD/AI later without rebuilding the poster. If last year’s version already had the right information hierarchy, I’d use that as the layout baseline and push the Halloween atmosphere harder. Can you send that reference and the final print size?",
-        "contactedAt": null
+        "contactedAt": "2026-10-01T13:42:00-03:00",
+        "commentUrl": "https://www.reddit.com/r/DesignJobs/comments/1wv2797/comment/pd8l7nd/"
       }
     },
     {
