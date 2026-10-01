@@ -233,13 +233,13 @@
       "company": "Jules Lam",
       "buyer": "Jules Lam",
       "location": "A verificar",
-      "description": "Busca un ecommerce de moda como proyecto único, evitando plataformas por cuotas mensuales y buscando más control; el punto crítico es reducir recurrencia sin trasladar el costo a mantenimiento de un stack totalmente custom.",
+      "description": "Busca un ecommerce custom como proyecto único para su marca de ropa, evitando fees mensuales y manteniendo control. Confirmó por DM que es una startup en Filipinas y venderá localmente por ahora; eso vuelve críticos el checkout y la logística local antes de definir el stack.",
       "category": "ecommerce-crm",
       "sourceName": "Facebook",
       "sourceUrl": "https://www.facebook.com/groups/671788822575338/posts/1037037489383801/",
       "directUrl": "https://www.facebook.com/fourthofjuliee/",
       "publishedAt": "2026-09-30T22:44:02-03:00",
-      "verifiedAt": "2026-10-01T05:16:13-03:00",
+      "verifiedAt": "2026-10-01T08:44:00-03:00",
       "active": true,
       "argentinaEligible": true,
       "applicationMode": "direct",
@@ -252,17 +252,18 @@
       },
       "scamRisk": "medium",
       "rank": {
-        "score": 82,
-        "reason": "Brief comercial claro, comprador identificable y muy fresco; alta competencia, pero el trade-off entre cuotas y mantenimiento permite una respuesta diferenciada."
+        "score": 90,
+        "reason": "Buyer intent explícito: pidió portfolio, tarifa one-time, timeline y costos recurrentes. Ya respondió el DM y confirmó lanzamiento local en Filipinas. Competencia muy alta, pero la conversación está abierta y el siguiente paso puede reducir alcance/riesgo alrededor de pagos y logística local."
       },
       "evidence": [
         "https://www.facebook.com/groups/671788822575338/posts/1037037489383801/",
-        "https://www.facebook.com/fourthofjuliee/"
+        "https://www.facebook.com/fourthofjuliee/",
+        "Messenger reply 2026-10-01 04:16 - Jules: startup in the Philippines, selling locally for a while"
       ],
       "outreach": {
         "status": "replied",
         "channel": "messenger",
-        "message": "Jules, if the goal is lower monthly fees and more control, I wouldn’t rebuild every ecommerce piece from zero. I’d keep the storefront custom but use a self-hosted commerce core, so you own it without turning maintenance into a second problem. What country and payment methods are you selling with?",
+        "message": "That helps. For a PH-only launch, I’d choose the stack around checkout and shipping before the storefront, so you don’t pay to custom-build things you may not need yet. Which has to work on day one: GCash/Maya/cards, or COD?",
         "contactedAt": null
       }
     },
