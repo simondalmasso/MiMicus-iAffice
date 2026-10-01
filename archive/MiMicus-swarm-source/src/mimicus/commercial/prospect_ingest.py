@@ -25,24 +25,26 @@ def normalize_prospect(row: Mapping[str, Any]) -> LeadCandidate:
     if not isinstance(outreach, Mapping):
         raise ValueError("outreach must be an object")
 
-    return LeadCandidate(
-        prospect_id=str(row.get("id", "")),
-        source_name=source_name,
-        lane=lane,
-        buyer=row.get("buyer"),
-        title=str(row.get("title", "")),
-        active=bool(row.get("active", False)),
-        argentina_eligible=row.get("argentinaEligible"),
-        worker_fee=row.get("workerFee"),
-        scam_risk=row.get("scamRisk"),
-        setter_score=rank.get("score"),
-        outreach_status=str(outreach.get("status", "")),
-        outreach_channel=outreach.get("channel"),
-        published_at=row.get("publishedAt"),
-        verified_at=row.get("verifiedAt"),
-        contacted_at=outreach.get("contactedAt"),
-        source_url=row.get("sourceUrl"),
-        direct_url=row.get("directUrl"),
+    return LeadCandidate.model_validate(
+        {
+            "prospect_id": str(row.get("id", "")),
+            "source_name": source_name,
+            "lane": lane,
+            "buyer": row.get("buyer"),
+            "title": str(row.get("title", "")),
+            "active": bool(row.get("active", False)),
+            "argentina_eligible": row.get("argentinaEligible"),
+            "worker_fee": row.get("workerFee"),
+            "scam_risk": row.get("scamRisk"),
+            "setter_score": rank.get("score"),
+            "outreach_status": str(outreach.get("status", "")),
+            "outreach_channel": outreach.get("channel"),
+            "published_at": row.get("publishedAt"),
+            "verified_at": row.get("verifiedAt"),
+            "contacted_at": outreach.get("contactedAt"),
+            "source_url": row.get("sourceUrl"),
+            "direct_url": row.get("directUrl"),
+        }
     )
 
 
