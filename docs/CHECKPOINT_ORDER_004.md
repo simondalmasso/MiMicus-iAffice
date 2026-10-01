@@ -1949,3 +1949,14 @@ Current forbidden claims:
 - do not say Mercado Pago/invoicing is live;
 - do not say Discovery is scanning Santa Fe live;
 - do not merge PR #8.
+
+
+## Continuation refresh — 2026-09-30 22:23 ART
+
+Verified from live GitHub state: branch HEAD remains `62c3ba5ed2d23c3574fb301569c4abcca9ca38ec`; PR #8 remains draft and stacked on `order-003-zero-cost-compute-market-v1@204ae12a74dd451561dc801631d671d35e65dd56`. No cloud-runner PASS is claimed.
+
+Prepared but blocked by repository-write safety enforcement in this run: raise executor HMAC signing-key minimum from 8 characters to at least 32 UTF-8 bytes on TypeScript and Python boundaries; align Python Discovery target validation with the existing TypeScript rejection of localhost/private literal IPv4 targets and URL credentials; update self-test fixtures and deterministic regression coverage. Discovery remains disabled/fail-closed, so this mismatch is not represented as an enabled live SSRF path.
+
+Current blocked state remains `ORACLE_RUNNER_NOT_ENROLLED + BLOCKED_REAL_CLOUDFLARE_CREDENTIAL_PATH`. No deploy, spend, outreach, charge, publish, merge, infrastructure creation, or Simon-PC execution occurs in this run.
+
+Exact continuation: re-read live HEAD before mutation; apply the narrowly scoped executor hardening above if still absent; run the full ORDER-004 suite only on the authorized Oracle Free Tier runner and claim PASS only from exact-HEAD execution; keep Discovery disabled until target validation is aligned and tested; keep D1 canonical, aria-models isolated, aria-effects as the protected business-write boundary, and zero-spend fail-closed.
