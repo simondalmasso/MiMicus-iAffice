@@ -1,3 +1,4 @@
+from mimicus.commercial.decision import DeterministicLeadDecisionService
 from mimicus.commercial.models import (
     LeadCandidate,
     LeadDecision,
@@ -9,6 +10,7 @@ from mimicus.commercial.models import (
 from mimicus.commercial.prospect_ingest import normalize_ledger, normalize_prospect
 
 __all__ = [
+    "DeterministicLeadDecisionService",
     "LeadCandidate",
     "LeadDecision",
     "LeadDecisionBatch",
