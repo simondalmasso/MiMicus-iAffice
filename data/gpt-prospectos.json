@@ -196,9 +196,9 @@
       "category": "support",
       "sourceName": "Facebook",
       "sourceUrl": "https://www.facebook.com/groups/997316161549398/permalink/1766308701316803/",
-      "directUrl": "https://www.facebook.com/kayleigh.benton.75/",
+      "directUrl": "https://www.facebook.com/messages/e2ee/t/840441102466156/",
       "publishedAt": "2026-09-30T08:28:13-03:00",
-      "verifiedAt": "2026-10-01T08:44:00-03:00",
+      "verifiedAt": "2026-10-01T10:40:00-03:00",
       "active": true,
       "argentinaEligible": true,
       "applicationMode": "direct",
@@ -211,8 +211,8 @@
       },
       "scamRisk": "low",
       "rank": {
-        "score": 90,
-        "reason": "Buyer intent explícito: pide implementación, rough quote y resolución rápida esta semana. El problema sigue publicado y no aparece señal visible de cierre; competencia alta, pero el DM ya está enviado."
+        "score": 91,
+        "reason": "Buyer intent explícito: pide implementación, rough quote y resolución rápida esta semana. El DM sigue como último mensaje enviado hace ~9 h y no hay respuesta ni señal de cierre; mantener sin follow-up inmediato."
       },
       "evidence": [
         "https://www.facebook.com/groups/997316161549398/permalink/1766308701316803/",
@@ -237,9 +237,9 @@
       "category": "ecommerce-crm",
       "sourceName": "Facebook",
       "sourceUrl": "https://www.facebook.com/groups/671788822575338/posts/1037037489383801/",
-      "directUrl": "https://www.facebook.com/fourthofjuliee/",
+      "directUrl": "https://www.facebook.com/messages/e2ee/t/1752121699348738/",
       "publishedAt": "2026-09-30T22:44:02-03:00",
-      "verifiedAt": "2026-10-01T08:44:00-03:00",
+      "verifiedAt": "2026-10-01T10:40:00-03:00",
       "active": true,
       "argentinaEligible": true,
       "applicationMode": "direct",
@@ -252,8 +252,8 @@
       },
       "scamRisk": "medium",
       "rank": {
-        "score": 90,
-        "reason": "Buyer intent explícito: pidió portfolio, tarifa one-time, timeline y costos recurrentes. Ya respondió el DM y confirmó lanzamiento local en Filipinas. Competencia muy alta, pero la conversación está abierta y el siguiente paso puede reducir alcance/riesgo alrededor de pagos y logística local."
+        "score": 94,
+        "reason": "Buyer intent explícito: pidió proyecto one-time, rate, timeline y costos recurrentes. Ya respondió el DM y confirmó que lanzará localmente en Filipinas; la conversación está abierta y el siguiente paso reduce alcance alrededor de pagos/logística antes de cotizar."
       },
       "evidence": [
         "https://www.facebook.com/groups/671788822575338/posts/1037037489383801/",
@@ -359,9 +359,9 @@
       "category": "ecommerce-crm",
       "sourceName": "Facebook",
       "sourceUrl": "https://www.facebook.com/groups/997316161549398/posts/1766807894600217/",
-      "directUrl": "https://www.facebook.com/profile.php?id=100000821612172",
+      "directUrl": "https://www.facebook.com/groups/997316161549398/posts/1766807894600217/",
       "publishedAt": "2026-09-30T20:11:09-03:00",
-      "verifiedAt": "2026-10-01T08:44:00-03:00",
+      "verifiedAt": "2026-10-01T10:40:00-03:00",
       "active": true,
       "argentinaEligible": true,
       "applicationMode": "direct",
@@ -374,8 +374,8 @@
       },
       "scamRisk": "low",
       "rank": {
-        "score": 92,
-        "reason": "Dolor técnico concreto, flujo reproducible y comentario diferencial ya publicado. Sigue sin respuesta ~2 h después; no corresponde follow-up todavía."
+        "score": 84,
+        "reason": "Dolor técnico concreto y comentario diferencial ya publicado. El comentario sigue visible ~4 h después sin respuesta; no hay presupuesto ni pedido explícito de contratar, así que baja frente a buyer-intent más fuerte pero sigue siendo seguimiento válido."
       },
       "evidence": [
         "https://www.facebook.com/groups/997316161549398/posts/1766807894600217/",
