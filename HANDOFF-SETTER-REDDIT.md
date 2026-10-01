@@ -49,12 +49,16 @@ Secuencia:
 1. **u/AmatuerTech** — `prepared`
    - https://www.reddit.com/r/smallbusiness/comments/1wu6sfw/best_alternative_to_shopify_for_a_small_business/
    - Dolor: varios sitios catálogo/quote; resolver repetibilidad antes del builder.
-2. **u/monowyrm** — `prepared`
-   - https://www.reddit.com/r/smallbusiness/comments/1wtmjgi/produce_ordering_from_suppliers/
-   - Dolor: compras/inventario para cuatro restaurantes; separar sistema de ordering.
-3. **u/TownEvening7180** — `prepared`
-   - https://www.reddit.com/r/smallbusiness/comments/1wt2fvt/where_to_build_a_website_for_a_small_business/
-   - Ya superó 48 h, pero fue admitido correctamente: sigue abierto hasta cierre/descarte.
+   - Buyer intent: medio. Negocio real, el Shopify actual ya generó pedidos y quiere lanzar varios sitios, pero no expresó contratación directa todavía.
+   - Siguiente movimiento listo: preguntar si los sitios comparten campos de producto y flujo de consulta.
+
+### Cerrados en la última revisión
+- **u/TownEvening7180** — `closed`: consulta de plataforma sin señal de pago; hilo saturado y el ataque no agregaba información nueva.
+- **u/monowyrm** — `closed`: dolor real, pero sin evidencia de intención de pagar; ya recibió una oferta concreta de implementación y el historial público elevó el riesgo.
+
+### Discovery
+- WIP activo: **1/3**.
+- Último barrido no agregó leads nuevos: el mejor candidato pago/urgente no tuvo timestamp exacto consistente entre fuentes públicas, así que no fue admitido.
 
 No envíes sin autorización activa del usuario en esa sesión.
 
