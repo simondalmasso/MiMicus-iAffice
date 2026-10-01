@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import datetime
 from enum import StrEnum
+from types import MappingProxyType
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
 
 class LeadDisposition(StrEnum):
@@ -57,7 +59,7 @@ class LeadDecisionPolicy(BaseModel):
 
     version: str = Field(default="lead-policy-v1", min_length=1)
     max_work_per_lane: int = Field(default=3, ge=1)
-    follow_up_after_hours: dict[str, int]
+    follow_up_after_hours: Mapping[str, int]
     stage_precedence: tuple[LeadStage, ...] = (
         LeadStage.REPLIED,
         LeadStage.PREPARED,
@@ -70,13 +72,17 @@ class LeadDecisionPolicy(BaseModel):
 
     @field_validator("follow_up_after_hours")
     @classmethod
-    def validate_follow_up_hours(cls, value: dict[str, int]) -> dict[str, int]:
+    def validate_follow_up_hours(cls, value: Mapping[str, int]) -> Mapping[str, int]:
         normalized = {str(channel): int(hours) for channel, hours in value.items()}
         if any(not channel.strip() for channel in normalized):
             raise ValueError("follow-up channel must be non-empty")
         if any(hours < 0 for hours in normalized.values()):
             raise ValueError("follow-up hours must be non-negative")
-        return normalized
+        return MappingProxyType(dict(sorted(normalized.items())))
+
+    @field_serializer("follow_up_after_hours")
+    def serialize_follow_up_hours(self, value: Mapping[str, int]) -> dict[str, int]:
+        return dict(value)
 
 
 class LeadDecision(BaseModel):
@@ -99,9 +105,24 @@ class LeadDecisionBatch(BaseModel):
 
     input_ids: tuple[str, ...]
     decisions: tuple[LeadDecision, ...]
-    selected_by_lane: dict[str, tuple[str, ...]]
+    selected_by_lane: Mapping[str, tuple[str, ...]]
     held_ids: tuple[str, ...]
     rejected_ids: tuple[str, ...]
     repair_data_ids: tuple[str, ...]
     policy_hash: str = Field(min_length=64, max_length=64)
     batch_hash: str = Field(min_length=64, max_length=64)
+
+    @field_validator("selected_by_lane")
+    @classmethod
+    def freeze_selected_by_lane(
+        cls,
+        value: Mapping[str, tuple[str, ...]],
+    ) -> Mapping[str, tuple[str, ...]]:
+        return MappingProxyType(dict(sorted(value.items())))
+
+    @field_serializer("selected_by_lane")
+    def serialize_selected_by_lane(
+        self,
+        value: Mapping[str, tuple[str, ...]],
+    ) -> dict[str, tuple[str, ...]]:
+        return dict(value)

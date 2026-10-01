@@ -12,6 +12,9 @@ _LANES = {
 
 
 def normalize_prospect(row: Mapping[str, Any]) -> LeadCandidate:
+    if "active" not in row:
+        raise ValueError("active is required")
+
     source_name = str(row.get("sourceName", "")).strip()
     lane = _LANES.get(source_name.lower())
     if lane is None:
@@ -32,7 +35,7 @@ def normalize_prospect(row: Mapping[str, Any]) -> LeadCandidate:
             "lane": lane,
             "buyer": row.get("buyer"),
             "title": str(row.get("title", "")),
-            "active": bool(row.get("active", False)),
+            "active": row["active"],
             "argentina_eligible": row.get("argentinaEligible"),
             "worker_fee": row.get("workerFee"),
             "scam_risk": row.get("scamRisk"),
