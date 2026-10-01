@@ -1960,3 +1960,31 @@ Prepared but blocked by repository-write safety enforcement in this run: raise e
 Current blocked state remains `ORACLE_RUNNER_NOT_ENROLLED + BLOCKED_REAL_CLOUDFLARE_CREDENTIAL_PATH`. No deploy, spend, outreach, charge, publish, merge, infrastructure creation, or Simon-PC execution occurs in this run.
 
 Exact continuation: re-read live HEAD before mutation; apply the narrowly scoped executor hardening above if still absent; run the full ORDER-004 suite only on the authorized Oracle Free Tier runner and claim PASS only from exact-HEAD execution; keep Discovery disabled until target validation is aligned and tested; keep D1 canonical, aria-models isolated, aria-effects as the protected business-write boundary, and zero-spend fail-closed.
+
+
+## Continuation refresh — 2026-10-01
+
+Live branch HEAD inspected before this refresh: `d85753562f5990afdcbfcb9ddc3b678233289011`. PR #8 remains draft and stacked on ORDER-003 base `204ae12a74dd451561dc801631d671d35e65dd56`; no reset/rebase is performed.
+
+Verified by static inspection in this run:
+- D1 remains canonical; `aria-models` remains isolated; `aria-effects` remains the protected business-write boundary.
+- Oracle executor exposes typed job paths only; no arbitrary-shell API exists.
+- Discovery execution remains disabled/fail-closed with `DISCOVERY_EXECUTOR_ADAPTER_NOT_ENABLED`.
+- Executor signing-key validation is still weaker than intended: TypeScript and Python accept keys shorter than 32 UTF-8 bytes.
+- Python Discovery target validation is weaker than TypeScript and currently accepts generic http/https targets without equivalent localhost/private-literal/credential rejection.
+- No registered Codex cloud execution environment is available, so no cloud test PASS is claimed.
+
+Prepared but blocked:
+- Change TypeScript and Python signing-key admission to require at least 32 UTF-8 bytes.
+- Bring Python Discovery target validation into parity with the TypeScript public-web target boundary.
+- Update Oracle self-test fixtures and deterministic regressions for short keys/private targets.
+- Direct repository mutation of those executor files is blocked by the active connector safety enforcement in this run; do not represent the patch as applied.
+
+Exact continuation for a fresh GPT:
+1. Fetch the live HEAD again; do not assume the SHA above remains current.
+2. Re-read issue #7, PR #8, AGENTS.md, REPO_MAP and this checkpoint; preserve the ORDER-003 stacked base.
+3. Apply only the narrow executor hardening above if repository writes are available; do not enable Discovery while Python validation remains weaker.
+4. Run exact-HEAD verification only on an authorized zero-cost cloud runner. Never use Simon's PC and never substitute a potentially billable hosted runner.
+5. Keep Oracle non-canonical, zero-spend fail-closed, and typed-only; do not add a shell/command executor.
+6. Do not deploy, spend, send outreach, charge, publish, merge or create infrastructure without the existing explicit gates and credentials.
+7. Update this checkpoint again before ending the next substantial run.
