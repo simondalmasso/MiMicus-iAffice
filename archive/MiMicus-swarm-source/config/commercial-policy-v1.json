@@ -1,0 +1,9 @@
+{
+  "version": "commercial-v1",
+  "max_work_per_lane": 3,
+  "follow_up_after_hours": {
+    "messenger": 24,
+    "post-comment": 24,
+    "reddit_comment": 24
+  }
+}
