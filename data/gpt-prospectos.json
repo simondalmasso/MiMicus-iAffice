@@ -494,8 +494,8 @@
       },
       "scamRisk": "low",
       "rank": {
-        "score": 88,
-        "reason": "Buyer intent y presupuesto explícitos, problema de producción concreto, permalink y creation_time exactos, comprador público y sólo ~15 comentarios visibles. Hay potencial de segunda etapa paga. El fit no es perfecto porque pide experiencia hands-on en web security/Cloudflare, así que conviene entrar por diagnóstico reproducible sin vender expertise no demostrada."
+        "score": 89,
+        "reason": "Buyer intent and fixed budget are explicit ($50–100 initial diagnosis), with a separate paid follow-on possible. The problem is concrete and reproducible, creation_time is exact and <48h, buyer is public, and visible competition is low/generic. Fit risk remains because she explicitly asks for hands-on web security/Cloudflare experience, so outreach must lead with a diagnostic method rather than an expertise claim."
       },
       "evidence": [
         "https://www.facebook.com/applemae.belo/posts/pfbid029hZmmwjFUHU2aHWhobf4ajcM4R2sMHqexgZ33biDWgfim3PAPBdYrez7yePkWf4l",
@@ -505,7 +505,7 @@
       "outreach": {
         "status": "prepared",
         "channel": "messenger",
-        "message": "Mae, the strongest clue is that one booking can succeed and the next fails while availability still shows. Before changing Cloudflare, I’d compare the successful vs failed request and first separate a 403/429/challenge from a normal application error. What status or error do you get on the failed attempt?",
+        "message": "Mae, the useful split is whether the failed attempt is a Cloudflare/security response or the booking app itself. I’d capture one successful request and the next failed one, then compare status code, cookies and any IP/challenge signal before changing anything. What HTTP status or error shows on the failed attempt?",
         "contactedAt": null
       }
     }
