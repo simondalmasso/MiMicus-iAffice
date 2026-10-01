@@ -442,7 +442,7 @@
       "sourceUrl": "https://www.reddit.com/r/smallbusiness/comments/1wu6sfw/best_alternative_to_shopify_for_a_small_business/",
       "directUrl": "https://www.reddit.com/r/smallbusiness/comments/1wu6sfw/best_alternative_to_shopify_for_a_small_business/",
       "publishedAt": "2026-09-30T11:43:26-03:00",
-      "verifiedAt": "2026-10-01T07:57:00-03:00",
+      "verifiedAt": "2026-10-01T14:24:00-03:00",
       "active": true,
       "argentinaEligible": true,
       "applicationMode": "direct",
@@ -462,10 +462,11 @@
         "https://www.reddit.com/r/smallbusiness/comments/1wu6sfw/best_alternative_to_shopify_for_a_small_business/"
       ],
       "outreach": {
-        "status": "prepared",
+        "status": "contacted",
         "channel": "post-comment",
-        "message": "If the new sites use the same catalogue + quote flow, I’d make that reusable once instead of choosing a different builder each time. Are the product fields and enquiry flow basically the same across them?",
-        "contactedAt": null
+        "message": "The platform choice matters less than whether the new sites share the same product fields and quote flow. If they do, I’d define that structure once and reuse the site shell, otherwise you end up maintaining several slightly different systems. Are the new sites basically the same kind of catalogue under different brands, or completely different products?",
+        "contactedAt": "2026-10-01T14:24:00-03:00",
+        "commentUrl": "https://www.reddit.com/r/smallbusiness/comments/1wu6sfw/comment/pd8ycsd/"
       }
     },
     {
@@ -522,7 +523,7 @@
       "sourceUrl": "https://www.reddit.com/r/slavelabour/comments/1wubotj/task_graphic_designer_needed_for/",
       "directUrl": "https://www.reddit.com/r/slavelabour/comments/1wubotj/task_graphic_designer_needed_for/",
       "publishedAt": "2026-09-30T14:49:37-03:00",
-      "verifiedAt": "2026-10-01T13:43:01-03:00",
+      "verifiedAt": "2026-10-01T14:24:00-03:00",
       "active": true,
       "argentinaEligible": true,
       "applicationMode": "direct",
@@ -548,7 +549,9 @@
         "channel": "post-comment",
         "message": "$bid — Since the branding, product shots and references are already set, I’d lock one reusable product-visual system first so the website and social creatives don’t drift apart. How many SKUs/creatives are in the first batch?",
         "contactedAt": "2026-10-01T13:40:00-03:00",
-        "commentUrl": "https://www.reddit.com/r/slavelabour/comments/1wubotj/comment/pd8jcfj/"
+        "commentUrl": "https://www.reddit.com/r/slavelabour/comments/1wubotj/comment/pd8jcfj/",
+        "dmStatus": "blocked_by_reddit_composer",
+        "dmNote": "OP requested DM with portfolio/pricing/availability, but Reddit private-message composer kept Send disabled despite valid recipient, subject and body. Public $bid remains live."
       }
     },
     {
@@ -564,8 +567,8 @@
       "sourceUrl": "https://www.reddit.com/r/DesignJobs/comments/1wv2797/hiring_halloween_poster_needs_to_be_designed/",
       "directUrl": "https://www.reddit.com/r/DesignJobs/comments/1wv2797/hiring_halloween_poster_needs_to_be_designed/",
       "publishedAt": "2026-10-01T12:18:42-03:00",
-      "verifiedAt": "2026-10-01T13:43:01-03:00",
-      "active": true,
+      "verifiedAt": "2026-10-01T14:24:00-03:00",
+      "active": false,
       "argentinaEligible": true,
       "applicationMode": "direct",
       "workerFee": false,
@@ -577,8 +580,8 @@
       },
       "scamRisk": "low",
       "rank": {
-        "score": 88,
-        "reason": "Pedido pequeño pero extremadamente fresco, presupuesto explícito, entregable claro y comprador con cuenta Reddit desde 2017 y karma sustancial. Encaje directo con Photoshop/Illustrator; la competencia visible ya existe pero el comprador todavía no marcó cierre."
+        "score": 32,
+        "reason": "Buyer intent and budget were real, but this account cannot currently reach the buyer: public comment auto-removed by subreddit karma gate and private-message composer disabled. Remove from WIP until contact becomes possible."
       },
       "evidence": [
         "https://www.reddit.com/r/DesignJobs/comments/1wv2797/hiring_halloween_poster_needs_to_be_designed/",
@@ -586,11 +589,13 @@
         "https://www.reddit.com/r/DesignJobs/about/rules/"
       ],
       "outreach": {
-        "status": "contacted",
+        "status": "blocked",
         "channel": "post-comment",
         "message": "I’d keep the artwork and text fully separated so you can reuse the PSD/AI later without rebuilding the poster. If last year’s version already had the right information hierarchy, I’d use that as the layout baseline and push the Halloween atmosphere harder. Can you send that reference and the final print size?",
         "contactedAt": "2026-10-01T13:42:00-03:00",
-        "commentUrl": "https://www.reddit.com/r/DesignJobs/comments/1wv2797/comment/pd8l7nd/"
+        "commentUrl": "https://www.reddit.com/r/DesignJobs/comments/1wv2797/comment/pd8l7nd/",
+        "commentRemoved": true,
+        "blockReason": "r/DesignJobs AutoModerator removed the comment because u/Jumpy_Reading6301 does not meet the subreddit minimum account age/50 karma requirement. Reddit private-message composer also kept Send disabled."
       }
     },
     {
