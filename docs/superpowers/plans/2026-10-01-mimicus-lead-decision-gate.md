@@ -136,6 +136,7 @@ class LeadDecisionBatch(BaseModel): ...
 Constraints:
 - `ConfigDict(frozen=True, extra="forbid")` for domain models.
 - all timestamps are timezone-aware `datetime`;
+- `LeadCandidate` includes `outreach_channel: str | None` because contacted follow-up timing is channel-specific;
 - `setter_score` bounded 0..100;
 - policy contains `max_work_per_lane: int = 3`, explicit `follow_up_after_hours: dict[str, int]`, and a version string;
 - hashes are derived with existing `sha256_obj`, never Python `hash()`.
