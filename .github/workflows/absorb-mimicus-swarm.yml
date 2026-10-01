@@ -1,0 +1,46 @@
+name: absorb-mimicus-swarm
+
+on:
+  push:
+    branches:
+      - mimicus-v2-monochrome
+    paths:
+      - .github/workflows/absorb-mimicus-swarm.yml
+
+permissions:
+  contents: write
+
+jobs:
+  absorb:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Absorb MiMicus-swarm exact history
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE_HEAD="565407eb1296eae617f5b14b512d2e0cf08c6c02"
+          if [ -d archive/MiMicus-swarm-source ]; then
+            echo "archive already present"
+            test -f archive/MiMicus-swarm-source/src/mimicus/orchestration/swarm_core.py
+            exit 0
+          fi
+          git remote add mimicus-swarm https://github.com/simondalmasso/MiMicus-swarm.git
+          git fetch mimicus-swarm order-002-mimicus-v01
+          test "$(git rev-parse mimicus-swarm/order-002-mimicus-v01)" = "$SOURCE_HEAD"
+          git subtree add             --prefix=archive/MiMicus-swarm-source             mimicus-swarm order-002-mimicus-v01             -m "archive: absorb MiMicus-swarm ORDER-008 source history"
+          test -f archive/MiMicus-swarm-source/src/mimicus/orchestration/swarm_core.py
+          test -f archive/MiMicus-swarm-source/docs/ARCHITECTURE.md
+          test -d archive/MiMicus-swarm-source/tests
+
+      - name: Push absorbed history
+        run: git push origin HEAD:mimicus-v2-monochrome
