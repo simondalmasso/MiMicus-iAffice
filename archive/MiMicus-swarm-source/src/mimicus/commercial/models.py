@@ -126,3 +126,33 @@ class LeadDecisionBatch(BaseModel):
         value: Mapping[str, tuple[str, ...]],
     ) -> dict[str, tuple[str, ...]]:
         return dict(value)
+
+
+class CommercialTraceEvent(BaseModel):
+    """Sanitized observable event; never carries hidden chain-of-thought."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    sequence: int = Field(ge=1)
+    event: Literal["lead_ingested", "laya_reading", "decision_emitted"]
+    as_of: datetime
+    prospect_id: str = Field(min_length=1)
+    lane: Literal["facebook", "reddit"]
+    source_name: str | None = None
+    outreach_status: str | None = None
+    setter_score: float | None = Field(default=None, ge=0.0, le=100.0)
+    scam_risk: Literal["low", "medium", "high"] | None = None
+    active: bool | None = None
+    policy_version: str | None = None
+    disposition: LeadDisposition | None = None
+    stage: LeadStage | None = None
+    rank_position: int | None = Field(default=None, ge=1)
+    reasons: tuple[str, ...] = ()
+    data_quality_issues: tuple[str, ...] = ()
+
+    @field_validator("as_of")
+    @classmethod
+    def require_trace_timezone(cls, value: datetime) -> datetime:
+        if value.utcoffset() is None:
+            raise ValueError("trace as_of must include timezone information")
+        return value
