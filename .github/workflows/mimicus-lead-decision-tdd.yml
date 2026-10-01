@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "aud-arq/mimicus-lead-decision-v1"
+      - "aud-arq/mimicus-live-observer-v1"
 
 permissions:
   contents: read
