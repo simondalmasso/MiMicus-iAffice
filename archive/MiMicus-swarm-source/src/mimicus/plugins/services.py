@@ -181,7 +181,7 @@ class RuntimeServices:
     communication: SparseCommunicationService
     sandbox: LocalSandboxService
     telemetry: LedgerTelemetryService
-    lead_decision: LeadDecisionService
+    lead_decision: LeadDecisionService | None = None
 
     @property
     def repository(self) -> Repository:

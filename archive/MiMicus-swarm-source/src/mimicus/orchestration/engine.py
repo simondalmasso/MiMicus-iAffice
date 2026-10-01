@@ -93,7 +93,10 @@ class MiMicusEngine(LegacyMiMicusEngine):
         as_of: datetime,
     ) -> LeadDecisionBatch:
         candidates = normalize_ledger(payload)
-        return self.services.lead_decision.decide(candidates, policy, as_of=as_of)
+        service = self.services.lead_decision
+        if service is None:
+            raise RuntimeError("lead decision service is not mounted")
+        return service.decide(candidates, policy, as_of=as_of)
 
     async def run_async(self, request: LegacyRunRequest) -> RunResult:
         core_request = request if isinstance(request, RunRequest) else RunRequest.model_validate(request.model_dump(mode="json"))

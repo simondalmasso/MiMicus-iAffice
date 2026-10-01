@@ -16,6 +16,7 @@ PluginKind = Literal[
     "communication_policy",
     "sandbox",
     "telemetry",
+    "decision_policy",
 ]
 
 
