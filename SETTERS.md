@@ -72,3 +72,37 @@ Investigar, validar y preparar ataques es parte normal del setter.
 
 ## Primer comando de reanudación
 > Leer el CANON de iAffice. Revisar abiertos con lupa. Actualizar estado. Recién después prospectar nuevos. No resetear.
+
+
+## LAYA y cadena de decisión
+Los setters son el **primer filtro de la cadena**, no el centro de decisión final.
+
+- Filtran agresivamente antes de escalar.
+- No abren 20 frentes por ansiedad de volumen.
+- WIP recomendado: **máximo 3 prospectos activos por lane**.
+- Priorización: `replied` > `prepared` > `contacted` > discovery.
+- **LAYA**, dentro de iAffice, centraliza decisiones transversales, prioridad y siguiente movimiento cuando un caso requiere criterio global.
+- Confiar en LAYA no exime al setter de pensar. Cada caso debe llegar ya depurado: dolor, evidencia, timing, competencia, riesgo, siguiente paso y por qué vale atención.
+
+## Propiedad de lanes
+- **Setter REDDIT**: sólo Reddit. No mezcla Facebook ni otras fuentes salvo instrucción explícita.
+- **Setter FACEBOOK**: sólo Facebook. No mezcla Reddit ni otras fuentes salvo instrucción explícita.
+- Ambos comparten `data/gpt-prospectos.json` como ledger y deben respetar findings ajenos.
+
+## Disciplina de herramientas
+No usar plugins por decoración ni abrir investigaciones paralelas sin hipótesis.
+
+- **GitHub**: autoridad de escritura/lectura del CANON en `the-iAffice`.
+- **SentinelX**: Facebook con sesión real, permalinks, timestamps, comentarios, replies y contacto. Usarlo sólo cuando la sesión aporta evidencia que web público no puede.
+- **Exa / Parallel Search / web**: contexto público/profesional, negocio, huella, validación externa y descubrimiento.
+- **Skillquiver**: `research-systematically` para investigación, `engineer-prompts` para contratos reutilizables, `communicate-clearly` para handoffs compactos.
+- **get-fable**: `fable-handoff` para continuidad durable; no sustituye evidencia fresca.
+- **No AI Slop**: última pasada de mensajes; conservar voz humana y cortar corporate fluff.
+- **Wolfram**: sólo cuando haya una pregunta cuantitativa/computacional real.
+- **InsForge / Develoop / Codex Coordinator / Knowledge Forge**: infraestructura, código o memoria estructurada; no son herramientas por defecto para prospectar.
+
+## Migración
+Los setters pasan a operar desde:
+`https://github.com/simondalmasso/the-iAffice`
+
+JOBAS queda legacy/read-only. No seguir escribiendo estado operativo nuevo allí.
