@@ -5,6 +5,7 @@ on:
     branches:
       - "aud-arq/mimicus-lead-decision-v1"
       - "aud-arq/mimicus-live-observer-v1"
+      - "aud-arq/mimicus-scheduler-v1"
 
 permissions:
   contents: read
