@@ -198,7 +198,7 @@ class EffectStore:
             row = connection.execute(
                 select(EffectIntentRow).where(EffectIntentRow.intent_id == intent_id)
             ).first()
-        return None if row is None else _intent_from_row(row._mapping)
+        return None if row is None else _intent_from_row(dict(row._mapping))
 
     def intents_for_approval(self, approval_id: str) -> list[EffectIntent]:
         with self.repository.engine.begin() as connection:
@@ -207,4 +207,4 @@ class EffectStore:
                 .where(EffectIntentRow.approval_id == approval_id)
                 .order_by(EffectIntentRow.created_at)
             ).all()
-        return [_intent_from_row(row._mapping) for row in rows]
+        return [_intent_from_row(dict(row._mapping)) for row in rows]
