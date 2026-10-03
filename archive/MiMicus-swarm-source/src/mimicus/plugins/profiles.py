@@ -5,10 +5,13 @@ from dataclasses import dataclass
 from typing import cast
 
 from mimicus.commercial.decision import DeterministicLeadDecisionService
+from mimicus.effects.dispatcher import EffectDispatcher
+from mimicus.effects.store import EffectStore
 from mimicus.plugins.builtin import BuiltinPlugin, builtin_manifest
 from mimicus.plugins.registry import PluginKernel
 from mimicus.plugins.services import (
     BuiltinAgentFactory,
+    EffectDispatchService,
     ImmuneMemoryService,
     LeadDecisionService,
     LedgerTelemetryService,
@@ -67,6 +70,7 @@ def build_kernel(profile_name: str, database_url: str | None = None, *, provider
     )
     storage = RepositoryStorage(repository)
     factory = BuiltinAgentFactory(provider.capabilities)
+    effect_dispatch = EffectDispatcher(store=EffectStore(repository))
     plugins = [
         BuiltinPlugin(builtin_manifest("storage.sqlite", "storage_backend", ("storage",)), storage),
         BuiltinPlugin(builtin_manifest(f"model.{PROFILES[profile_name].provider}", "model_provider", ("model_provider",), dependencies=("storage.sqlite",)), provider),
@@ -77,6 +81,15 @@ def build_kernel(profile_name: str, database_url: str | None = None, *, provider
         BuiltinPlugin(builtin_manifest("sandbox.local", "sandbox", ("sandbox",)), LocalSandboxService()),
         BuiltinPlugin(builtin_manifest("telemetry.ledger", "telemetry", ("telemetry",)), LedgerTelemetryService()),
         BuiltinPlugin(builtin_manifest("decision.commercial", "decision_policy", ("lead_decision",)), DeterministicLeadDecisionService()),
+        BuiltinPlugin(
+            builtin_manifest(
+                "effects.approval",
+                "effect_policy",
+                ("effect_dispatch",),
+                dependencies=("storage.sqlite",),
+            ),
+            effect_dispatch,
+        ),
         BuiltinPlugin(builtin_manifest("agents.phenotypes", "agent_factory", ("agent_factory",)), factory),
     ]
     kernel = PluginKernel()
@@ -99,6 +112,7 @@ def build_runtime_services(profile_name: str, database_url: str, *, provider_ove
         sandbox=cast(LocalSandboxService, kernel.services.get("sandbox")),
         telemetry=cast(LedgerTelemetryService, kernel.services.get("telemetry")),
         lead_decision=cast(LeadDecisionService, kernel.services.get("lead_decision")),
+        effect_dispatch=cast(EffectDispatchService, kernel.services.get("effect_dispatch")),
     )
     hashes = [plugin.manifest.manifest_hash for plugin in kernel.plugins.values()]
     return services, hashes, kernel
