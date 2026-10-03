@@ -243,5 +243,35 @@ class MemoryLinkRow(Base):
     __table_args__ = (UniqueConstraint("parent_memory_id", "child_memory_id", "relation", name="uq_memory_link"),)
 
 
+
+
+class EffectApprovalRow(Base):
+    __tablename__ = "effect_approvals"
+    approval_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    envelope_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    approver_id: Mapped[str] = mapped_column(String(256), nullable=False)
+    issued_at: Mapped[str] = mapped_column(String(64), nullable=False)
+    expires_at: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    consumed_at: Mapped[str | None] = mapped_column(String(64))
+    policy_version: Mapped[str] = mapped_column(String(128), nullable=False)
+
+
+class EffectIntentRow(Base):
+    __tablename__ = "effect_intents"
+    intent_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    approval_id: Mapped[str] = mapped_column(
+        ForeignKey("effect_approvals.approval_id"),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+    envelope_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    state: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    created_at: Mapped[str] = mapped_column(String(64), nullable=False)
+    completed_at: Mapped[str | None] = mapped_column(String(64))
+    outcome_hash: Mapped[str | None] = mapped_column(String(64))
+    error_class: Mapped[str | None] = mapped_column(String(256))
+
+
 Index("ix_falsifier_execution_run_verdict", FalsifierExecutionRow.run_id, FalsifierExecutionRow.verdict)
 Index("ix_lineage_domain_state", AgentBankruptcyRow.domain, AgentBankruptcyRow.state)
