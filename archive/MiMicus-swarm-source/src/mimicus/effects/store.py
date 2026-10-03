@@ -82,6 +82,7 @@ class EffectStore:
                     EffectApprovalRow.approval_id == approval_id,
                     EffectApprovalRow.envelope_hash == envelope_hash,
                     EffectApprovalRow.consumed_at.is_(None),
+                    EffectApprovalRow.issued_at <= now_iso,
                     EffectApprovalRow.expires_at > now_iso,
                 )
                 .values(consumed_at=now_iso)
@@ -99,6 +100,9 @@ class EffectStore:
                     raise EffectAuthorizationError("approval envelope hash mismatch")
                 if mapping["consumed_at"] is not None:
                     raise EffectAuthorizationError("approval already consumed")
+                issued = datetime.fromisoformat(str(mapping["issued_at"]))
+                if issued > current:
+                    raise EffectAuthorizationError("approval not active yet")
                 expiry = datetime.fromisoformat(str(mapping["expires_at"]))
                 if expiry <= current:
                     raise EffectAuthorizationError("approval expired")
