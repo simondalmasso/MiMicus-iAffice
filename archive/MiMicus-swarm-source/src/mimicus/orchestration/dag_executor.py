@@ -110,57 +110,116 @@ class DagExecutor:
             node.status = "COMPLETED"
             return value, duration_ms, node.output_hash
 
-        while pending:
-            ready = sorted(node_id for node_id in pending if all(parent in outputs for parent in nodes[node_id].prerequisites))
-            if not ready:
-                raise RuntimeError("DAG execution stalled: no ready nodes")
-            if len(ready) > 1 and self.max_concurrency > 1:
-                capacity = min(self.max_concurrency, len(ready))
-                if capacity == 1:
-                    avoidable_serialization += len(ready) - 1
-            batch = ready[: self.max_concurrency]
-            batch_started = perf_counter()
-            tasks: dict[str, asyncio.Task[tuple[object, float, str]]] = {}
-            failure: BaseException | None = None
-            try:
-                async with asyncio.TaskGroup() as group:
-                    for node_id in batch:
-                        tasks[node_id] = group.create_task(invoke(nodes[node_id]), name=f"mimicus:{node_id}")
-            except* BaseException as error_group:
-                failure = error_group
-            batch_ms = (perf_counter() - batch_started) * 1000.0
-            if failure is not None:
-                failed = sorted(node_id for node_id in batch if nodes[node_id].status in {"FAILED", "TIMED_OUT"})
-                cancelled = sorted(node_id for node_id in batch if nodes[node_id].status == "CANCELLED")
-                for node_id in batch:
-                    schedule.append(
-                        {
-                            "node_id": node_id,
-                            "kind": nodes[node_id].kind.value,
-                            "prerequisites": list(nodes[node_id].prerequisites),
-                            "duration_ms": nodes[node_id].duration_ms,
-                            "batch_wall_ms": batch_ms,
-                            "output_hash": nodes[node_id].output_hash,
-                            "status": nodes[node_id].status,
-                        }
-                    )
-                raise DagExecutionError(failed, cancelled) from failure
-            for node_id in batch:
-                value, duration_ms, digest = tasks[node_id].result()
-                outputs[node_id] = value
-                output_hashes[node_id] = digest
-                pending.remove(node_id)
-                schedule.append(
-                    {
-                        "node_id": node_id,
-                        "kind": nodes[node_id].kind.value,
-                        "prerequisites": list(nodes[node_id].prerequisites),
-                        "duration_ms": duration_ms,
-                        "batch_wall_ms": batch_ms,
-                        "output_hash": digest,
-                        "status": "COMPLETED",
-                    }
+        in_flight: dict[str, asyncio.Task[tuple[object, float, str]]] = {}
+        scheduler_turn = 0
+
+        def schedule_row(node_id: str, *, turn_wall_ms: float) -> dict[str, object]:
+            node = nodes[node_id]
+            return {
+                "node_id": node_id,
+                "kind": node.kind.value,
+                "prerequisites": list(node.prerequisites),
+                "duration_ms": node.duration_ms,
+                "batch_wall_ms": turn_wall_ms,
+                "scheduler_turn": scheduler_turn,
+                "output_hash": node.output_hash,
+                "status": node.status,
+            }
+
+        async def cancel_in_flight() -> None:
+            tasks = list(in_flight.values())
+            for task in tasks:
+                if not task.done():
+                    task.cancel()
+            if tasks:
+                await asyncio.gather(*tasks, return_exceptions=True)
+
+        try:
+            while pending or in_flight:
+                ready = sorted(
+                    node_id
+                    for node_id in pending
+                    if all(parent in outputs for parent in nodes[node_id].prerequisites)
                 )
+                capacity = self.max_concurrency - len(in_flight)
+                for node_id in ready[:capacity]:
+                    pending.remove(node_id)
+                    in_flight[node_id] = asyncio.create_task(
+                        invoke(nodes[node_id]),
+                        name=f"mimicus:{node_id}",
+                    )
+
+                waiting_ready = [
+                    node_id
+                    for node_id in pending
+                    if all(parent in outputs for parent in nodes[node_id].prerequisites)
+                ]
+                if waiting_ready and len(in_flight) < self.max_concurrency:
+                    avoidable_serialization += 1
+
+                if not in_flight:
+                    if pending:
+                        raise RuntimeError("DAG execution stalled: no ready nodes")
+                    break
+
+                scheduler_turn += 1
+                turn_started = perf_counter()
+                done, _ = await asyncio.wait(
+                    set(in_flight.values()),
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
+                turn_wall_ms = (perf_counter() - turn_started) * 1000.0
+
+                completed_ids = sorted(
+                    node_id for node_id, task in in_flight.items() if task in done
+                )
+                failed_ids: list[str] = []
+                failure: BaseException | None = None
+                for node_id in completed_ids:
+                    task = in_flight[node_id]
+                    if task.cancelled():
+                        if nodes[node_id].status != "CANCELLED":
+                            nodes[node_id].status = "CANCELLED"
+                        if failure is None:
+                            failure = asyncio.CancelledError()
+                        continue
+                    exc = task.exception()
+                    if exc is not None:
+                        failed_ids.append(node_id)
+                        if failure is None:
+                            failure = exc
+
+                if failure is not None:
+                    await cancel_in_flight()
+                    current_ids = sorted(in_flight)
+                    failed = sorted(
+                        node_id
+                        for node_id in current_ids
+                        if nodes[node_id].status in {"FAILED", "TIMED_OUT"}
+                    )
+                    cancelled = sorted(
+                        node_id
+                        for node_id in current_ids
+                        if nodes[node_id].status == "CANCELLED"
+                    )
+                    schedule.extend(
+                        schedule_row(node_id, turn_wall_ms=turn_wall_ms)
+                        for node_id in current_ids
+                    )
+                    raise DagExecutionError(failed, cancelled) from failure
+
+                for node_id in completed_ids:
+                    task = in_flight.pop(node_id)
+                    value, duration_ms, digest = task.result()
+                    outputs[node_id] = value
+                    output_hashes[node_id] = digest
+                    schedule.append(
+                        schedule_row(node_id, turn_wall_ms=turn_wall_ms)
+                        | {"duration_ms": duration_ms, "output_hash": digest}
+                    )
+        except asyncio.CancelledError:
+            await cancel_in_flight()
+            raise
 
         observed_wall_ms = (perf_counter() - wall_started) * 1000.0
         serial_work_ms = sum(node.duration_ms for node in plan.nodes if node.status == "COMPLETED" and node.node_id not in pre)
