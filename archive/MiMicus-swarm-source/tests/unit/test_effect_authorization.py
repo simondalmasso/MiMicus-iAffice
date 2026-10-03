@@ -203,3 +203,23 @@ def test_adapter_identity_must_match_bound_envelope_before_consumption(tmp_path:
     correct = RecordingAdapter()
     result = dispatcher.dispatch(envelope, approval_id="approval-1", adapter=correct)
     assert result.state == EffectIntentState.SUCCEEDED
+
+
+def test_future_approval_is_denied_without_consuming_receipt(tmp_path: Path) -> None:
+    store, dispatcher = _dispatcher(tmp_path)
+    envelope = _envelope()
+    receipt = EffectApprovalReceipt(
+        approval_id="approval-future",
+        envelope_hash=envelope.envelope_hash,
+        approver_id="human:operator",
+        issued_at=NOW + timedelta(minutes=5),
+        expires_at=NOW + timedelta(minutes=15),
+        policy_version="effect-policy-v1",
+    )
+    store.register_approval(receipt)
+    adapter = RecordingAdapter()
+
+    with pytest.raises(EffectAuthorizationError, match="not active"):
+        dispatcher.dispatch(envelope, approval_id="approval-future", adapter=adapter)
+
+    assert adapter.calls == []
