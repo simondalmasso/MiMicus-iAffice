@@ -21,6 +21,8 @@ NOW = datetime(2026, 10, 3, 22, 30, tzinfo=UTC)
 
 
 class RecordingAdapter:
+    adapter_id = "test.messaging"
+
     def __init__(self, *, fail: bool = False) -> None:
         self.calls: list[EffectActionEnvelope] = []
         self.fail = fail
@@ -182,3 +184,22 @@ def test_atomic_consumption_allows_at_most_one_concurrent_dispatch(tmp_path: Pat
 def test_envelope_rejects_raw_credential_fields() -> None:
     with pytest.raises(ValidationError, match="credential"):
         _envelope(payload={"authorization": "Bearer secret"})
+
+
+def test_adapter_identity_must_match_bound_envelope_before_consumption(tmp_path: Path) -> None:
+    store, dispatcher = _dispatcher(tmp_path)
+    envelope = _envelope()
+    store.register_approval(_approval(envelope))
+
+    class WrongAdapter(RecordingAdapter):
+        adapter_id = "test.other"
+
+    wrong = WrongAdapter()
+    with pytest.raises(EffectAuthorizationError, match="adapter"):
+        dispatcher.dispatch(envelope, approval_id="approval-1", adapter=wrong)
+
+    assert wrong.calls == []
+    # Mismatch must not burn the valid receipt; the correct adapter can still use it.
+    correct = RecordingAdapter()
+    result = dispatcher.dispatch(envelope, approval_id="approval-1", adapter=correct)
+    assert result.state == EffectIntentState.SUCCEEDED
