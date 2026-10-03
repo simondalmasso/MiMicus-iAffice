@@ -9,6 +9,8 @@ from mimicus.canonical import sha256_obj, sha256_text
 from mimicus.coalition.selector import AgentCandidate, select_coalition
 from mimicus.coalition.threat_profile import ThreatProfile
 from mimicus.commercial.models import LeadCandidate, LeadDecisionBatch, LeadDecisionPolicy
+from mimicus.effects.dispatcher import EffectAdapter
+from mimicus.effects.models import EffectActionEnvelope, EffectIntent
 from mimicus.falsifiers.builtins import builtin_specs
 from mimicus.falsifiers.primitives import execute_primitive
 from mimicus.falsifiers.spec import FalsifierExecution, FalsifierSpec
@@ -46,6 +48,16 @@ class LeadDecisionService(Protocol):
         *,
         as_of: datetime,
     ) -> LeadDecisionBatch: ...
+
+
+class EffectDispatchService(Protocol):
+    def dispatch(
+        self,
+        envelope: EffectActionEnvelope,
+        *,
+        approval_id: str,
+        adapter: EffectAdapter,
+    ) -> EffectIntent: ...
 
 
 @dataclass
@@ -182,6 +194,7 @@ class RuntimeServices:
     sandbox: LocalSandboxService
     telemetry: LedgerTelemetryService
     lead_decision: LeadDecisionService | None = None
+    effect_dispatch: EffectDispatchService | None = None
 
     @property
     def repository(self) -> Repository:
