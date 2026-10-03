@@ -292,3 +292,61 @@ def test_threat_profile_fixture_for_distinct_capabilities() -> None:
     assert any("freshness" in candidate.capabilities for candidate in candidates)
     assert any("entailment" in candidate.capabilities for candidate in candidates)
     assert profile.required_capabilities == ("freshness", "entailment")
+
+
+def test_completion_driven_scheduler_releases_child_before_unrelated_sibling() -> None:
+    a = DagNode("a", NodeKind.AGENT_TASK, ("root",))
+    b = DagNode("b", NodeKind.AGENT_TASK, ("root",))
+    a1 = DagNode("a1", NodeKind.AGENT_TASK, ("a",))
+    join = DagNode("join-live", NodeKind.JOIN, ("a1", "b"))
+    plan = MorphologyPlan(
+        MorphologyName.PARALLEL_FANOUT,
+        [DagNode("root", NodeKind.PROFILE), a, b, a1, join],
+        [],
+    )
+
+    release_a = asyncio.Event()
+    release_b = asyncio.Event()
+    a_started = asyncio.Event()
+    b_started = asyncio.Event()
+    a1_started = asyncio.Event()
+
+    async def handler(node: DagNode) -> object:
+        if node.node_id == "a":
+            a_started.set()
+            await release_a.wait()
+            return "a-done"
+        if node.node_id == "b":
+            b_started.set()
+            await release_b.wait()
+            return "b-done"
+        if node.node_id == "a1":
+            a1_started.set()
+            return "a1-done"
+        return node.node_id
+
+    async def run() -> None:
+        execution = asyncio.create_task(
+            DagExecutor(2).execute(plan, handler, precompleted={"root": "done"})
+        )
+        try:
+            await asyncio.wait_for(a_started.wait(), timeout=2.0)
+            await asyncio.wait_for(b_started.wait(), timeout=2.0)
+            assert not a1_started.is_set()
+
+            release_a.set()
+            await asyncio.wait_for(a1_started.wait(), timeout=2.0)
+
+            # The load-bearing assertion: A1 became eligible after A and began
+            # while unrelated sibling B was deliberately still blocked.
+            assert not release_b.is_set()
+            assert not execution.done()
+        finally:
+            release_a.set()
+            release_b.set()
+
+        result = await asyncio.wait_for(execution, timeout=2.0)
+        assert result.outputs["a1"] == "a1-done"
+        assert result.metrics.peak_concurrency <= 2
+
+    asyncio.run(run())
