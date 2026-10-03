@@ -50,6 +50,7 @@ def build_causal_execution(
         output_hash = execution.output_hashes.get(node.node_id)
         if not _hash64(output_hash):
             raise ValueError(f"successful causal record requires output hash for node {node.node_id}")
+        assert isinstance(output_hash, str)
 
         prerequisites = tuple(node.prerequisites)
         prerequisite_hashes: dict[str, str] = {}
@@ -57,6 +58,7 @@ def build_causal_execution(
             parent_hash = execution.output_hashes.get(parent)
             if not _hash64(parent_hash):
                 raise ValueError(f"missing prerequisite output hash for {node.node_id}: {parent}")
+            assert isinstance(parent_hash, str)
             prerequisite_hashes[parent] = parent_hash
 
         status = "PRECOMPLETED" if node.node_id in precompleted_ids else "COMPLETED"
