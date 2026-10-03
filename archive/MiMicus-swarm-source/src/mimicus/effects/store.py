@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import insert, select, update
 from sqlalchemy.exc import IntegrityError
@@ -25,8 +27,7 @@ def _utc(value: datetime, *, label: str) -> datetime:
     return value.astimezone(UTC)
 
 
-def _intent_from_row(row: object) -> EffectIntent:
-    mapping = row._mapping if hasattr(row, "_mapping") else row  # type: ignore[attr-defined]
+def _intent_from_row(mapping: Mapping[str, Any]) -> EffectIntent:
     return EffectIntent(
         intent_id=str(mapping["intent_id"]),
         approval_id=str(mapping["approval_id"]),
@@ -156,7 +157,7 @@ class EffectStore:
                 select(EffectIntentRow).where(EffectIntentRow.intent_id == intent_id)
             ).first()
             assert row is not None
-            return _intent_from_row(row)
+            return _intent_from_row(row._mapping)
 
     def mark_succeeded(
         self,
@@ -193,7 +194,7 @@ class EffectStore:
             row = connection.execute(
                 select(EffectIntentRow).where(EffectIntentRow.intent_id == intent_id)
             ).first()
-        return None if row is None else _intent_from_row(row)
+        return None if row is None else _intent_from_row(row._mapping)
 
     def intents_for_approval(self, approval_id: str) -> list[EffectIntent]:
         with self.repository.engine.begin() as connection:
@@ -202,4 +203,4 @@ class EffectStore:
                 .where(EffectIntentRow.approval_id == approval_id)
                 .order_by(EffectIntentRow.created_at)
             ).all()
-        return [_intent_from_row(row) for row in rows]
+        return [_intent_from_row(row._mapping) for row in rows]
