@@ -223,3 +223,27 @@ def test_trace_is_visible_while_laya_decision_is_still_in_flight(tmp_path: Path)
         "lead_ingested",
         "observer_error",
     ]
+
+
+def test_url_source_rejects_private_and_loopback_resolution() -> None:
+    with pytest.raises(ValueError, match="public"):
+        UrlLedgerSource(
+            "https://ledger.example.test/prospects.json",
+            resolve_host=lambda _host: ["127.0.0.1"],
+        )
+
+    with pytest.raises(ValueError, match="public"):
+        UrlLedgerSource(
+            "https://ledger.example.test/prospects.json",
+            resolve_host=lambda _host: ["10.0.0.8"],
+        )
+
+
+def test_url_source_accepts_public_resolution_with_injected_fetcher() -> None:
+    source = UrlLedgerSource(
+        "https://ledger.example.test/prospects.json",
+        resolve_host=lambda _host: ["93.184.216.34"],
+        fetch_bytes=lambda _url, _timeout: json.dumps({"findings": []}).encode(),
+    )
+
+    assert source.read() == {"findings": []}
