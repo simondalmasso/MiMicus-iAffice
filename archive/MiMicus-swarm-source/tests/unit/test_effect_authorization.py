@@ -170,7 +170,8 @@ def test_atomic_consumption_allows_at_most_one_concurrent_dispatch(tmp_path: Pat
             return "denied"
 
     with ThreadPoolExecutor(max_workers=2) as pool:
-        results = sorted([pool.submit(attempt).result() for _ in range(2)])
+        futures = [pool.submit(attempt) for _ in range(2)]
+        results = sorted(future.result(timeout=3) for future in futures)
 
     assert results == ["denied", "dispatched"]
     assert len(adapter.calls) == 1
