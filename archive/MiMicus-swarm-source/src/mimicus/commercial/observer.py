@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import ipaddress
 import json
+import socket
 from collections import deque
 from collections.abc import Callable, Mapping
 from copy import deepcopy
@@ -9,7 +11,7 @@ from pathlib import Path
 from threading import Lock
 from typing import Any, Protocol
 from urllib.parse import urlsplit
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from mimicus.canonical import sha256_obj
 from mimicus.commercial.models import CommercialTraceEvent, LeadDecisionPolicy
@@ -38,11 +40,59 @@ class FileLedgerSource:
 
 
 FetchBytes = Callable[[str, float], bytes]
+ResolveHost = Callable[[str], list[str]]
 
 
-def _fetch_https_bytes(url: str, timeout: float) -> bytes:
+def _resolve_host(host: str) -> list[str]:
+    try:
+        rows = socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM)
+    except OSError as exc:
+        raise ValueError("ledger URL hostname could not be resolved") from exc
+    return sorted({str(row[4][0]) for row in rows})
+
+
+def _validate_public_https_url(url: str, resolve_host: ResolveHost) -> None:
+    parsed = urlsplit(url)
+    if parsed.scheme.lower() != "https":
+        raise ValueError("ledger URL must use HTTPS")
+    if parsed.username is not None or parsed.password is not None:
+        raise ValueError("ledger URL must not contain credentials")
+    if not parsed.hostname:
+        raise ValueError("ledger URL must include a hostname")
+
+    addresses = resolve_host(parsed.hostname)
+    if not addresses:
+        raise ValueError("ledger URL hostname must resolve to a public IP address")
+
+    for raw_address in addresses:
+        address = raw_address.split("%", 1)[0]
+        try:
+            ip = ipaddress.ip_address(address)
+        except ValueError as exc:
+            raise ValueError("ledger URL hostname returned an invalid IP address") from exc
+        if not ip.is_global or ip.is_multicast or ip.is_unspecified or ip.is_reserved:
+            raise ValueError("ledger URL hostname must resolve only to public IP addresses")
+
+
+class _RejectRedirects(HTTPRedirectHandler):
+    def redirect_request(
+        self,
+        req: Request,
+        fp: Any,
+        code: int,
+        msg: str,
+        headers: Any,
+        newurl: str,
+    ) -> Request | None:
+        del req, fp, code, msg, headers, newurl
+        raise ValueError("remote ledger redirects are not allowed")
+
+
+def _fetch_https_bytes(url: str, timeout: float, *, resolve_host: ResolveHost) -> bytes:
+    _validate_public_https_url(url, resolve_host)
     request = Request(url, headers={"User-Agent": "Mimicus-Live-Observer/1"})
-    with urlopen(request, timeout=timeout) as response:  # noqa: S310 - URL is validated as HTTPS before this call
+    opener = build_opener(_RejectRedirects())
+    with opener.open(request, timeout=timeout) as response:
         body = response.read(_MAX_REMOTE_BYTES + 1)
     if len(body) > _MAX_REMOTE_BYTES:
         raise ValueError("remote ledger exceeds maximum supported size")
@@ -55,23 +105,23 @@ class UrlLedgerSource:
         url: str,
         *,
         timeout: float = 5.0,
-        fetch_bytes: FetchBytes = _fetch_https_bytes,
+        fetch_bytes: FetchBytes | None = None,
+        resolve_host: ResolveHost | None = None,
     ) -> None:
-        parsed = urlsplit(url)
-        if parsed.scheme.lower() != "https":
-            raise ValueError("ledger URL must use HTTPS")
-        if parsed.username is not None or parsed.password is not None:
-            raise ValueError("ledger URL must not contain credentials")
-        if not parsed.hostname:
-            raise ValueError("ledger URL must include a hostname")
+        resolver = resolve_host or _resolve_host
+        _validate_public_https_url(url, resolver)
         if timeout <= 0:
             raise ValueError("ledger URL timeout must be positive")
         self.url = url
         self.timeout = timeout
+        self._resolve_host = resolver
         self._fetch_bytes = fetch_bytes
 
     def read(self) -> dict[str, Any]:
-        raw = self._fetch_bytes(self.url, self.timeout)
+        if self._fetch_bytes is None:
+            raw = _fetch_https_bytes(self.url, self.timeout, resolve_host=self._resolve_host)
+        else:
+            raw = self._fetch_bytes(self.url, self.timeout)
         return _decode_json_object(raw.decode("utf-8"), label="remote ledger")
 
 
