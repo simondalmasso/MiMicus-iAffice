@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from mimicus.commercial import observer as commercial_observer
 from mimicus.commercial.observer import FileLedgerSource, UrlLedgerSource
 from mimicus.interfaces import commercial_observer_server
 from mimicus.interfaces.cli import main
@@ -88,6 +89,7 @@ def test_cli_observe_url_source_uses_https_source(
         captured.update(kwargs)
 
     monkeypatch.setattr(commercial_observer_server, "run_commercial_observer", fake_run, raising=False)
+    monkeypatch.setattr(commercial_observer, "_resolve_host", lambda _host: ["93.184.216.34"])
     monkeypatch.setenv("MIMICUS_DATABASE_URL", "sqlite:///:memory:")
 
     assert (
