@@ -157,7 +157,7 @@ class EffectStore:
                 select(EffectIntentRow).where(EffectIntentRow.intent_id == intent_id)
             ).first()
             assert row is not None
-            return _intent_from_row(row._mapping)
+            return _intent_from_row(dict(row._mapping))
 
     def mark_succeeded(
         self,
