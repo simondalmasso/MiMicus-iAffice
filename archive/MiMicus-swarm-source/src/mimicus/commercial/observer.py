@@ -118,10 +118,11 @@ class UrlLedgerSource:
         self._fetch_bytes = fetch_bytes
 
     def read(self) -> dict[str, Any]:
-        if self._fetch_bytes is None:
-            raw = _fetch_https_bytes(self.url, self.timeout, resolve_host=self._resolve_host)
-        else:
-            raw = self._fetch_bytes(self.url, self.timeout)
+        raw = (
+            _fetch_https_bytes(self.url, self.timeout, resolve_host=self._resolve_host)
+            if self._fetch_bytes is None
+            else self._fetch_bytes(self.url, self.timeout)
+        )
         return _decode_json_object(raw.decode("utf-8"), label="remote ledger")
 
 
