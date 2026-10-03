@@ -155,6 +155,7 @@ def test_url_source_requires_public_https_and_can_use_injected_fetcher() -> None
 
     source = UrlLedgerSource(
         "https://example.test/ledger.json",
+        resolve_host=lambda _host: ["93.184.216.34"],
         fetch_bytes=lambda _url, _timeout: json.dumps({"findings": []}).encode(),
     )
     assert source.read() == {"findings": []}
