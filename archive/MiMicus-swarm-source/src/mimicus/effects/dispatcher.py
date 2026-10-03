@@ -7,10 +7,12 @@ from typing import Protocol
 
 from mimicus.canonical import sha256_obj
 from mimicus.effects.models import EffectActionEnvelope, EffectIntent
-from mimicus.effects.store import EffectStore
+from mimicus.effects.store import EffectAuthorizationError, EffectStore
 
 
 class EffectAdapter(Protocol):
+    adapter_id: str
+
     def dispatch(self, envelope: EffectActionEnvelope) -> object: ...
 
 
@@ -37,6 +39,8 @@ class EffectDispatcher:
         approval_id: str,
         adapter: EffectAdapter,
     ) -> EffectIntent:
+        if adapter.adapter_id != envelope.adapter:
+            raise EffectAuthorizationError("effect adapter identity does not match approved envelope")
         intent = self.store.consume_approval(
             approval_id=approval_id,
             envelope_hash=envelope.envelope_hash,
