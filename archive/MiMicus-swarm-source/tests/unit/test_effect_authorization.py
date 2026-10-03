@@ -46,12 +46,14 @@ def _envelope(**updates: object) -> EffectActionEnvelope:
 
 
 def _approval(envelope: EffectActionEnvelope, approval_id: str = "approval-1", *, expires_at: datetime | None = None) -> EffectApprovalReceipt:
+    expiry = expires_at or (NOW + timedelta(minutes=10))
+    issued = NOW if expiry > NOW else (expiry - timedelta(minutes=10))
     return EffectApprovalReceipt(
         approval_id=approval_id,
         envelope_hash=envelope.envelope_hash,
         approver_id="human:operator",
-        issued_at=NOW,
-        expires_at=expires_at or (NOW + timedelta(minutes=10)),
+        issued_at=issued,
+        expires_at=expiry,
         policy_version="effect-policy-v1",
     )
 
