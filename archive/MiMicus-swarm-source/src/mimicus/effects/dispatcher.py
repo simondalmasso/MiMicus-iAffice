@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from contextlib import suppress
 from datetime import UTC, datetime
 from typing import Protocol
 
@@ -50,14 +51,12 @@ class EffectDispatcher:
                 outcome_hash=outcome_hash,
             )
         except Exception as exc:
-            try:
+            # The effect may already have happened. Never restore approval
+            # or attempt an automatic redispatch merely because recording failed.
+            with suppress(Exception):
                 self.store.mark_unknown(
                     intent.intent_id,
                     completed_at=self._now(),
                     error_class=type(exc).__name__,
                 )
-            except Exception:
-                # The effect may already have happened. Never restore approval
-                # or attempt an automatic redispatch merely because recording failed.
-                pass
             raise
