@@ -1,10 +1,11 @@
 {
   "name": "mimicus-iaffice",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0-rc.1",
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "check": "wrangler deploy --dry-run"
+    "check:js": "node --check public/app.js",
+    "check": "npm run check:js && wrangler deploy --dry-run"
   }
 }
