@@ -33,3 +33,22 @@ def test_cli_doctor_run_benchmark_and_plugin(tmp_path: Path, monkeypatch, capsys
     out = tmp_path / "bench"
     assert main(["benchmark", "--profile", "offline", "--episodes", "200", "--output-dir", str(out)]) == 0
     assert (out / "BENCHMARK.json").exists()
+
+
+
+def test_doctor_reports_nvidia_credential_and_cost_preflight(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("MIMICUS_DATABASE_URL", f"sqlite:///{tmp_path / 'nvidia-doctor.db'}")
+    monkeypatch.setenv("NVIDIA_API_KEY", "nvapi-test")
+    monkeypatch.delenv("MIMICUS_NVIDIA_KNOWN_ZERO_COST", raising=False)
+
+    unknown_cost = doctor("nvidia")
+    assert unknown_cost["provider_ready"] is True
+    assert unknown_cost["provider_live_credential_present"] is True
+    assert unknown_cost["pricing_preflight_status"] == "REQUIRED_FOR_MULTI_CALL"
+
+    monkeypatch.setenv("MIMICUS_NVIDIA_KNOWN_ZERO_COST", "1")
+    confirmed_free = doctor("nvidia")
+    assert confirmed_free["provider_ready"] is True
+    assert confirmed_free["provider_live_credential_present"] is True
+    assert confirmed_free["pricing_preflight_status"] == "READY"
+    assert confirmed_free["estimated_max_cost_per_call"] == 0.0
