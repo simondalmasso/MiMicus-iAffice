@@ -1,4 +1,4 @@
-name: Mimicus Core CI
+name: Mimicus CI
 
 on:
   push:
@@ -10,6 +10,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: mimicus-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   core:
@@ -28,9 +32,19 @@ jobs:
         run: pytest --cov=mimicus --cov-report=term-missing
       - name: Ruff
         run: ruff check src tests
-      - name: Cockpit JS syntax
-        run: node --check ../public/app.js
       - name: Mypy
         run: mypy src/mimicus
       - name: Build
         run: python -m build
+
+  cockpit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - name: JavaScript syntax
+        run: node --check public/app.js
+      - name: Worker dry-run
+        run: npx --yes wrangler@4.134.0 deploy --dry-run
