@@ -53,8 +53,12 @@ def semantic_replay(repository: Any, run_id: str) -> dict[str, Any]:
     snapshot_version = str(input_material.get("version", "ORDER-008-semantic-replay-v1"))
     causal_required = snapshot_version == "ORDER-008-semantic-replay-v2"
     causal_material = input_material.get("causal_execution")
-    causal_available = isinstance(causal_material, dict) and bool(causal_material)
-    causal_result = verify_causal_execution(causal_material) if causal_available else {"verified": not causal_required, "semantic_hash": None, "reason": "causal snapshot not available"}
+    if isinstance(causal_material, dict) and causal_material:
+        causal_available = True
+        causal_result = verify_causal_execution(causal_material)
+    else:
+        causal_available = False
+        causal_result = {"verified": not causal_required, "semantic_hash": None, "reason": "causal snapshot not available"}
     causal_hash_ok = (not causal_required and not causal_available) or (
         bool(causal_result.get("verified"))
         and causal_result.get("semantic_hash") == expected.get("causal_semantic_hash")
