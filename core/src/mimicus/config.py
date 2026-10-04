@@ -28,7 +28,7 @@ class Settings:
         )
 
     def validate(self) -> None:
-        if self.profile not in {"offline", "openai", "test"}:
+        if self.profile not in {"offline", "openai", "nvidia", "test"}:
             raise ValueError(f"unknown profile: {self.profile}")
         if not 1 <= self.max_agents <= 8:
             raise ValueError("max_agents must be in 1..8")
