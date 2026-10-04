@@ -221,6 +221,7 @@ class CommercialObserver:
                     "held_ids": batch_payload["held_ids"],
                     "rejected_ids": batch_payload["rejected_ids"],
                     "repair_data_ids": batch_payload["repair_data_ids"],
+                    "completed_ids": batch_payload["completed_ids"],
                 }
             )
             self._last_payload_hash = payload_hash
