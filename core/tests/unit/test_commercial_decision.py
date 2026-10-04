@@ -6,9 +6,11 @@ import pytest
 
 from mimicus.commercial.decision import DeterministicLeadDecisionService
 from mimicus.commercial.models import (
+    CommercialStage,
     LeadCandidate,
     LeadDecisionPolicy,
     LeadDisposition,
+    LeadNextAction,
     LeadStage,
 )
 
@@ -29,6 +31,7 @@ def _candidate(
     contacted_at: datetime | None = None,
     verified_at: datetime | None = None,
     published_at: datetime | None = None,
+    commercial_stage: str = "unknown",
 ) -> LeadCandidate:
     source_name = "Facebook" if lane == "facebook" else "Reddit"
     return LeadCandidate.model_validate(
@@ -50,6 +53,7 @@ def _candidate(
             "contacted_at": contacted_at,
             "source_url": f"https://example.test/{prospect_id}",
             "direct_url": f"https://example.test/{prospect_id}/contact",
+            "commercial": {"stage": commercial_stage},
         }
     )
 
@@ -263,3 +267,82 @@ def test_policy_and_batch_mappings_are_immutable() -> None:
     )
     with pytest.raises(TypeError):
         batch.selected_by_lane["facebook"] = ()  # type: ignore[index]
+
+
+def test_proposal_outranks_replied_even_with_lower_setter_score() -> None:
+    batch = DeterministicLeadDecisionService().decide(
+        [
+            _candidate("reply", status="replied", score=100),
+            _candidate("proposal", status="contacted", score=10, contacted_at=AS_OF - timedelta(hours=30), commercial_stage="proposal"),
+        ],
+        _policy(),
+        as_of=AS_OF,
+    )
+
+    assert batch.selected_by_lane["facebook"][:2] == ("proposal", "reply")
+    proposal = _by_id(batch)["proposal"]
+    assert proposal.stage == LeadStage.PROPOSAL  # type: ignore[union-attr]
+    assert proposal.commercial_stage == CommercialStage.PROPOSAL  # type: ignore[union-attr]
+    assert proposal.next_action == LeadNextAction.FOLLOW_UP  # type: ignore[union-attr]
+
+
+def test_qualified_outranks_replied_and_requests_proposal() -> None:
+    batch = DeterministicLeadDecisionService().decide(
+        [
+            _candidate("reply", status="replied", score=99),
+            _candidate("qualified", status="replied", score=20, commercial_stage="qualified"),
+        ],
+        _policy(),
+        as_of=AS_OF,
+    )
+
+    assert batch.selected_by_lane["facebook"][:2] == ("qualified", "reply")
+    decision = _by_id(batch)["qualified"]
+    assert decision.stage == LeadStage.QUALIFIED  # type: ignore[union-attr]
+    assert decision.next_action == LeadNextAction.PROPOSE  # type: ignore[union-attr]
+
+
+@pytest.mark.parametrize("commercial_stage", ["won", "lost"])
+def test_explicit_terminal_outcome_is_complete_not_reject(commercial_stage: str) -> None:
+    batch = DeterministicLeadDecisionService().decide(
+        [_candidate(f"terminal-{commercial_stage}", status="closed", commercial_stage=commercial_stage)],
+        _policy(),
+        as_of=AS_OF,
+    )
+    decision = _by_id(batch)[f"terminal-{commercial_stage}"]
+
+    assert decision.disposition == LeadDisposition.COMPLETE  # type: ignore[union-attr]
+    assert decision.next_action == LeadNextAction.NONE  # type: ignore[union-attr]
+    assert f"terminal-{commercial_stage}" in batch.completed_ids
+    assert f"terminal-{commercial_stage}" not in batch.rejected_ids
+
+
+def test_legacy_unknown_commercial_stage_preserves_old_reply_precedence() -> None:
+    batch = DeterministicLeadDecisionService().decide(
+        [
+            _candidate("prepared", status="prepared", score=99, commercial_stage="unknown"),
+            _candidate("reply", status="replied", score=50, commercial_stage="unknown"),
+        ],
+        _policy(),
+        as_of=AS_OF,
+    )
+
+    assert batch.selected_by_lane["facebook"] == ("reply", "prepared")
+    assert _by_id(batch)["reply"].next_action == LeadNextAction.QUALIFY  # type: ignore[union-attr]
+    assert _by_id(batch)["prepared"].next_action == LeadNextAction.CONTACT  # type: ignore[union-attr]
+
+
+def test_contacted_waiting_next_action_is_wait() -> None:
+    batch = DeterministicLeadDecisionService().decide(
+        [
+            _candidate(
+                "waiting-next",
+                status="contacted",
+                contacted_at=AS_OF - timedelta(hours=1),
+            )
+        ],
+        _policy(),
+        as_of=AS_OF,
+    )
+
+    assert _by_id(batch)["waiting-next"].next_action == LeadNextAction.WAIT  # type: ignore[union-attr]
