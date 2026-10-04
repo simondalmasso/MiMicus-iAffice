@@ -95,9 +95,16 @@ function renderLiveEvent(row){
   }
 
   if(row.event === "laya_reading"){
+    const stage = row.commercial_stage ?? "unknown";
+    const evidenceCount = row.commercial_evidence_count ?? 0;
+    const evidenceMatch = row.commercial_stage_evidenced === true
+      ? "yes"
+      : row.commercial_stage_evidenced === false
+        ? "no"
+        : "—";
     appendLog(
       "LAYA",
-      `Leyendo ${row.prospect_id} · policy ${row.policy_version ?? "—"} · risk ${row.scam_risk ?? "—"} · active ${row.active ?? "—"}`,
+      `Leyendo ${row.prospect_id} · stage ${stage} · evidence ${evidenceCount} · matched ${evidenceMatch} · policy ${row.policy_version ?? "—"} · risk ${row.scam_risk ?? "—"} · active ${row.active ?? "—"}`,
       when
     );
     return;
