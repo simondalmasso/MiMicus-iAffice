@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
@@ -24,9 +24,17 @@ class LedgerEvent(BaseModel):
 
 
 class EventLedger:
-    def __init__(self, run_id: str) -> None:
+    def __init__(
+        self,
+        run_id: str,
+        *,
+        clock: Callable[[], datetime] | None = None,
+        id_source: Callable[[], str] | None = None,
+    ) -> None:
         self.run_id = run_id
         self.events: list[LedgerEvent] = []
+        self._clock = clock or (lambda: datetime.now(UTC))
+        self._id_source = id_source or (lambda: str(uuid4()))
 
     @property
     def head(self) -> str:
@@ -34,8 +42,12 @@ class EventLedger:
 
     def append(self, event_type: str, payload: dict[str, Any] | None = None) -> LedgerEvent:
         sequence = len(self.events)
-        event_id = str(uuid4())
-        timestamp = datetime.now(UTC)
+        event_id = self._id_source()
+        timestamp = self._clock()
+        if not event_id:
+            raise ValueError("event id source returned an empty id")
+        if timestamp.utcoffset() is None:
+            raise ValueError("event ledger clock must return timezone-aware datetimes")
         event_payload = payload or {}
         prev_event_hash = self.head
         raw: dict[str, Any] = {
