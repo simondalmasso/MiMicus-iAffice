@@ -28,6 +28,21 @@ jobs:
           python-version: "3.12"
       - name: Install
         run: python -m pip install -e ".[dev]"
+      - name: Commercial triage smoke
+        env:
+          MIMICUS_DATABASE_URL: "sqlite:///:memory:"
+        run: |
+          mimicus triage \
+            --profile offline \
+            --ledger-file fixtures/commercial-observer-demo.json \
+            --policy-file config/commercial-policy-v1.json \
+            --as-of "2026-10-04T00:00:00-03:00" > /tmp/mimicus-triage.json
+          python - <<'PY'
+          import json
+          payload = json.load(open("/tmp/mimicus-triage.json", encoding="utf-8"))
+          assert payload["selected_by_lane"]["facebook"][0] == "demo-proposal"
+          assert "demo-weak-prepared" in payload["held_ids"]
+          PY
       - name: Tests and coverage
         run: pytest --cov=mimicus --cov-report=term-missing
       - name: Ruff
