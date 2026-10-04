@@ -46,12 +46,47 @@ class LeadStage(StrEnum):
     UNKNOWN = "unknown"
 
 
+class CommercialStageEvidence(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    stage: CommercialStage
+    observed_at: datetime
+    source_ref: str = Field(min_length=1)
+    summary: str | None = None
+
+    @field_validator("observed_at")
+    @classmethod
+    def require_evidence_timezone(cls, value: datetime) -> datetime:
+        if value.utcoffset() is None:
+            raise ValueError("commercial evidence observed_at must include timezone information")
+        return value
+
+
 class CommercialContext(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     stage: CommercialStage = CommercialStage.UNKNOWN
     updated_at: datetime | None = None
     note: str | None = None
+    evidence: tuple[CommercialStageEvidence, ...] = ()
+
+    @field_validator("evidence")
+    @classmethod
+    def canonicalize_evidence(
+        cls,
+        value: tuple[CommercialStageEvidence, ...],
+    ) -> tuple[CommercialStageEvidence, ...]:
+        return tuple(
+            sorted(
+                value,
+                key=lambda row: (
+                    row.observed_at.isoformat(),
+                    row.stage.value,
+                    row.source_ref,
+                    row.summary or "",
+                ),
+            )
+        )
 
     @field_validator("updated_at")
     @classmethod
