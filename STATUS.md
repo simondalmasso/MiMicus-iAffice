@@ -8,8 +8,8 @@
 
 The consolidated product has passed:
 
-- **200 tests PASS**
-- **90.24% total coverage** (required: 90%)
+- **224 tests PASS**
+- **90.25% total coverage** (required: 90%)
 - **Ruff PASS**
 - **mypy PASS**
 - **Python package build PASS**
@@ -22,8 +22,9 @@ The CI workflow runs these gates on `main` and the release staging branch.
 
 - active Python runtime under `core/`;
 - LAYA / `MiMicusEngine` remains the single orchestration authority;
-- deterministic commercial lead decision gate;
-- live read-only LAYA observer;
+- deterministic commercial lead decision gate with evidence-backed stage escalation;
+- deterministic closer action queue for every `WORK_NOW` lead;
+- live read-only LAYA observer with sanitized stage/evidence/next-action telemetry;
 - completion-driven DAG scheduler;
 - one-use exact-envelope effect authorization;
 - causal replay anchored to the append-only event ledger;
@@ -56,8 +57,9 @@ Repository/release readiness is ahead of deployment readiness.
 
 Remaining deployment work:
 
-1. exact-head CI on canonical `main`;
-2. optional preview/live health verification;
-3. production deployment only after explicit release decision.
+1. fast-forward the verified closer-handoff checkpoint to canonical `main`;
+2. exact-head CI on canonical `main`;
+3. optional preview/live health verification;
+4. production deployment only after explicit release decision.
 
 There is no known architectural blocker at this checkpoint.

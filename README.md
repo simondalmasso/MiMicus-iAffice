@@ -4,7 +4,7 @@ MiMicus iAffice is a governed multi-agent runtime with a monochrome operator coc
 
 The repository has two product surfaces:
 
-- **`core/`** — authoritative Python runtime: LAYA / `MiMicusEngine`, Morphology DAG execution, governed memory, evidence/provenance, commercial lead triage, effect authorization and causal replay.
+- **`core/`** — authoritative Python runtime: LAYA / `MiMicusEngine`, Morphology DAG execution, governed memory, evidence/provenance, commercial lead triage + closer handoff, effect authorization and causal replay.
 - **Cockpit** — Cloudflare Worker + static UI at the repository root (`worker.js`, `wrangler.toml`, `public/`).
 
 ## Architecture
@@ -23,7 +23,7 @@ DagExecutor
       |
       +--> governed memory
       +--> falsification / verification
-      +--> commercial decision gate
+      +--> commercial decision gate / closer handoff
       +--> effect authorization boundary
       |
       v
@@ -42,7 +42,7 @@ The previous default-branch content is preserved intact at:
 
 Current release gates include:
 
-- 200 tests passing
+- 224 tests passing
 - coverage >= 90%
 - Ruff passing
 - mypy passing

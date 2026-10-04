@@ -63,13 +63,26 @@ DeterministicLeadDecisionService
        v
 LAYA authoritative queue
        |
-       +--> WORK_NOW
+       +--> WORK_NOW ----> CommercialActionTicket
+       |                        |
+       |                        v
+       |                  closer / human review
+       |                        |
+       |                        v
+       |                 EffectApprovalReceipt
+       |                        |
+       |                        v
+       |                  optional dispatch
+       |
        +--> HOLD
        +--> REPAIR_DATA
+       +--> COMPLETE
        +--> REJECT
 ```
 
-Setter ranking is an input signal, not authority. The gate remains deterministic and free of network/model calls.
+Setter ranking is an input signal, not authority. Elevated commercial stages require matching structured evidence before they can gain priority. The gate remains deterministic and free of network/model calls.
+
+A `CommercialActionTicket` is emitted only for `WORK_NOW`. It binds buyer/title/contact target, stage, `next_action`, rank and authoritative `decision_hash`. It is a handoff artifact, not effect authority: `requires_human_approval=true` and an actual external mutation still requires the separate EffectApprovalReceipt boundary.
 
 ## Effects
 
