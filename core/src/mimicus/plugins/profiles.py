@@ -24,6 +24,7 @@ from mimicus.plugins.services import (
 )
 from mimicus.providers.base import Provider
 from mimicus.providers.openai_agents import OpenAIAgentsProvider
+from mimicus.providers.openai_compatible import OpenAICompatibleProvider
 from mimicus.providers.scripted import ScriptedProvider
 from mimicus.storage.repository import Repository
 
@@ -34,6 +35,25 @@ class Profile:
     network_allowed: bool
     provider: str
     database_kind: str
+
+
+def _env_bool(name: str, *, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None or not value.strip():
+        return default
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise ValueError(f"{name} must be a boolean value")
+
+
+def _require_env(name: str) -> str:
+    value = os.getenv(name)
+    if value is None or not value.strip():
+        raise ValueError(f"{name} is required for this profile")
+    return value.strip()
 
 
 def _env_float(name: str) -> float | None:
@@ -49,8 +69,34 @@ def _env_float(name: str) -> float | None:
 PROFILES = {
     "offline": Profile("offline", False, "scripted", "sqlite"),
     "openai": Profile("openai", True, "openai_agents", "sqlite"),
+    "nvidia": Profile("nvidia", True, "nvidia_nim", "sqlite"),
     "test": Profile("test", False, "scripted", "sqlite-temp"),
 }
+
+
+def _build_provider(profile_name: str) -> Provider:
+    if profile_name in {"offline", "test"}:
+        return ScriptedProvider()
+    if profile_name == "openai":
+        return OpenAIAgentsProvider(
+            os.getenv("MIMICUS_OPENAI_MODEL", "gpt-5-mini"),
+            input_usd_per_million_tokens=_env_float("MIMICUS_OPENAI_INPUT_USD_PER_MILLION_TOKENS"),
+            output_usd_per_million_tokens=_env_float("MIMICUS_OPENAI_OUTPUT_USD_PER_MILLION_TOKENS"),
+            max_cost_per_call_usd=_env_float("MIMICUS_OPENAI_MAX_COST_PER_CALL_USD"),
+        )
+    if profile_name == "nvidia":
+        return OpenAICompatibleProvider(
+            model=os.getenv("MIMICUS_NVIDIA_MODEL", "deepseek-ai/deepseek-v4.1-flash"),
+            base_url="https://integrate.api.nvidia.com/v1",
+            api_key=_require_env("NVIDIA_API_KEY"),
+            provider_id="nvidia_nim",
+            provider_version="nvidia-nim/deepseek-v4.1",
+            known_zero_cost=_env_bool("MIMICUS_NVIDIA_KNOWN_ZERO_COST"),
+            input_usd_per_million_tokens=_env_float("MIMICUS_NVIDIA_INPUT_USD_PER_MILLION_TOKENS"),
+            output_usd_per_million_tokens=_env_float("MIMICUS_NVIDIA_OUTPUT_USD_PER_MILLION_TOKENS"),
+            max_cost_per_call_usd=_env_float("MIMICUS_NVIDIA_MAX_COST_PER_CALL_USD"),
+        )
+    raise ValueError(f"unsupported provider profile: {profile_name}")
 
 
 def build_kernel(profile_name: str, database_url: str | None = None, *, provider_override: Provider | None = None) -> PluginKernel:
@@ -58,16 +104,7 @@ def build_kernel(profile_name: str, database_url: str | None = None, *, provider
         raise ValueError(f"unknown profile: {profile_name}")
     db_url = database_url or os.environ.get("MIMICUS_DATABASE_URL") or "sqlite:///mimicus.db"
     repository = Repository(db_url)
-    provider: Provider = provider_override or (
-        ScriptedProvider()
-        if profile_name != "openai"
-        else OpenAIAgentsProvider(
-            os.getenv("MIMICUS_OPENAI_MODEL", "gpt-5-mini"),
-            input_usd_per_million_tokens=_env_float("MIMICUS_OPENAI_INPUT_USD_PER_MILLION_TOKENS"),
-            output_usd_per_million_tokens=_env_float("MIMICUS_OPENAI_OUTPUT_USD_PER_MILLION_TOKENS"),
-            max_cost_per_call_usd=_env_float("MIMICUS_OPENAI_MAX_COST_PER_CALL_USD"),
-        )
-    )
+    provider: Provider = provider_override or _build_provider(profile_name)
     storage = RepositoryStorage(repository)
     factory = BuiltinAgentFactory(provider.capabilities)
     effect_dispatch = EffectDispatcher(store=EffectStore(repository))
