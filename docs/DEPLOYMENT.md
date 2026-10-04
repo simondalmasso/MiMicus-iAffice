@@ -37,7 +37,7 @@ The Worker remains observational. No production route may provide command ingres
 
 ## Gate C — local live observer
 
-Use a representative prospect ledger and explicit policy.
+Use the sanitized `core/fixtures/commercial-observer-demo.json` first, then a representative current setter ledger supplied explicitly at runtime.
 
 Required flow:
 
