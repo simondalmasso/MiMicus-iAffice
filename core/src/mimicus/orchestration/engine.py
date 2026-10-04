@@ -157,6 +157,8 @@ class MiMicusEngine(LegacyMiMicusEngine):
                     policy_version=policy.version,
                     disposition=decision.disposition,
                     stage=decision.stage,
+                    commercial_stage=decision.commercial_stage,
+                    next_action=decision.next_action,
                     rank_position=decision.rank_position,
                     reasons=decision.reasons,
                     data_quality_issues=decision.data_quality_issues,
