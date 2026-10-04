@@ -34,6 +34,22 @@ def normalize_prospect(row: Mapping[str, Any]) -> LeadCandidate:
     elif not isinstance(commercial, Mapping):
         raise ValueError("commercial must be an object")
 
+    raw_commercial_evidence = commercial.get("evidence", [])
+    if not isinstance(raw_commercial_evidence, list):
+        raise ValueError("commercial evidence must be a list")
+    commercial_evidence: list[dict[str, Any]] = []
+    for evidence in raw_commercial_evidence:
+        if not isinstance(evidence, Mapping):
+            raise ValueError("commercial evidence item must be an object")
+        commercial_evidence.append(
+            {
+                "stage": evidence.get("stage"),
+                "observed_at": evidence.get("observedAt", evidence.get("observed_at")),
+                "source_ref": evidence.get("sourceRef", evidence.get("source_ref")),
+                "summary": evidence.get("summary"),
+            }
+        )
+
     return LeadCandidate.model_validate(
         {
             "prospect_id": str(row.get("id", "")),
@@ -57,7 +73,7 @@ def normalize_prospect(row: Mapping[str, Any]) -> LeadCandidate:
                 "stage": commercial.get("stage", "unknown"),
                 "updated_at": commercial.get("updatedAt"),
                 "note": commercial.get("note"),
-                "evidence": commercial.get("evidence", []),
+                "evidence": commercial_evidence,
             },
         }
     )
