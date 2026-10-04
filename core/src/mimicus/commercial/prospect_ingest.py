@@ -28,6 +28,12 @@ def normalize_prospect(row: Mapping[str, Any]) -> LeadCandidate:
     if not isinstance(outreach, Mapping):
         raise ValueError("outreach must be an object")
 
+    commercial = row.get("commercial")
+    if commercial is None:
+        commercial = {"stage": "unknown"}
+    elif not isinstance(commercial, Mapping):
+        raise ValueError("commercial must be an object")
+
     return LeadCandidate.model_validate(
         {
             "prospect_id": str(row.get("id", "")),
@@ -47,6 +53,11 @@ def normalize_prospect(row: Mapping[str, Any]) -> LeadCandidate:
             "contacted_at": outreach.get("contactedAt"),
             "source_url": row.get("sourceUrl"),
             "direct_url": row.get("directUrl"),
+            "commercial": {
+                "stage": commercial.get("stage", "unknown"),
+                "updated_at": commercial.get("updatedAt"),
+                "note": commercial.get("note"),
+            },
         }
     )
 
