@@ -5,11 +5,13 @@ from datetime import datetime
 
 from mimicus.canonical import sha256_obj
 from mimicus.commercial.models import (
+    CommercialStage,
     LeadCandidate,
     LeadDecision,
     LeadDecisionBatch,
     LeadDecisionPolicy,
     LeadDisposition,
+    LeadNextAction,
     LeadStage,
 )
 
@@ -18,6 +20,8 @@ from mimicus.commercial.models import (
 class _Assessment:
     candidate: LeadCandidate
     stage: LeadStage
+    commercial_stage: CommercialStage
+    next_action: LeadNextAction
     disposition: LeadDisposition
     reasons: tuple[str, ...] = ()
     issues: tuple[str, ...] = ()
@@ -126,6 +130,13 @@ class DeterministicLeadDecisionService:
                 if decision.disposition == LeadDisposition.REPAIR_DATA
             )
         )
+        completed_ids = tuple(
+            sorted(
+                decision.prospect_id
+                for decision in canonical_decisions
+                if decision.disposition == LeadDisposition.COMPLETE
+            )
+        )
         semantic_batch = {
             "as_of": as_of.isoformat(),
             "input_ids": sorted(ids),
@@ -134,6 +145,7 @@ class DeterministicLeadDecisionService:
             "held_ids": held_ids,
             "rejected_ids": rejected_ids,
             "repair_data_ids": repair_data_ids,
+            "completed_ids": completed_ids,
             "policy_hash": policy_hash,
         }
         return LeadDecisionBatch(
@@ -143,6 +155,7 @@ class DeterministicLeadDecisionService:
             held_ids=held_ids,
             rejected_ids=rejected_ids,
             repair_data_ids=repair_data_ids,
+            completed_ids=completed_ids,
             policy_hash=policy_hash,
             batch_hash=sha256_obj(semantic_batch),
         )
@@ -155,11 +168,23 @@ class DeterministicLeadDecisionService:
         as_of: datetime,
     ) -> _Assessment:
         status = candidate.outreach_status.strip().lower()
+        commercial_stage = candidate.commercial.stage
 
+        if commercial_stage in {CommercialStage.WON, CommercialStage.LOST}:
+            return _Assessment(
+                candidate=candidate,
+                stage=LeadStage.TERMINAL,
+                commercial_stage=commercial_stage,
+                next_action=LeadNextAction.NONE,
+                disposition=LeadDisposition.COMPLETE,
+                reasons=(f"commercial:{commercial_stage.value}",),
+            )
         if status == "closed":
             return _Assessment(
                 candidate=candidate,
                 stage=LeadStage.TERMINAL,
+                commercial_stage=commercial_stage,
+                next_action=LeadNextAction.NONE,
                 disposition=LeadDisposition.REJECT,
                 reasons=("terminal_status",),
             )
@@ -167,6 +192,8 @@ class DeterministicLeadDecisionService:
             return _Assessment(
                 candidate=candidate,
                 stage=self._known_stage(status),
+                commercial_stage=commercial_stage,
+                next_action=LeadNextAction.NONE,
                 disposition=LeadDisposition.REJECT,
                 reasons=("inactive",),
             )
@@ -174,6 +201,8 @@ class DeterministicLeadDecisionService:
             return _Assessment(
                 candidate=candidate,
                 stage=self._known_stage(status),
+                commercial_stage=commercial_stage,
+                next_action=LeadNextAction.NONE,
                 disposition=LeadDisposition.REJECT,
                 reasons=("argentina_ineligible",),
             )
@@ -181,6 +210,8 @@ class DeterministicLeadDecisionService:
             return _Assessment(
                 candidate=candidate,
                 stage=self._known_stage(status),
+                commercial_stage=commercial_stage,
+                next_action=LeadNextAction.NONE,
                 disposition=LeadDisposition.REJECT,
                 reasons=("worker_fee",),
             )
@@ -188,6 +219,8 @@ class DeterministicLeadDecisionService:
             return _Assessment(
                 candidate=candidate,
                 stage=self._known_stage(status),
+                commercial_stage=commercial_stage,
+                next_action=LeadNextAction.NONE,
                 disposition=LeadDisposition.REJECT,
                 reasons=("high_scam_risk",),
             )
@@ -204,7 +237,11 @@ class DeterministicLeadDecisionService:
         if not candidate.direct_url:
             issues.append("missing_direct_url")
 
-        if status == "replied":
+        if commercial_stage == CommercialStage.PROPOSAL:
+            stage = LeadStage.PROPOSAL
+        elif commercial_stage == CommercialStage.QUALIFIED:
+            stage = LeadStage.QUALIFIED
+        elif status == "replied":
             stage = LeadStage.REPLIED
         elif status == "prepared":
             stage = LeadStage.PREPARED
@@ -237,6 +274,8 @@ class DeterministicLeadDecisionService:
             return _Assessment(
                 candidate=candidate,
                 stage=stage,
+                commercial_stage=commercial_stage,
+                next_action=LeadNextAction.NONE,
                 disposition=LeadDisposition.REPAIR_DATA,
                 issues=tuple(sorted(set(issues))),
             )
@@ -244,9 +283,24 @@ class DeterministicLeadDecisionService:
         return _Assessment(
             candidate=candidate,
             stage=stage,
+            commercial_stage=commercial_stage,
+            next_action=self._next_action(stage),
             disposition=LeadDisposition.HOLD,
             reasons=(f"stage:{stage.value}",),
         )
+
+    @staticmethod
+    def _next_action(stage: LeadStage) -> LeadNextAction:
+        return {
+            LeadStage.PROPOSAL: LeadNextAction.FOLLOW_UP,
+            LeadStage.QUALIFIED: LeadNextAction.PROPOSE,
+            LeadStage.REPLIED: LeadNextAction.QUALIFY,
+            LeadStage.PREPARED: LeadNextAction.CONTACT,
+            LeadStage.CONTACTED_DUE: LeadNextAction.FOLLOW_UP,
+            LeadStage.CONTACTED_WAITING: LeadNextAction.WAIT,
+            LeadStage.TERMINAL: LeadNextAction.NONE,
+            LeadStage.UNKNOWN: LeadNextAction.NONE,
+        }[stage]
 
     @staticmethod
     def _known_stage(status: str) -> LeadStage:
@@ -293,6 +347,8 @@ class DeterministicLeadDecisionService:
             "lane": assessment.candidate.lane,
             "disposition": disposition.value,
             "stage": assessment.stage.value,
+            "commercial_stage": assessment.commercial_stage.value,
+            "next_action": assessment.next_action.value,
             "rank_position": rank_position,
             "reasons": reasons,
             "data_quality_issues": assessment.issues,
@@ -305,6 +361,8 @@ class DeterministicLeadDecisionService:
             lane=assessment.candidate.lane,
             disposition=disposition,
             stage=assessment.stage,
+            commercial_stage=assessment.commercial_stage,
+            next_action=assessment.next_action,
             rank_position=rank_position,
             reasons=reasons,
             data_quality_issues=assessment.issues,
