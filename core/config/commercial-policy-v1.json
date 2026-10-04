@@ -8,6 +8,8 @@
   },
   "prepared_min_score": 70,
   "stage_precedence": [
+    "proposal",
+    "qualified",
     "replied",
     "contacted_due",
     "prepared",
