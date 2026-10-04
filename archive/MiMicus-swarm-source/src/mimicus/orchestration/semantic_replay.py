@@ -26,7 +26,8 @@ def semantic_replay(repository: Any, run_id: str) -> dict[str, Any]:
             "status": "RUN_NOT_FOUND",
             "run_id": run_id,
         }
-    integrity = verify_replay(repository.get_events(run_id), str(run.get("ledger_head", "")))
+    events = repository.get_events(run_id)
+    integrity = verify_replay(events, str(run.get("ledger_head", "")))
     semantic = run.get("semantic_replay")
     if not isinstance(semantic, dict) or not semantic:
         return {
@@ -59,9 +60,28 @@ def semantic_replay(repository: Any, run_id: str) -> dict[str, Any]:
     else:
         causal_available = False
         causal_result = {"verified": not causal_required, "semantic_hash": None, "reason": "causal snapshot not available"}
-    causal_hash_ok = (not causal_required and not causal_available) or (
-        bool(causal_result.get("verified"))
-        and causal_result.get("semantic_hash") == expected.get("causal_semantic_hash")
+    causal_anchor_hashes = [
+        str(event.get("payload", {}).get("causal_semantic_hash"))
+        for event in events
+        if event.get("event_type") == "causal_execution_recorded"
+        and isinstance(event.get("payload"), dict)
+        and isinstance(event.get("payload", {}).get("causal_semantic_hash"), str)
+    ]
+    if causal_required:
+        causal_ledger_anchor_ok = (
+            len(causal_anchor_hashes) == 1
+            and causal_anchor_hashes[0] == causal_result.get("semantic_hash")
+        )
+    elif causal_available and causal_anchor_hashes:
+        causal_ledger_anchor_ok = causal_result.get("semantic_hash") in causal_anchor_hashes
+    else:
+        causal_ledger_anchor_ok = True
+    causal_hash_ok = (
+        ((not causal_required and not causal_available) or (
+            bool(causal_result.get("verified"))
+            and causal_result.get("semantic_hash") == expected.get("causal_semantic_hash")
+        ))
+        and causal_ledger_anchor_ok
     )
     if not bool(semantic.get("replayable_provider")):
         return {
@@ -73,6 +93,7 @@ def semantic_replay(repository: Any, run_id: str) -> dict[str, Any]:
             "input_hash_verified": input_hash_ok,
             "expected_hash_verified": expected_hash_ok,
             "causal_contract_verified": causal_hash_ok if causal_required or causal_available else None,
+            "causal_ledger_anchor_verified": causal_ledger_anchor_ok if causal_required or causal_available else None,
             "causal_contract": causal_result,
             "ledger": integrity,
         }
@@ -186,6 +207,7 @@ def semantic_replay(repository: Any, run_id: str) -> dict[str, Any]:
         "decision_reexecution_verified": decision_ok,
         "plan_contract_verified": plan_ok,
         "causal_contract_verified": causal_hash_ok if causal_required or causal_available else None,
+        "causal_ledger_anchor_verified": causal_ledger_anchor_ok if causal_required or causal_available else None,
         "causal_contract": causal_result,
         "replayed_decision_hash": decision.hash,
         "replayed_claim_hashes": claim_hashes,
