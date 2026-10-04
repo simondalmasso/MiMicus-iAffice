@@ -22,6 +22,8 @@ The causal hash MUST bind:
 - semantic completion state;
 - policy/effect decisions when such decisions are part of the run.
 
+The causal semantic hash is additionally anchored into the append-only EventLedger as `causal_execution_recorded.causal_semantic_hash`. Semantic replay must compare its mutable snapshot against that chain-protected anchor.
+
 The causal hash MUST NOT bind:
 - run UUID;
 - event UUID;
@@ -72,7 +74,8 @@ Each node semantic record contains:
 - a prerequisite output hash differs from the parent node's recorded output hash;
 - a node output hash is absent/invalid;
 - causal input hash does not recompute;
-- required V1 fields are malformed.
+- required V1 fields are malformed;
+- the semantic hash does not match the chain-protected EventLedger anchor.
 
 Incidental material is ignored by the verifier.
 
