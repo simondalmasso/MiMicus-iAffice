@@ -13,13 +13,13 @@ The browser does not decide. LAYA / `MiMicusEngine` remains authoritative.
 From the repository root:
 
 ```powershell
-py -3.12 -m pip install -e ".\archive\MiMicus-swarm-source[dev]"
+py -3.12 -m pip install -e ".\core[dev]"
 
 $env:MIMICUS_DATABASE_URL = "sqlite:///:memory:"
 
 mimicus observe `
-  --ledger-url "https://raw.githubusercontent.com/simondalmasso/the-iAffice/main/data/gpt-prospectos.json" `
-  --policy-file ".\archive\MiMicus-swarm-source\config\commercial-policy-v1.json" `
+  --ledger-url "https://raw.githubusercontent.com/simondalmasso/MiMicus-iAffice/main/data/gpt-prospectos.json" `
+  --policy-file ".\core\config\commercial-policy-v1.json" `
   --cockpit-dir ".\public" `
   --host 127.0.0.1 `
   --port 8788 `
@@ -39,14 +39,14 @@ If the canonical ledger is already present locally:
 ```powershell
 mimicus observe `
   --ledger-file ".\data\gpt-prospectos.json" `
-  --policy-file ".\archive\MiMicus-swarm-source\config\commercial-policy-v1.json" `
+  --policy-file ".\core\config\commercial-policy-v1.json" `
   --cockpit-dir ".\public"
 ```
 
 ## What the Activity Stream shows
 
 - **SETTER / lead_ingested** — lane, prospect ID, outreach state, setter score.
-- **LAYA / laya_reading** — policy version, risk and active state.
+- **LAYA / laya_reading** — commercial stage, evidence count/match, policy version, risk and active state. Evidence content and source references are not emitted.
 - **LAYA / decision_emitted** — `WORK_NOW`, `HOLD`, `REPAIR_DATA` or `REJECT`, stage and explicit reasons.
 - **SISTEMA / batch_complete** — batch hash and work/hold/repair/reject counts.
 - **SISTEMA / observer_error** — observer/source degradation only.
