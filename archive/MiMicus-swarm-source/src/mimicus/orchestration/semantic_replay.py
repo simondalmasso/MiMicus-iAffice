@@ -7,6 +7,7 @@ from mimicus.claims.models import Claim
 from mimicus.claims.projections import EvidenceProjection
 from mimicus.falsifiers.primitives import execute_claim_bound
 from mimicus.falsifiers.spec import FalsifierExecution, FalsifierSpec
+from mimicus.orchestration.causal_replay import verify_causal_execution
 from mimicus.orchestration.production_synthesis import synthesize_production
 from mimicus.orchestration.replay import verify_replay
 
@@ -49,15 +50,26 @@ def semantic_replay(repository: Any, run_id: str) -> dict[str, Any]:
         }
     input_hash_ok = sha256_obj(input_material) == semantic.get("input_hash")
     expected_hash_ok = sha256_obj(expected) == semantic.get("expected_hash")
+    snapshot_version = str(input_material.get("version", "ORDER-008-semantic-replay-v1"))
+    causal_required = snapshot_version == "ORDER-008-semantic-replay-v2"
+    causal_material = input_material.get("causal_execution")
+    causal_available = isinstance(causal_material, dict) and bool(causal_material)
+    causal_result = verify_causal_execution(causal_material) if causal_available else {"verified": not causal_required, "semantic_hash": None, "reason": "causal snapshot not available"}
+    causal_hash_ok = (not causal_required and not causal_available) or (
+        bool(causal_result.get("verified"))
+        and causal_result.get("semantic_hash") == expected.get("causal_semantic_hash")
+    )
     if not bool(semantic.get("replayable_provider")):
         return {
-            "verified": bool(integrity.get("verified")) and input_hash_ok and expected_hash_ok,
+            "verified": bool(integrity.get("verified")) and input_hash_ok and expected_hash_ok and causal_hash_ok,
             "integrity_verified": bool(integrity.get("verified")),
             "semantic_reexecution_verified": False,
             "status": "INTEGRITY_VERIFIED_PROVIDER_NOT_SEMANTICALLY_REPLAYABLE",
             "run_id": run_id,
             "input_hash_verified": input_hash_ok,
             "expected_hash_verified": expected_hash_ok,
+            "causal_contract_verified": causal_hash_ok if causal_required or causal_available else None,
+            "causal_contract": causal_result,
             "ledger": integrity,
         }
     if not input_hash_ok or not expected_hash_ok:
@@ -154,7 +166,7 @@ def semantic_replay(repository: Any, run_id: str) -> dict[str, Any]:
     )
     decision_ok = decision.hash == expected.get("decision_hash")
     plan_ok = input_material.get("plan_hash") == expected.get("plan_hash") == run.get("plan_hash")
-    semantic_ok = all((projection_ok, execution_ok, execution_set_ok, claim_ok, decision_ok, plan_ok))
+    semantic_ok = all((projection_ok, execution_ok, execution_set_ok, claim_ok, decision_ok, plan_ok, causal_hash_ok))
     overall = bool(integrity.get("verified")) and semantic_ok
     return {
         "verified": overall,
@@ -169,6 +181,8 @@ def semantic_replay(repository: Any, run_id: str) -> dict[str, Any]:
         "falsifier_reexecution_verified": execution_ok and execution_set_ok,
         "decision_reexecution_verified": decision_ok,
         "plan_contract_verified": plan_ok,
+        "causal_contract_verified": causal_hash_ok if causal_required or causal_available else None,
+        "causal_contract": causal_result,
         "replayed_decision_hash": decision.hash,
         "replayed_claim_hashes": claim_hashes,
         "replayed_falsifier_hashes": execution_hashes,
