@@ -5,5 +5,13 @@
     "messenger": 24,
     "post-comment": 24,
     "reddit_comment": 24
-  }
+  },
+  "stage_precedence": [
+    "proposal",
+    "qualified",
+    "replied",
+    "prepared",
+    "contacted_due",
+    "contacted_waiting"
+  ]
 }
