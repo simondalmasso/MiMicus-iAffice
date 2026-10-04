@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from sqlalchemy import inspect
@@ -31,6 +32,22 @@ def test_event_bus_ledger_tamper_and_snapshot_mismatch() -> None:
     tampered[1]["payload"]["x"] = 999
     assert verify_replay(tampered)["verified"] is False
     assert verify_replay(ledger.events, "f" * 64)["verified"] is False
+
+
+def test_event_ledger_accepts_injected_clock_and_id_source() -> None:
+    moment = datetime(2026, 10, 3, 22, 0, tzinfo=UTC)
+    times = iter((moment, moment + timedelta(seconds=1)))
+    ids = iter(("event-a", "event-b"))
+    ledger = EventLedger("run", clock=lambda: next(times), id_source=lambda: next(ids))
+
+    first = ledger.append("a", {"x": 1})
+    second = ledger.append("b", {"x": 2})
+
+    assert first.event_id == "event-a"
+    assert second.event_id == "event-b"
+    assert first.timestamp == moment
+    assert second.timestamp == moment + timedelta(seconds=1)
+    assert EventLedger.verify(ledger.events)[0] is True
 
 
 def test_storage_schema_sqlite_and_postgres_compile(tmp_path: Path) -> None:
