@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+import copy
+
+from sqlalchemy import update
+
+from mimicus.canonical import canonical_json, sha256_obj
 from mimicus.claims.evidence_bundle import EvidenceInput
 from mimicus.orchestration.causal_replay import verify_causal_execution
 from mimicus.orchestration.engine import MiMicusEngine, RunRequest
 from mimicus.orchestration.semantic_replay import semantic_replay
 from mimicus.providers.scripted import ScriptedProvider
+from mimicus.storage.models import RunRow
 
 
 def test_runtime_records_and_semantically_replays_causal_dag(tmp_path) -> None:
@@ -78,3 +84,61 @@ def test_runtime_causal_semantic_hash_excludes_incidental_scheduler_material(tmp
 
     assert verify_causal_execution(causal)["verified"] is True
     assert causal["semantic_hash"] == original_hash
+
+
+def test_causal_replay_is_anchored_to_immutable_event_ledger(tmp_path) -> None:
+    engine = MiMicusEngine(
+        f"sqlite:///{tmp_path / 'causal-anchor.db'}",
+        provider=ScriptedProvider(),
+    )
+    run = engine.run(
+        RunRequest(
+            task="Assess a supported runtime observation.",
+            domain="general",
+            source_mode="runtime",
+            evidence=[
+                EvidenceInput(
+                    origin="causal://anchor",
+                    independence_cluster="causal-anchor",
+                    content="verified runtime observation",
+                    extracted_facts={"observed": True},
+                )
+            ],
+            max_agents=1,
+            learn=False,
+        )
+    )
+
+    persisted = engine.repository.get_run(run.run_id)
+    assert persisted is not None
+    tampered = copy.deepcopy(persisted)
+    causal = tampered["causal_execution"]
+    semantic_nodes = causal["semantic"]["nodes"]
+    parent_ids = {
+        parent
+        for row in semantic_nodes
+        for parent in row["prerequisites"]
+    }
+    leaf = next(row for row in semantic_nodes if row["node_id"] not in parent_ids)
+    leaf["output_hash"] = "f" * 64
+    causal["semantic_hash"] = sha256_obj(causal["semantic"])
+
+    snapshot = tampered["semantic_replay"]
+    snapshot_causal = snapshot["input_material"]["causal_execution"]
+    snapshot_causal["semantic"] = copy.deepcopy(causal["semantic"])
+    snapshot_causal["semantic_hash"] = causal["semantic_hash"]
+    snapshot["expected"]["causal_semantic_hash"] = causal["semantic_hash"]
+    snapshot["input_hash"] = sha256_obj(snapshot["input_material"])
+    snapshot["expected_hash"] = sha256_obj(snapshot["expected"])
+
+    with engine.repository.engine.begin() as connection:
+        connection.execute(
+            update(RunRow)
+            .where(RunRow.run_id == run.run_id)
+            .values(result_json=canonical_json(tampered))
+        )
+
+    detected = semantic_replay(engine.repository, run.run_id)
+    assert detected["verified"] is False
+    assert detected["causal_contract_verified"] is False
+    assert detected["causal_ledger_anchor_verified"] is False
