@@ -32,6 +32,7 @@ def _candidate(
     verified_at: datetime | None = None,
     published_at: datetime | None = None,
     commercial_stage: str = "unknown",
+    commercial_evidence: list[dict[str, object]] | None = None,
 ) -> LeadCandidate:
     source_name = "Facebook" if lane == "facebook" else "Reddit"
     return LeadCandidate.model_validate(
@@ -53,7 +54,10 @@ def _candidate(
             "contacted_at": contacted_at,
             "source_url": f"https://example.test/{prospect_id}",
             "direct_url": f"https://example.test/{prospect_id}/contact",
-            "commercial": {"stage": commercial_stage},
+            "commercial": {
+                "stage": commercial_stage,
+                "evidence": commercial_evidence or [],
+            },
         }
     )
 
@@ -451,3 +455,128 @@ def test_next_actions_are_deterministic_by_stage() -> None:
     assert rows["prepared"].next_action == LeadNextAction.CONTACT  # type: ignore[union-attr]
     assert rows["due"].next_action == LeadNextAction.FOLLOW_UP  # type: ignore[union-attr]
     assert rows["waiting"].next_action == LeadNextAction.WAIT  # type: ignore[union-attr]
+
+
+def test_qualified_stage_without_matching_evidence_is_repair_data() -> None:
+    batch = DeterministicLeadDecisionService().decide(
+        [_candidate("qualified-no-proof", status="replied", commercial_stage="qualified")],
+        _policy(),
+        as_of=AS_OF,
+    )
+    decision = _by_id(batch)["qualified-no-proof"]
+
+    assert decision.disposition == LeadDisposition.REPAIR_DATA  # type: ignore[union-attr]
+    assert "missing_commercial_stage_evidence" in decision.data_quality_issues  # type: ignore[union-attr]
+    assert batch.selected_by_lane["facebook"] == ()
+
+
+def test_proposal_stage_rejects_evidence_for_a_different_stage() -> None:
+    batch = DeterministicLeadDecisionService().decide(
+        [
+            _candidate(
+                "proposal-wrong-proof",
+                status="replied",
+                commercial_stage="proposal",
+                commercial_evidence=[
+                    {
+                        "stage": "qualified",
+                        "observed_at": AS_OF - timedelta(minutes=10),
+                        "source_ref": "messenger:thread-1",
+                        "summary": "Buyer need and scope confirmed.",
+                    }
+                ],
+            )
+        ],
+        _policy(),
+        as_of=AS_OF,
+    )
+    decision = _by_id(batch)["proposal-wrong-proof"]
+
+    assert decision.disposition == LeadDisposition.REPAIR_DATA  # type: ignore[union-attr]
+    assert "missing_commercial_stage_evidence" in decision.data_quality_issues  # type: ignore[union-attr]
+
+
+def test_matching_proposal_evidence_unlocks_proposal_priority() -> None:
+    batch = DeterministicLeadDecisionService().decide(
+        [
+            _candidate("reply", status="replied", score=100),
+            _candidate(
+                "proposal-proof",
+                status="replied",
+                score=1,
+                commercial_stage="proposal",
+                commercial_evidence=[
+                    {
+                        "stage": "proposal",
+                        "observed_at": AS_OF - timedelta(minutes=5),
+                        "source_ref": "messenger:thread-2",
+                        "summary": "Proposal sent after buyer confirmed scope.",
+                    }
+                ],
+            ),
+        ],
+        _policy(max_work=2),
+        as_of=AS_OF,
+    )
+
+    assert batch.selected_by_lane["facebook"] == ("proposal-proof", "reply")
+    proposal = _by_id(batch)["proposal-proof"]
+    assert proposal.disposition == LeadDisposition.WORK_NOW  # type: ignore[union-attr]
+    assert proposal.next_action == LeadNextAction.FOLLOW_UP  # type: ignore[union-attr]
+
+
+def test_future_commercial_evidence_is_repair_data() -> None:
+    batch = DeterministicLeadDecisionService().decide(
+        [
+            _candidate(
+                "future-proof",
+                status="replied",
+                commercial_stage="qualified",
+                commercial_evidence=[
+                    {
+                        "stage": "qualified",
+                        "observed_at": AS_OF + timedelta(minutes=1),
+                        "source_ref": "messenger:future",
+                    }
+                ],
+            )
+        ],
+        _policy(),
+        as_of=AS_OF,
+    )
+    decision = _by_id(batch)["future-proof"]
+
+    assert decision.disposition == LeadDisposition.REPAIR_DATA  # type: ignore[union-attr]
+    assert "commercial_evidence_after_as_of" in decision.data_quality_issues  # type: ignore[union-attr]
+
+
+@pytest.mark.parametrize("commercial_stage", ["won", "lost"])
+def test_terminal_commercial_stage_requires_matching_outcome_evidence(commercial_stage: str) -> None:
+    without = DeterministicLeadDecisionService().decide(
+        [_candidate(f"{commercial_stage}-no-proof", status="closed", commercial_stage=commercial_stage)],
+        _policy(),
+        as_of=AS_OF,
+    )
+    without_decision = _by_id(without)[f"{commercial_stage}-no-proof"]
+    assert without_decision.disposition == LeadDisposition.REPAIR_DATA  # type: ignore[union-attr]
+
+    with_proof = DeterministicLeadDecisionService().decide(
+        [
+            _candidate(
+                f"{commercial_stage}-proof",
+                status="closed",
+                commercial_stage=commercial_stage,
+                commercial_evidence=[
+                    {
+                        "stage": commercial_stage,
+                        "observed_at": AS_OF - timedelta(minutes=1),
+                        "source_ref": f"crm:{commercial_stage}",
+                    }
+                ],
+            )
+        ],
+        _policy(),
+        as_of=AS_OF,
+    )
+    with_decision = _by_id(with_proof)[f"{commercial_stage}-proof"]
+    assert with_decision.disposition == LeadDisposition.COMPLETE  # type: ignore[union-attr]
