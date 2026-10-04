@@ -59,6 +59,7 @@ class LeadDecisionPolicy(BaseModel):
 
     version: str = Field(default="lead-policy-v1", min_length=1)
     max_work_per_lane: int = Field(default=3, ge=1)
+    prepared_min_score: float = Field(default=0.0, ge=0.0, le=100.0)
     follow_up_after_hours: Mapping[str, int]
     stage_precedence: tuple[LeadStage, ...] = (
         LeadStage.REPLIED,
