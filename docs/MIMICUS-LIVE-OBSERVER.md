@@ -16,9 +16,10 @@ From the repository root:
 py -3.12 -m pip install -e ".\core[dev]"
 
 $env:MIMICUS_DATABASE_URL = "sqlite:///:memory:"
+$env:MIMICUS_LEDGER_URL = "https://example.invalid/replace-with-read-only-ledger.json"
 
 mimicus observe `
-  --ledger-url "https://raw.githubusercontent.com/simondalmasso/MiMicus-iAffice/main/data/gpt-prospectos.json" `
+  --ledger-url $env:MIMICUS_LEDGER_URL `
   --policy-file ".\core\config\commercial-policy-v1.json" `
   --cockpit-dir ".\public" `
   --host 127.0.0.1 `
@@ -34,14 +35,18 @@ The observer binds only to loopback. V1 intentionally rejects `0.0.0.0`.
 
 ## Local-file mode
 
-If the canonical ledger is already present locally:
+If the canonical setter ledger is present locally, pass its path explicitly. Active setter state is intentionally not vendored into canonical `main`.
+
+For a zero-risk smoke test, use the sanitized fixture shipped with the repo:
 
 ```powershell
 mimicus observe `
-  --ledger-file ".\data\gpt-prospectos.json" `
+  --ledger-file ".\core\fixtures\commercial-observer-demo.json" `
   --policy-file ".\core\config\commercial-policy-v1.json" `
   --cockpit-dir ".\public"
 ```
+
+For real operation, replace `--ledger-file` with the current setter ledger path or provide a read-only HTTPS JSON URL you control.
 
 ## What the Activity Stream shows
 
