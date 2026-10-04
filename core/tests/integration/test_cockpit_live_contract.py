@@ -13,6 +13,9 @@ def test_cockpit_has_live_observer_mode_without_commercial_decision_logic() -> N
 
     assert "local-live-observer" in app
     assert "/api/activity?since=" in app
+    assert "commercial_stage" in app
+    assert "commercial_evidence_count" in app
+    assert "commercial_stage_evidenced" in app
     for event_name in ("lead_ingested", "laya_reading", "decision_emitted", "batch_complete", "observer_error"):
         assert event_name in app
 
@@ -21,6 +24,8 @@ def test_cockpit_has_live_observer_mode_without_commercial_decision_logic() -> N
     assert "follow_up_after_hours" not in app
     assert "setter_score >" not in app
     assert "rank.score" not in app
+    assert "source_ref" not in app
+    assert "sourceRef" not in app
 
 
 def test_default_live_policy_covers_current_setter_channels() -> None:
