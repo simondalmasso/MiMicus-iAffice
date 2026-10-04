@@ -13,16 +13,52 @@ class LeadDisposition(StrEnum):
     WORK_NOW = "WORK_NOW"
     HOLD = "HOLD"
     REPAIR_DATA = "REPAIR_DATA"
+    COMPLETE = "COMPLETE"
     REJECT = "REJECT"
 
 
+class CommercialStage(StrEnum):
+    UNKNOWN = "unknown"
+    DISCOVERY = "discovery"
+    QUALIFIED = "qualified"
+    PROPOSAL = "proposal"
+    WON = "won"
+    LOST = "lost"
+
+
+class LeadNextAction(StrEnum):
+    CONTACT = "CONTACT"
+    QUALIFY = "QUALIFY"
+    PROPOSE = "PROPOSE"
+    FOLLOW_UP = "FOLLOW_UP"
+    WAIT = "WAIT"
+    NONE = "NONE"
+
+
 class LeadStage(StrEnum):
+    PROPOSAL = "proposal"
+    QUALIFIED = "qualified"
     REPLIED = "replied"
     PREPARED = "prepared"
     CONTACTED_DUE = "contacted_due"
     CONTACTED_WAITING = "contacted_waiting"
     TERMINAL = "terminal"
     UNKNOWN = "unknown"
+
+
+class CommercialContext(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    stage: CommercialStage = CommercialStage.UNKNOWN
+    updated_at: datetime | None = None
+    note: str | None = None
+
+    @field_validator("updated_at")
+    @classmethod
+    def require_commercial_timezone(cls, value: datetime | None) -> datetime | None:
+        if value is not None and value.utcoffset() is None:
+            raise ValueError("commercial updated_at must include timezone information")
+        return value
 
 
 class LeadCandidate(BaseModel):
@@ -45,6 +81,7 @@ class LeadCandidate(BaseModel):
     contacted_at: datetime | None = None
     source_url: str | None = None
     direct_url: str | None = None
+    commercial: CommercialContext = Field(default_factory=CommercialContext)
 
     @field_validator("published_at", "verified_at", "contacted_at")
     @classmethod
@@ -62,6 +99,8 @@ class LeadDecisionPolicy(BaseModel):
     prepared_min_score: float = Field(default=0.0, ge=0.0, le=100.0)
     follow_up_after_hours: Mapping[str, int]
     stage_precedence: tuple[LeadStage, ...] = (
+        LeadStage.PROPOSAL,
+        LeadStage.QUALIFIED,
         LeadStage.REPLIED,
         LeadStage.CONTACTED_DUE,
         LeadStage.PREPARED,
@@ -93,6 +132,8 @@ class LeadDecision(BaseModel):
     lane: Literal["facebook", "reddit"]
     disposition: LeadDisposition
     stage: LeadStage
+    commercial_stage: CommercialStage
+    next_action: LeadNextAction
     rank_position: int | None = Field(default=None, ge=1)
     reasons: tuple[str, ...] = ()
     data_quality_issues: tuple[str, ...] = ()
@@ -110,6 +151,7 @@ class LeadDecisionBatch(BaseModel):
     held_ids: tuple[str, ...]
     rejected_ids: tuple[str, ...]
     repair_data_ids: tuple[str, ...]
+    completed_ids: tuple[str, ...] = ()
     policy_hash: str = Field(min_length=64, max_length=64)
     batch_hash: str = Field(min_length=64, max_length=64)
 
@@ -147,6 +189,8 @@ class CommercialTraceEvent(BaseModel):
     policy_version: str | None = None
     disposition: LeadDisposition | None = None
     stage: LeadStage | None = None
+    commercial_stage: CommercialStage | None = None
+    next_action: LeadNextAction | None = None
     rank_position: int | None = Field(default=None, ge=1)
     reasons: tuple[str, ...] = ()
     data_quality_issues: tuple[str, ...] = ()
