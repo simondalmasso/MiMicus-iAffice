@@ -175,6 +175,23 @@ class DeterministicLeadDecisionService:
         status = candidate.outreach_status.strip().lower()
         commercial_stage = candidate.commercial.stage
 
+        commercial_issues = self._commercial_stage_issues(candidate, as_of=as_of)
+        if commercial_issues:
+            stage = {
+                CommercialStage.QUALIFIED: LeadStage.QUALIFIED,
+                CommercialStage.PROPOSAL: LeadStage.PROPOSAL,
+                CommercialStage.WON: LeadStage.TERMINAL,
+                CommercialStage.LOST: LeadStage.TERMINAL,
+            }.get(commercial_stage, self._known_stage(status))
+            return _Assessment(
+                candidate=candidate,
+                stage=stage,
+                commercial_stage=commercial_stage,
+                next_action=LeadNextAction.NONE,
+                disposition=LeadDisposition.REPAIR_DATA,
+                issues=commercial_issues,
+            )
+
         if commercial_stage in {CommercialStage.WON, CommercialStage.LOST}:
             return _Assessment(
                 candidate=candidate,
@@ -293,6 +310,34 @@ class DeterministicLeadDecisionService:
             disposition=LeadDisposition.HOLD,
             reasons=(f"stage:{stage.value}",),
         )
+
+    @staticmethod
+    def _commercial_stage_issues(
+        candidate: LeadCandidate,
+        *,
+        as_of: datetime,
+    ) -> tuple[str, ...]:
+        stage = candidate.commercial.stage
+        elevated = {
+            CommercialStage.QUALIFIED,
+            CommercialStage.PROPOSAL,
+            CommercialStage.WON,
+            CommercialStage.LOST,
+        }
+        if stage not in elevated:
+            return ()
+
+        matching = tuple(
+            evidence
+            for evidence in candidate.commercial.evidence
+            if evidence.stage == stage
+        )
+        issues: set[str] = set()
+        if not matching:
+            issues.add("missing_commercial_stage_evidence")
+        if any(evidence.observed_at > as_of for evidence in matching):
+            issues.add("commercial_evidence_after_as_of")
+        return tuple(sorted(issues))
 
     @staticmethod
     def _next_action(stage: LeadStage) -> LeadNextAction:
