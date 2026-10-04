@@ -1,6 +1,6 @@
-# MiMicus V0.2.1 architecture
+# MiMicus V0.2.2 architecture
 
-MiMicus V0.2.1 is a persistent agentic immune swarm runtime. The normal engine is assembled through the plugin kernel into typed functional services for storage, model/provider access, agent factories, falsifiers, memory, coalition selection, sparse communication, sandbox policy and telemetry.
+MiMicus V0.2.2 is a persistent agentic immune swarm runtime. The normal engine is assembled through the plugin kernel into typed functional services for storage, model/provider access, agent factories, falsifiers, memory, coalition selection, sparse communication, sandbox policy, telemetry, commercial lead decisions and effect dispatch.
 
 ## Runtime control plane
 
@@ -8,7 +8,7 @@ There is one orchestration control plane: `MiMicusEngine`. External swarm framew
 
 The canonical execution plan is a hashable Morphology DAG. Supported node kinds are `PROFILE`, `MEMORY_RETRIEVE`, `AUDITION`, `DECOMPOSE`, `AGENT_TASK`, `FALSIFIER`, `CHALLENGE`, `JOIN`, `SYNTHESIS`, `LEARN` and `GERMINAL`. The compiler chooses the smallest sufficient plan from task threat profile, selected agents, available falsifiers, complexity, budget and concurrency constraints. It can emit `solo`, `parallel_fanout`, `paired_verify`, `sparse_graph` and `hierarchical_fanout_fanin` plans with distinct executable topology. Paired and sparse plans contain different challenge semantics; hierarchical plans contain decomposition plus nested fan-out/fan-in.
 
-Dependencies are executable: `DagExecutor` schedules only ready nodes and runs independent ready work concurrently up to `max_concurrency`. Fatal sibling failures use structured task-group cancellation: remaining siblings are cancelled and awaited before the executor returns. Plan hashes, node input/output hashes, terminal statuses, scheduling evidence and critical-path measurements are included in run provenance.
+Dependencies are executable. `DagExecutor` admits only ready nodes, fills capacity deterministically by node ID, then waits for the first completion rather than a whole ready batch. A newly eligible descendant can therefore start while an unrelated slow sibling remains in flight. Fatal node failure cancels all in-flight siblings and awaits cancellation before returning. Plan hashes, node input/output hashes, terminal statuses, scheduling evidence, critical-path measurements and peak concurrency are included in run provenance.
 
 ## Runtime-truth identity and calibration
 
@@ -18,9 +18,11 @@ Calibration and bankruptcy are scoped by exact fingerprint, domain, audited capa
 
 ## Persistent immune state and online memory
 
-SQLite and PostgreSQL-compatible storage includes runs/events plus authority-bearing calibration, bankruptcy/probation, exact fingerprints, lineages, coalition plans, communications, claims, evidence, falsifier versions/executions/performance, evasion events, fossils, mutation candidates, memory items/links/transitions, task ledgers and progress ledgers.
+SQLite and PostgreSQL-compatible storage includes runs/events plus authority-bearing calibration, bankruptcy/probation, exact fingerprints, lineages, coalition plans, communications, claims, evidence, falsifier versions/executions/performance, evasion events, fossils, mutation candidates, memory items/links/transitions, task ledgers, progress ledgers, effect approvals and effect intents.
 
 A run retrieves persisted verified memory and promoted falsifiers before execution. Memory still passes MiMicus RETRIEVAL and CROSS-AGENT gates before injection. The OpenAI adapter serializes only eligible verified institutional memory into a bounded structured input; quarantined/rejected memory does not consume eligible-memory slots. The sealed first pass explicitly excludes peer outputs. Provider usage records the number of verified-memory items actually consumed.
+
+Memory authority remains policy-driven rather than similarity-driven. Retrieval can surface candidates, but candidate retrieval alone does not promote memory into a trusted state.
 
 ## Budget and falsifier market
 
@@ -31,6 +33,18 @@ Falsifier selection uses deterministic signatures over primitive, trigger tokens
 ## Evidence persistence
 
 Runtime evidence is normalized into immutable structured rows with provenance, observed time, extraction method, independence cluster and snapshot hash. Claims reference only evidence rows MiMicus persists. Evidence references are run-scoped to avoid cross-run primary-key collisions while retaining a canonical content hash. `get_run` and replay inspection enumerate persisted evidence and permit reference resolution after process restart.
+
+## Commercial decision boundary
+
+The commercial slice remains subordinate to LAYA. `MiMicusEngine.triage_prospects(...)` normalizes setter-shaped prospect data and delegates to `DeterministicLeadDecisionService`. It is deterministic for identical normalized inputs, policy and explicit `as_of`, and performs no model call, network call, setter-ledger mutation or external outreach.
+
+The optional local commercial observer reads file or HTTPS prospect sources, de-duplicates by content hash and publishes a read-only loopback activity model. It does not become a second decision engine; authoritative decisions still come from the same `triage_prospects` path.
+
+## Effect authorization boundary
+
+External effects are deny-by-default. `EffectActionEnvelope` binds adapter, operation, destination, resource, payload and scope into a canonical hash. A durable `EffectApprovalReceipt` authorizes exactly that hash for a bounded time window and can be consumed only once.
+
+`EffectDispatcher` verifies adapter identity before consuming the approval. Successful dispatch persists an outcome hash. If the adapter raises after invocation, the intent becomes `UNKNOWN`; the approval remains consumed and Mimicus does not blindly retry because the remote side effect may already have happened. V0.2.2 ships the authorization/dispatch seam but no autonomous real-world adapter.
 
 ## Sparse communication
 
@@ -46,6 +60,8 @@ ORDER-004 uses the same ordered public structured-evidence stream for architectu
 
 ## Determinism and replay
 
-Semantic identities, plan hashes, claim/falsifier/evidence hashes and the event chain are deterministic inputs to replay verification. Monotonic duration and wall timing are preserved as evidence but are not treated as semantic truth. No arbitrary generated code execution path is introduced by V0.2.1.
+Semantic identities, plan hashes, claim/falsifier/evidence hashes and the event chain are deterministic inputs to replay verification. Monotonic durations, scheduler-turn timing and wall timing are preserved as incidental evidence but are not treated as semantic truth.
 
-ORDER-002 and ORDER-003 evidence remain historical. ORDER-004 closes the audited correctness findings without replacing the single MiMicus control plane. The checksummed ORDER-004 audit bundle is committed at `evidence/ORDER-004/` and is revalidated by exact-head CI.
+V0.2.2 adds a causal execution contract for the Morphology DAG. The semantic projection binds node IDs, kinds, prerequisites, terminal states and output hashes, while excluding incidental scheduler timing. Its semantic hash is recorded in the append-only event ledger and included in the semantic replay snapshot. Replay therefore verifies both the recomputed causal contract and its chain-protected ledger anchor; re-hashing a tampered mutable result snapshot cannot manufacture a successful replay.
+
+ORDER-002 and ORDER-003 evidence remain historical. Later ORDER evidence and the current exact-head CI gates extend those proofs without replacing the single MiMicus control plane. No arbitrary generated-code execution path is introduced by V0.2.2.
