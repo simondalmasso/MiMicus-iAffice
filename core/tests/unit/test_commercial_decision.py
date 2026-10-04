@@ -344,3 +344,22 @@ def test_quality_floor_is_bound_into_policy_hash() -> None:
 
     assert low.policy_hash != high.policy_hash
     assert low.batch_hash != high.batch_hash
+
+
+def test_due_followup_outranks_new_prepared_work() -> None:
+    batch = DeterministicLeadDecisionService().decide(
+        [
+            _candidate("fresh-prepared", status="prepared", score=100),
+            _candidate(
+                "due-followup",
+                status="contacted",
+                score=10,
+                contacted_at=AS_OF - timedelta(hours=48),
+            ),
+        ],
+        _policy(max_work=1, prepared_min_score=0),
+        as_of=AS_OF,
+    )
+
+    assert batch.selected_by_lane["facebook"] == ("due-followup",)
+    assert _by_id(batch)["fresh-prepared"].disposition == LeadDisposition.HOLD  # type: ignore[union-attr]
