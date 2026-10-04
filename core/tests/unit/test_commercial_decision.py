@@ -35,6 +35,14 @@ def _candidate(
     commercial_evidence: list[dict[str, object]] | None = None,
 ) -> LeadCandidate:
     source_name = "Facebook" if lane == "facebook" else "Reddit"
+    if commercial_evidence is None and commercial_stage in {"qualified", "proposal", "won", "lost"}:
+        commercial_evidence = [
+            {
+                "stage": commercial_stage,
+                "observed_at": AS_OF - timedelta(minutes=5),
+                "source_ref": f"test:{prospect_id}:{commercial_stage}",
+            }
+        ]
     return LeadCandidate.model_validate(
         {
             "prospect_id": prospect_id,
@@ -459,7 +467,14 @@ def test_next_actions_are_deterministic_by_stage() -> None:
 
 def test_qualified_stage_without_matching_evidence_is_repair_data() -> None:
     batch = DeterministicLeadDecisionService().decide(
-        [_candidate("qualified-no-proof", status="replied", commercial_stage="qualified")],
+        [
+            _candidate(
+                "qualified-no-proof",
+                status="replied",
+                commercial_stage="qualified",
+                commercial_evidence=[],
+            )
+        ],
         _policy(),
         as_of=AS_OF,
     )
@@ -553,7 +568,14 @@ def test_future_commercial_evidence_is_repair_data() -> None:
 @pytest.mark.parametrize("commercial_stage", ["won", "lost"])
 def test_terminal_commercial_stage_requires_matching_outcome_evidence(commercial_stage: str) -> None:
     without = DeterministicLeadDecisionService().decide(
-        [_candidate(f"{commercial_stage}-no-proof", status="closed", commercial_stage=commercial_stage)],
+        [
+            _candidate(
+                f"{commercial_stage}-no-proof",
+                status="closed",
+                commercial_stage=commercial_stage,
+                commercial_evidence=[],
+            )
+        ],
         _policy(),
         as_of=AS_OF,
     )
