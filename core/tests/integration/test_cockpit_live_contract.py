@@ -16,6 +16,7 @@ def test_cockpit_has_live_observer_mode_without_commercial_decision_logic() -> N
     assert "commercial_stage" in app
     assert "commercial_evidence_count" in app
     assert "commercial_stage_evidenced" in app
+    assert "next_action" in app
     for event_name in ("lead_ingested", "laya_reading", "decision_emitted", "batch_complete", "observer_error"):
         assert event_name in app
 
