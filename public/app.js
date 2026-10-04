@@ -116,7 +116,7 @@ function renderLiveEvent(row){
       : "";
     appendLog(
       "LAYA",
-      `${row.prospect_id} → ${row.disposition} · ${row.stage}${reasons}`,
+      `${row.prospect_id} → ${row.disposition} · ${row.stage} · next ${row.next_action ?? "—"}${reasons}`,
       when
     );
     return;
