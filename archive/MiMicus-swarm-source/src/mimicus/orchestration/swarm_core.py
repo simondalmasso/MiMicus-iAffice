@@ -19,6 +19,7 @@ from mimicus.falsifiers.market import ClaimFalsifierBid, FalsifierMarket
 from mimicus.falsifiers.primitives import execute_claim_bound
 from mimicus.falsifiers.spec import FalsifierExecution, FalsifierSpec
 from mimicus.orchestration.budget import BudgetLedger
+from mimicus.orchestration.causal_replay import build_causal_execution
 from mimicus.orchestration.communication import ChallengeRequest, CommunicationCandidate
 from mimicus.orchestration.dag_executor import DagExecution, DagExecutor
 from mimicus.orchestration.decomposition import Subtask, decompose_task
@@ -845,6 +846,17 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
 
     executor = DagExecutor(request.max_concurrency)
     dag_execution: DagExecution = await executor.execute(plan, handle, precompleted=precompleted)
+    causal_execution = build_causal_execution(
+        plan,
+        dag_execution,
+        precompleted_ids=set(precompleted),
+        effect_decisions=[],
+        incidental={"run_id": run_id, "scheduler_schedule": dag_execution.schedule},
+    )
+    ledger.append(
+        "causal_execution_recorded",
+        {"plan_hash": plan.plan_hash, "causal_semantic_hash": causal_execution["semantic_hash"]},
+    )
     if decision is None:
         decision = synthesize_swarm([], executions, communications, budget=budget.snapshot(), coverage_complete=False)
     ordered_executions = sorted(executions, key=lambda row: (row.spec_hash, row.execution_snapshot_hash))
@@ -976,6 +988,7 @@ async def execute_swarm_core(host: Any, request: Any) -> dict[str, Any]:
         "subtasks": [row.model_dump(mode="json") | {"subtask_hash": row.hash} for row in subtasks],
         "threat_profile": profile.model_dump(mode="json"),
         "hierarchy_execution": hierarchy_execution,
+        "causal_execution": causal_execution,
     }
     host.repository.save_run_bundle(
         run_id=run_id,
