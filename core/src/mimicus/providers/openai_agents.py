@@ -59,6 +59,12 @@ class OpenAIAgentsProvider(Provider):
             evidence_acquisition_available=bool(tool_manifest),
         )
 
+    def _agent_model(self) -> Any:
+        return self.model
+
+    def _run_config(self) -> Any | None:
+        return None
+
     def build_agent(self, phenotype: str, domain: str) -> Any:
         from agents import Agent
 
@@ -72,7 +78,7 @@ class OpenAIAgentsProvider(Provider):
         kwargs: dict[str, Any] = {
             "name": f"mimicus-{phenotype}",
             "instructions": instructions,
-            "model": self.model,
+            "model": self._agent_model(),
             "output_type": Claim,
         }
         if self.tools:
@@ -169,7 +175,11 @@ class OpenAIAgentsProvider(Provider):
         agent = self.build_agent(phenotype, domain)
 
         async def invoke() -> Any:
-            return await Runner.run(agent, task, max_turns=self.max_turns)
+            kwargs: dict[str, Any] = {"max_turns": self.max_turns}
+            run_config = self._run_config()
+            if run_config is not None:
+                kwargs["run_config"] = run_config
+            return await Runner.run(agent, task, **kwargs)
 
         result = await asyncio.wait_for(invoke(), timeout=self.timeout_seconds)
         output = result.final_output
@@ -223,13 +233,17 @@ class OpenAIAgentsProvider(Provider):
         kwargs: dict[str, Any] = {
             "name": "mimicus-structured-challenger",
             "instructions": "Evaluate only the supplied structured claim/evidence/falsifier summary. Return a concise ChallengeResponse. Never expose hidden chain-of-thought.",
-            "model": self.model,
+            "model": self._agent_model(),
             "output_type": ChallengeResponse,
         }
         if self.tools:
             kwargs["tools"] = list(self.tools)
         agent = Agent(**kwargs)
-        result = await asyncio.wait_for(Runner.run(agent, request.model_dump_json(), max_turns=self.max_turns), timeout=self.timeout_seconds)
+        kwargs: dict[str, Any] = {"max_turns": self.max_turns}
+        run_config = self._run_config()
+        if run_config is not None:
+            kwargs["run_config"] = run_config
+        result = await asyncio.wait_for(Runner.run(agent, request.model_dump_json(), **kwargs), timeout=self.timeout_seconds)
         output = result.final_output
         response = output if isinstance(output, ChallengeResponse) else ChallengeResponse.model_validate(output)
         call_id = getattr(getattr(result, "last_agent", None), "name", None)
