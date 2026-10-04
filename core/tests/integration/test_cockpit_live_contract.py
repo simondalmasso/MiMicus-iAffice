@@ -5,7 +5,7 @@ from pathlib import Path
 
 from mimicus.commercial.models import LeadDecisionPolicy
 
-REPO_ROOT = Path(__file__).resolve().parents[4]
+REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 def test_cockpit_has_live_observer_mode_without_commercial_decision_logic() -> None:
@@ -24,7 +24,7 @@ def test_cockpit_has_live_observer_mode_without_commercial_decision_logic() -> N
 
 
 def test_default_live_policy_covers_current_setter_channels() -> None:
-    path = REPO_ROOT / "archive" / "MiMicus-swarm-source" / "config" / "commercial-policy-v1.json"
+    path = REPO_ROOT / "core" / "config" / "commercial-policy-v1.json"
     payload = json.loads(path.read_text(encoding="utf-8"))
     policy = LeadDecisionPolicy.model_validate(payload)
 
