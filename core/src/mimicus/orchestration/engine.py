@@ -136,6 +136,12 @@ class MiMicusEngine(LegacyMiMicusEngine):
                     setter_score=candidate.setter_score,
                     scam_risk=candidate.scam_risk,
                     active=candidate.active,
+                    commercial_stage=candidate.commercial.stage,
+                    commercial_evidence_count=len(candidate.commercial.evidence),
+                    commercial_stage_evidenced=any(
+                        evidence.stage == candidate.commercial.stage
+                        for evidence in candidate.commercial.evidence
+                    ),
                     policy_version=policy.version,
                 )
             )
