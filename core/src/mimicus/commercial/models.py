@@ -63,8 +63,8 @@ class LeadDecisionPolicy(BaseModel):
     follow_up_after_hours: Mapping[str, int]
     stage_precedence: tuple[LeadStage, ...] = (
         LeadStage.REPLIED,
-        LeadStage.PREPARED,
         LeadStage.CONTACTED_DUE,
+        LeadStage.PREPARED,
         LeadStage.CONTACTED_WAITING,
     )
     reject_high_scam: bool = True
