@@ -54,10 +54,16 @@ def _candidate(
     )
 
 
-def _policy(*, max_work: int = 3, thresholds: dict[str, int] | None = None) -> LeadDecisionPolicy:
+def _policy(
+    *,
+    max_work: int = 3,
+    thresholds: dict[str, int] | None = None,
+    prepared_min_score: float = 0,
+) -> LeadDecisionPolicy:
     return LeadDecisionPolicy(
         version="test-v1",
         max_work_per_lane=max_work,
+        prepared_min_score=prepared_min_score,
         follow_up_after_hours=thresholds if thresholds is not None else {"messenger": 24, "reddit_comment": 24},
     )
 
@@ -263,3 +269,78 @@ def test_policy_and_batch_mappings_are_immutable() -> None:
     )
     with pytest.raises(TypeError):
         batch.selected_by_lane["facebook"] = ()  # type: ignore[index]
+
+
+def test_prepared_below_quality_floor_is_held_with_free_capacity() -> None:
+    batch = DeterministicLeadDecisionService().decide(
+        [_candidate("weak-prepared", status="prepared", score=69)],
+        _policy(max_work=3, prepared_min_score=70),
+        as_of=AS_OF,
+    )
+    decision = _by_id(batch)["weak-prepared"]
+
+    assert decision.disposition == LeadDisposition.HOLD  # type: ignore[union-attr]
+    assert "prepared_below_quality_floor" in decision.reasons  # type: ignore[union-attr]
+    assert batch.selected_by_lane["facebook"] == ()
+
+
+def test_prepared_at_quality_floor_can_work_now() -> None:
+    batch = DeterministicLeadDecisionService().decide(
+        [_candidate("floor-prepared", status="prepared", score=70)],
+        _policy(max_work=3, prepared_min_score=70),
+        as_of=AS_OF,
+    )
+
+    assert batch.selected_by_lane["facebook"] == ("floor-prepared",)
+
+
+def test_reply_is_not_blocked_by_prepared_quality_floor() -> None:
+    batch = DeterministicLeadDecisionService().decide(
+        [_candidate("reply-low-score", status="replied", score=1)],
+        _policy(max_work=3, prepared_min_score=90),
+        as_of=AS_OF,
+    )
+
+    assert batch.selected_by_lane["facebook"] == ("reply-low-score",)
+
+
+def test_due_followup_is_not_blocked_by_prepared_quality_floor() -> None:
+    batch = DeterministicLeadDecisionService().decide(
+        [
+            _candidate(
+                "due-low-score",
+                status="contacted",
+                score=1,
+                contacted_at=AS_OF - timedelta(hours=48),
+            )
+        ],
+        _policy(max_work=3, prepared_min_score=90),
+        as_of=AS_OF,
+    )
+
+    assert batch.selected_by_lane["facebook"] == ("due-low-score",)
+
+
+def test_weak_prepared_does_not_consume_wip_capacity() -> None:
+    batch = DeterministicLeadDecisionService().decide(
+        [
+            _candidate("strong-1", score=95),
+            _candidate("weak", score=10),
+            _candidate("strong-2", score=90),
+        ],
+        _policy(max_work=2, prepared_min_score=70),
+        as_of=AS_OF,
+    )
+
+    assert batch.selected_by_lane["facebook"] == ("strong-1", "strong-2")
+    assert _by_id(batch)["weak"].disposition == LeadDisposition.HOLD  # type: ignore[union-attr]
+
+
+def test_quality_floor_is_bound_into_policy_hash() -> None:
+    service = DeterministicLeadDecisionService()
+    candidate = _candidate("same")
+    low = service.decide([candidate], _policy(prepared_min_score=0), as_of=AS_OF)
+    high = service.decide([candidate], _policy(prepared_min_score=90), as_of=AS_OF)
+
+    assert low.policy_hash != high.policy_hash
+    assert low.batch_hash != high.batch_hash
