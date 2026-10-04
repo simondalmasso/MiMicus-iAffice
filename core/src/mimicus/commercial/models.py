@@ -225,6 +225,8 @@ class CommercialTraceEvent(BaseModel):
     disposition: LeadDisposition | None = None
     stage: LeadStage | None = None
     commercial_stage: CommercialStage | None = None
+    commercial_evidence_count: int | None = Field(default=None, ge=0)
+    commercial_stage_evidenced: bool | None = None
     next_action: LeadNextAction | None = None
     rank_position: int | None = Field(default=None, ge=1)
     reasons: tuple[str, ...] = ()
