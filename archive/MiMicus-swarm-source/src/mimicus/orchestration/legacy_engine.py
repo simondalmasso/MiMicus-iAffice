@@ -83,6 +83,7 @@ class RunResult(BaseModel):
     persistent_memory_reused: list[str]
     persistent_falsifiers_reused: list[str]
     lineage_exclusions: dict[str, list[str]]
+    causal_execution: dict[str, Any] = Field(default_factory=dict)
 
 
 def _fingerprint(name: str, provider: str = "scripted", model: str = "fixture-v2", prompt: str | None = None, tool: str | None = None) -> str:
