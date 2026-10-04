@@ -42,6 +42,9 @@ jobs:
           payload = json.load(open("/tmp/mimicus-triage.json", encoding="utf-8"))
           assert payload["selected_by_lane"]["facebook"][0] == "demo-proposal"
           assert "demo-weak-prepared" in payload["held_ids"]
+          assert payload["action_queue"][0]["prospect_id"] == "demo-proposal"
+          assert payload["action_queue"][0]["next_action"] == "FOLLOW_UP"
+          assert payload["action_queue"][0]["requires_human_approval"] is True
           PY
       - name: Tests and coverage
         run: pytest --cov=mimicus --cov-report=term-missing
