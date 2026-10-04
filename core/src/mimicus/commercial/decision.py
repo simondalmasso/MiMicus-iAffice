@@ -415,7 +415,18 @@ class DeterministicLeadDecisionService:
             "requires_human_approval": True,
         }
         return CommercialActionTicket(
-            **payload,
+            prospect_id=decision.prospect_id,
+            lane=decision.lane,
+            buyer=candidate.buyer,
+            title=candidate.title,
+            source_url=candidate.source_url,
+            direct_url=candidate.direct_url,
+            commercial_stage=decision.commercial_stage,
+            next_action=decision.next_action,
+            rank_position=decision.rank_position,
+            decision_hash=decision.decision_hash,
+            effect_scope="commercial-outreach",
+            requires_human_approval=True,
             ticket_hash=sha256_obj(payload),
         )
 
