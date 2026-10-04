@@ -16,6 +16,7 @@ def _finding(
     source_name: str = "Facebook",
     status: str = "prepared",
     score: float = 80,
+    commercial: dict[str, object] | None = None,
 ) -> dict[str, object]:
     return {
         "id": prospect_id,
@@ -36,6 +37,7 @@ def _finding(
             "channel": "messenger" if source_name == "Facebook" else "reddit_comment",
             "contactedAt": None,
         },
+        "commercial": commercial or {"stage": "unknown"},
     }
 
 
@@ -116,3 +118,45 @@ def test_engine_trace_sink_failure_does_not_gain_control_authority(tmp_path: Pat
     )
 
     assert batch.selected_by_lane["facebook"] == ("trace-failure",)
+
+
+def test_laya_reading_trace_exposes_sanitized_commercial_evidence_state(tmp_path: Path) -> None:
+    engine = MiMicusEngine(f"sqlite:///{tmp_path / 'commercial-trace.db'}")
+    observed: list[object] = []
+
+    engine.triage_prospects(
+        {
+            "findings": [
+                _finding(
+                    "proposal-proof",
+                    status="replied",
+                    commercial={
+                        "stage": "proposal",
+                        "evidence": [
+                            {
+                                "stage": "proposal",
+                                "observedAt": "2026-10-01T17:30:00+00:00",
+                                "sourceRef": "messenger:thread-42",
+                                "summary": "Private detail must not be emitted by trace.",
+                            }
+                        ],
+                    },
+                )
+            ]
+        },
+        policy=_policy(),
+        as_of=AS_OF,
+        trace_sink=observed.append,
+    )
+
+    reading = next(
+        event.model_dump(mode="json")
+        for event in observed
+        if getattr(event, "event", None) == "laya_reading"
+    )
+    assert reading["commercial_stage"] == "proposal"
+    assert reading["commercial_evidence_count"] == 1
+    assert reading["commercial_stage_evidenced"] is True
+    serialized = str(reading)
+    assert "Private detail must not be emitted by trace." not in serialized
+    assert "messenger:thread-42" not in serialized
