@@ -1,0 +1,55 @@
+{
+  "findings": [
+    {
+      "id": "demo-proposal",
+      "title": "Demo buyer with evidenced proposal",
+      "buyer": "Demo Buyer",
+      "sourceName": "Facebook",
+      "sourceUrl": "https://example.test/demo-proposal",
+      "directUrl": "https://example.test/demo-proposal/contact",
+      "publishedAt": "2026-10-03T12:00:00-03:00",
+      "verifiedAt": "2026-10-03T18:00:00-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "workerFee": false,
+      "scamRisk": "low",
+      "rank": {"score": 80},
+      "outreach": {
+        "status": "replied",
+        "channel": "messenger",
+        "contactedAt": "2026-10-03T17:00:00-03:00"
+      },
+      "commercial": {
+        "stage": "proposal",
+        "evidence": [
+          {
+            "stage": "proposal",
+            "observedAt": "2026-10-03T19:00:00-03:00",
+            "sourceRef": "demo:proposal-confirmation",
+            "summary": "Sanitized fixture evidence."
+          }
+        ]
+      }
+    },
+    {
+      "id": "demo-weak-prepared",
+      "title": "Demo weak untouched lead",
+      "buyer": "Demo Buyer 2",
+      "sourceName": "Facebook",
+      "sourceUrl": "https://example.test/demo-weak",
+      "directUrl": "https://example.test/demo-weak/contact",
+      "publishedAt": "2026-10-03T10:00:00-03:00",
+      "verifiedAt": "2026-10-03T18:10:00-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "workerFee": false,
+      "scamRisk": "low",
+      "rank": {"score": 65},
+      "outreach": {
+        "status": "prepared",
+        "channel": "messenger",
+        "contactedAt": null
+      }
+    }
+  ]
+}
