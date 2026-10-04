@@ -35,6 +35,7 @@ class Profile:
     network_allowed: bool
     provider: str
     database_kind: str
+    credential_env: str | None = None
 
 
 def _env_bool(name: str, *, default: bool = False) -> bool:
@@ -68,8 +69,8 @@ def _env_float(name: str) -> float | None:
 
 PROFILES = {
     "offline": Profile("offline", False, "scripted", "sqlite"),
-    "openai": Profile("openai", True, "openai_agents", "sqlite"),
-    "nvidia": Profile("nvidia", True, "nvidia_nim", "sqlite"),
+    "openai": Profile("openai", True, "openai_agents", "sqlite", "OPENAI_API_KEY"),
+    "nvidia": Profile("nvidia", True, "nvidia_nim", "sqlite", "NVIDIA_API_KEY"),
     "test": Profile("test", False, "scripted", "sqlite-temp"),
 }
 
@@ -85,12 +86,13 @@ def _build_provider(profile_name: str) -> Provider:
             max_cost_per_call_usd=_env_float("MIMICUS_OPENAI_MAX_COST_PER_CALL_USD"),
         )
     if profile_name == "nvidia":
+        model = os.getenv("MIMICUS_NVIDIA_MODEL", "deepseek-ai/deepseek-v4.1-flash")
         return OpenAICompatibleProvider(
-            model=os.getenv("MIMICUS_NVIDIA_MODEL", "deepseek-ai/deepseek-v4.1-flash"),
+            model=model,
             base_url="https://integrate.api.nvidia.com/v1",
             api_key=_require_env("NVIDIA_API_KEY"),
             provider_id="nvidia_nim",
-            provider_version="nvidia-nim/deepseek-v4.1",
+            provider_version=f"nvidia-nim:{model}",
             known_zero_cost=_env_bool("MIMICUS_NVIDIA_KNOWN_ZERO_COST"),
             input_usd_per_million_tokens=_env_float("MIMICUS_NVIDIA_INPUT_USD_PER_MILLION_TOKENS"),
             output_usd_per_million_tokens=_env_float("MIMICUS_NVIDIA_OUTPUT_USD_PER_MILLION_TOKENS"),
