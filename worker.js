@@ -1,8 +1,10 @@
 const runtime = {
-  product: "Mimicus iAffice",
+  product: "MiMicus iAffice",
   supervisor: "LAYA",
   mode: "simulation-safe",
-  absorbedCore: "MiMicus Swarm",
+  release: "v0.3-prep",
+  corePackage: "mimicus-swarm",
+  coreVersion: "0.2.2",
   sourceHead: "565407eb1296eae617f5b14b512d2e0cf08c6c02",
   morphologies: ["solo","paired_verify","parallel_fanout","sparse_graph","hierarchical_fanout_fanin"]
 };
@@ -22,7 +24,9 @@ export default {
         service: "mimicus",
         runtime: "cloudflare-workers",
         ui: "monochrome-v2",
-        coreArchive: runtime.sourceHead
+        release: runtime.release,
+        coreVersion: runtime.coreVersion,
+        coreSourceHead: runtime.sourceHead
       }), { headers });
     }
     if (url.pathname === "/api/runtime") {
