@@ -46,6 +46,12 @@ def doctor(profile: str) -> dict[str, object]:
         mcp_version = version("mcp")
     except Exception as exc:
         mcp_version = f"unavailable:{type(exc).__name__}"
+    profile_config = PROFILES[profile]
+    credential_present = (
+        bool(os.getenv(profile_config.credential_env))
+        if profile_config.credential_env is not None
+        else False
+    )
     return {
         "version": __version__,
         "profile": profile,
@@ -53,8 +59,8 @@ def doctor(profile: str) -> dict[str, object]:
         "plugin_order": order,
         "plugin_services": services,
         "placeholder_services": placeholders,
-        "provider_ready": profile != "openai" or bool(os.getenv("OPENAI_API_KEY")),
-        "provider_live_credential_present": bool(os.getenv("OPENAI_API_KEY")) if profile == "openai" else False,
+        "provider_ready": not profile_config.network_allowed or credential_present,
+        "provider_live_credential_present": credential_present,
         "provider_supports_tools": provider_caps.supports_tools,
         "provider_tool_manifest_hash": provider_caps.tool_manifest_hash,
         "evidence_acquisition_available": provider_caps.evidence_acquisition_available,
