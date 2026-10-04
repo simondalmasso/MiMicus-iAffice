@@ -239,11 +239,11 @@ class OpenAIAgentsProvider(Provider):
         if self.tools:
             kwargs["tools"] = list(self.tools)
         agent = Agent(**kwargs)
-        kwargs: dict[str, Any] = {"max_turns": self.max_turns}
+        run_kwargs: dict[str, Any] = {"max_turns": self.max_turns}
         run_config = self._run_config()
         if run_config is not None:
-            kwargs["run_config"] = run_config
-        result = await asyncio.wait_for(Runner.run(agent, request.model_dump_json(), **kwargs), timeout=self.timeout_seconds)
+            run_kwargs["run_config"] = run_config
+        result = await asyncio.wait_for(Runner.run(agent, request.model_dump_json(), **run_kwargs), timeout=self.timeout_seconds)
         output = result.final_output
         response = output if isinstance(output, ChallengeResponse) else ChallengeResponse.model_validate(output)
         call_id = getattr(getattr(result, "last_agent", None), "name", None)
