@@ -390,8 +390,14 @@ def _semantic_record(
                 "expected_verdict": execution.verdict.value,
             }
         )
+    causal = result.get("causal_execution", {})
+    causal_projection = (
+        {"semantic": causal.get("semantic"), "semantic_hash": causal.get("semantic_hash")}
+        if isinstance(causal, dict)
+        else {}
+    )
     input_material = {
-        "version": "ORDER-008-semantic-replay-v1",
+        "version": "ORDER-008-semantic-replay-v2",
         "source_mode": request.source_mode,
         "task": request.task,
         "domain": request.domain or "general",
@@ -414,12 +420,14 @@ def _semantic_record(
         "hierarchy_execution": result.get("hierarchy_execution", {}),
         "budget": result.get("budget", {}),
         "communications": result.get("persistent_state", {}).get("communications", []),
+        "causal_execution": causal_projection,
     }
     expected = {
         "claim_identity_hashes": sorted(str(row.get("claim_hash")) for row in result.get("final_claims", [])),
         "falsifier_snapshot_hashes": sorted(row.execution_snapshot_hash for row in executions),
         "decision_hash": result.get("swarm_decision", {}).get("decision_hash"),
         "plan_hash": result.get("plan_hash"),
+        "causal_semantic_hash": causal.get("semantic_hash") if isinstance(causal, dict) else None,
     }
     return {
         "replayable_provider": boundary.capabilities.provider_id == "scripted",
