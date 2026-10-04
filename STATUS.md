@@ -1,16 +1,20 @@
 # MiMicus iAffice — Current checkpoint
 
-**State now:** repository consolidation and release audit are in progress.  
+**State now:** repository consolidation is complete; exact-head release verification is green.  
 **Release branch:** `release/mimicus-v0.3-prep`  
-**Validated architecture baseline:** `aud-arq/mimicus-causal-replay-v1@57c37aad32866b409b0b9c6fad6f70799c90760e`
+**Validated release checkpoint:** `1f9171accebb5bdd763bb9203b9f3fff0b53611b`  
+**GitHub Actions run:** `37168762898` — SUCCESS
 
-## Verified at the last architecture checkpoint
+## Verified now
 
 - **200 tests PASS**
 - **90.24% total coverage** (required: 90%)
 - **Ruff PASS**
-- **mypy PASS** across 104 source files
-- **package build PASS**
+- **mypy PASS**
+- **Python package build PASS**
+- **cockpit JavaScript syntax PASS**
+- **Cloudflare Worker dry-run PASS** with Wrangler 4.134.0
+- active runtime is under `core/`
 - commercial lead decision gate implemented
 - live read-only LAYA observer implemented
 - completion-driven DAG scheduler implemented
@@ -20,12 +24,13 @@
 
 ## Repository state now
 
-- active Python runtime is promoted to `core/`;
+- active Python runtime lives in `core/`;
 - historical `archive/` naming is removed from the release branch;
 - one-time source-absorption workflow is retired;
-- branch-specific TDD workflow is replaced by `Mimicus Core CI`;
-- root project documentation is being normalized for formal review;
-- default `main` remains untouched until this release branch passes the post-move gates.
+- branch-specific TDD workflow is replaced by consolidated `Mimicus CI`;
+- root and core documentation are synchronized;
+- historical deployment evidence is clearly marked historical;
+- legacy default-main content is preserved at `legacy/main-setters-radar-2026-10-03`.
 
 ## Safety state now
 
@@ -37,14 +42,15 @@
 
 ## Deployment status now
 
-**Not deploying yet.**
+**Not deployed from this release candidate.**
 
-Remaining gates:
+The code is release-ready enough to move into the default branch, but production deployment remains a separate decision.
 
-1. post-restructure full CI from `core/`;
-2. Worker dry-run and cockpit syntax;
-3. local observer smoke against a representative prospect fixture;
-4. final branch diff + security review;
-5. only then decide whether to make this structure the default branch and whether to deploy.
+Remaining deployment work:
 
-No architectural blocker is currently known.
+1. transition default `main` to this verified product state;
+2. run exact-head CI once more on `main`;
+3. optional preview/live health verification;
+4. production deployment only after explicit release decision.
+
+There is no known architectural blocker at this checkpoint.
