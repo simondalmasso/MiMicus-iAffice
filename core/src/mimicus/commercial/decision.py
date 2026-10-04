@@ -59,6 +59,11 @@ class DeterministicLeadDecisionService:
                 reasons = assessment.reasons
                 if assessment.stage == LeadStage.CONTACTED_WAITING:
                     reasons = (*reasons, "follow_up_not_due")
+                elif (
+                    assessment.stage == LeadStage.PREPARED
+                    and assessment.candidate.setter_score < policy.prepared_min_score
+                ):
+                    reasons = (*reasons, "prepared_below_quality_floor")
                 elif len(selected) < policy.max_work_per_lane:
                     disposition = LeadDisposition.WORK_NOW
                     selected.append(assessment.candidate.prospect_id)
