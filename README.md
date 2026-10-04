@@ -34,18 +34,24 @@ External systems may provide retrieval, model or tool capabilities, but they do 
 
 ## Current checkpoint
 
-Release preparation is consolidated on `release/mimicus-v0.3-prep`.
+`main` is now the canonical product branch.
 
-Validated architecture baseline before repository cleanup:
+The previous default-branch content is preserved intact at:
+
+`legacy/main-setters-radar-2026-10-03`
+
+Current release gates include:
 
 - 200 tests passing
-- 90.24% coverage (gate: 90%)
+- coverage >= 90%
 - Ruff passing
 - mypy passing
 - Python package build passing
+- cockpit JavaScript syntax passing
+- Cloudflare Worker dry-run passing
 - no autonomous real-world effect adapter enabled
 
-See [STATUS.md](STATUS.md) for the current checkpoint and [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for release gates.
+See [STATUS.md](STATUS.md) for the live checkpoint and [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for release gates.
 
 ## Core quick start
 
@@ -82,6 +88,7 @@ The public Worker is observational. It is not a second LAYA control plane.
 - [Memory trust model](core/docs/MEMORY_TRUST_MODEL.md)
 - [Deployment / release gates](docs/DEPLOYMENT.md)
 - [Repository layout](docs/REPOSITORY.md)
+- [Branch map](docs/BRANCHES.md)
 - [Current status](STATUS.md)
 
 ## History

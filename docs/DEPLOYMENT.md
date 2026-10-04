@@ -1,6 +1,8 @@
 # Deployment and release gates
 
-MiMicus separates **release readiness** from **deployment**. A green core does not automatically authorize production.
+MiMicus separates **repository readiness**, **release readiness** and **deployment**.
+
+A green core does not automatically authorize production.
 
 ## Gate A — Python core
 
@@ -28,7 +30,7 @@ From repository root:
 
 ```bash
 node --check public/app.js
-npx wrangler deploy --dry-run
+npx --yes wrangler@4.134.0 deploy --dry-run
 ```
 
 The Worker remains observational. No production route may provide command ingress into LAYA.
@@ -62,16 +64,27 @@ Before any real effect adapter is enabled:
 
 The current release contains the boundary, not autonomous effect adapters.
 
-## Gate E — release
+## Gate E — repository transition
 
-Only after A-D pass:
+Completed:
 
-1. review branch diff;
-2. confirm no unrelated historical files are introduced;
-3. update the default branch;
-4. optional preview deployment;
-5. production deployment only after preview health/UI verification.
+- active runtime promoted to `core/`;
+- obsolete migration workflows retired;
+- canonical `main` replaced with the verified product state;
+- previous `main` preserved under `legacy/main-setters-radar-2026-10-03`.
+
+## Gate F — deployment
+
+Still intentionally pending:
+
+1. exact-head CI on canonical `main`;
+2. optional preview deployment;
+3. preview health/UI verification;
+4. explicit production release decision;
+5. production deployment.
 
 ## Rollback
 
-The existing deployed cockpit can remain unchanged while this release branch is audited. Repository consolidation does not require an immediate Worker deployment.
+The earlier deployed cockpit remains unchanged until an explicit production deployment occurs.
+
+Repository consolidation by itself does not alter the live Worker.
