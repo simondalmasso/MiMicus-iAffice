@@ -57,6 +57,7 @@ def normalize_prospect(row: Mapping[str, Any]) -> LeadCandidate:
                 "stage": commercial.get("stage", "unknown"),
                 "updated_at": commercial.get("updatedAt"),
                 "note": commercial.get("note"),
+                "evidence": commercial.get("evidence", []),
             },
         }
     )
