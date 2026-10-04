@@ -6,5 +6,11 @@
     "post-comment": 24,
     "reddit_comment": 24
   },
-  "prepared_min_score": 70
+  "prepared_min_score": 70,
+  "stage_precedence": [
+    "replied",
+    "contacted_due",
+    "prepared",
+    "contacted_waiting"
+  ]
 }
