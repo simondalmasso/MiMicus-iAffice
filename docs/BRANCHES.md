@@ -1,47 +1,47 @@
-# Branch map
+# Branch governance
+
+The live GitHub branch list is authoritative. This document defines branch classes rather than attempting to maintain a permanently complete branch inventory.
 
 ## Canonical
 
-- `main` — **canonical MiMicus iAffice product branch**.
-- `release/mimicus-v0.3-prep` — release staging/reference branch; maintained aligned to the current canonical product checkpoint after verification.
+- `main` — the only canonical MiMicus iAffice product branch.
 
-## Preserved legacy default
+## Active work
 
-- `legacy/main-setters-radar-2026-10-03` — preservation point for the previous default `main` before product consolidation.
+New work uses role-specific names:
 
-No history was discarded during the transition.
+- `arq/<area>-<task>-vN` — implementation/architecture;
+- `aud/<area>-<task>-vN` — read-only audit state when a branch is useful;
+- `fix/<area>-<finding>-vN` — bounded correction;
+- `governance/<task>-vN` — repository governance only;
+- `exp/<topic>-vN` — disposable experiments/proposals.
 
-## Active integration provenance
+Every active writer records an exact base SHA and opens a PR before integration.
 
-- `arq/mimicus-commercial-closure-v1` — source branch for merged PR #11 (commercial funnel + closer handoff); retained for audit provenance.
+## Release reference
 
-## Architecture checkpoints
+- `release/mimicus-v0.3-prep` — release reference/staging line.
 
-Retained for audit/provenance:
+A release branch must not be described as aligned with `main` unless its SHA/ancestry was checked at the time of the claim.
 
-- `aud-arq/mimicus-lead-decision-v1`
-- `aud-arq/mimicus-live-observer-v1`
-- `aud-arq/mimicus-scheduler-v1`
-- `aud-arq/mimicus-effects-v1`
-- `aud-arq/mimicus-causal-replay-v1`
-- `aud-arq/mimicus-capability-review-v1`
+## Historical / provenance
 
-The canonical branch descends from the causal-replay checkpoint and contains the preceding runtime work.
+Existing branches under these families are retained only for provenance unless explicitly reactivated:
 
-## Historical product branches
+- `legacy/*`;
+- old `order-*`;
+- old `aud-arq/*` architecture checkpoints;
+- historical `mimicus-*` product branches;
+- `grokbot/*` and `sonnet55/*` architecture proposals.
 
-- `mimicus-iaffice-v1`
-- `mimicus-v2-monochrome`
+A historical branch has no production or integration authority merely because it still exists.
 
-These remain for provenance and comparison.
+## Merged source branches
 
-## Independent architecture proposals
+Merged implementation branches may be retained temporarily for audit provenance, then deleted as housekeeping after owner authorization. Do not keep merged branches indefinitely just to preserve history: the merge commit/PR is the durable provenance.
 
-- `grokbot/mimicus-zero-cost-architecture`
-- `sonnet55/mimicus-zero-cost-architecture`
+## Collision rule
 
-These are proposal/evidence branches only and have no production authority.
+Different filenames do not guarantee independence. If two branches alter the same schema, migration chain, workflow, public API, authority boundary, orchestration invariant, deployment config, or release-status truth, they are coupled and require one integration owner.
 
-## Older ORDER branches
-
-The `order-*` branches predate the formal release consolidation and are not current release sources.
+See `AGENTS.md` and `docs/GOVERNANCE.md`.
