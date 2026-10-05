@@ -8,6 +8,7 @@ from mimicus.commercial.funnel import (
 )
 from mimicus.commercial.models import (
     CommercialActionTicket,
+    CommercialSourceBrief,
     CommercialStageEvidence,
     LeadCandidate,
     LeadDecision,
@@ -21,6 +22,7 @@ from mimicus.commercial.prospect_ingest import normalize_ledger, normalize_prosp
 __all__ = [
     "CommercialActionTicket",
     "CommercialCalibrationRow",
+    "CommercialSourceBrief",
     "CommercialFunnelSnapshot",
     "CommercialStageEvidence",
     "DeterministicLeadDecisionService",
