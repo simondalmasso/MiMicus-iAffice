@@ -128,8 +128,18 @@ def test_openai_compatible_output_cap_reaches_agent_model_settings(monkeypatch: 
         def __init__(self, **kwargs):
             self.kwargs = kwargs
 
+    class AsyncOpenAI:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+    class OpenAIChatCompletionsModel:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
     module.ModelSettings = ModelSettings
     module.Agent = Agent
+    module.AsyncOpenAI = AsyncOpenAI
+    module.OpenAIChatCompletionsModel = OpenAIChatCompletionsModel
     monkeypatch.setitem(sys.modules, "agents", module)
 
     provider = OpenAICompatibleProvider(
