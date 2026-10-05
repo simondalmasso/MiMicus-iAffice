@@ -108,6 +108,24 @@ A source/setter must **not** provide or manufacture:
 
 LAYA / `DeterministicLeadDecisionService` derives decision state.
 
+## Closer source brief
+
+MiMicus preserves a bounded subset of source observations so the human/closer receives enough context to act on a `WORK_NOW` decision:
+
+- `company`;
+- `location`;
+- `description` → `source_brief.need`;
+- `category`;
+- `applicationMode`;
+- `salary.raw` → `source_brief.compensation_raw`;
+- `rank.reason` → `source_brief.setter_reason`.
+
+These values are **context, not authority**.
+
+They do not change `LeadStage`, `CommercialStage`, `LeadDisposition`, `LeadNextAction`, rank precedence or effect approval. They are bounded/frozen observations carried into the deterministic `CommercialActionTicket` and are included in its hash so later mutation is detectable.
+
+The live sanitized LAYA trace does not emit this brief. Future model-assisted drafting must continue to treat it as untrusted source content rather than system instructions.
+
 ## Closer handoff
 
 For every authoritative `WORK_NOW` decision, MiMicus creates one deterministic `CommercialActionTicket`.
