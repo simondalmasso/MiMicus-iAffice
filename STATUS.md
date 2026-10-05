@@ -8,8 +8,8 @@
 
 The consolidated product has passed:
 
-- **200 tests PASS**
-- **90.24% total coverage** (required: 90%)
+- **243 tests PASS**
+- **90.27% total coverage** (required: 90%)
 - **Ruff PASS**
 - **mypy PASS**
 - **Python package build PASS**
@@ -23,6 +23,8 @@ The CI workflow runs these gates on `main` and the release staging branch.
 - active Python runtime under `core/`;
 - LAYA / `MiMicusEngine` remains the single orchestration authority;
 - deterministic commercial lead decision gate;
+- commercial closer handoff with canonical `CommercialActionTicket` queue for `WORK_NOW` leads;
+- read-only commercial funnel analytics with sanitized calibration rows and stage-transition metrics;
 - live read-only LAYA observer;
 - completion-driven DAG scheduler;
 - one-use exact-envelope effect authorization;
@@ -52,7 +54,7 @@ The CI workflow runs these gates on `main` and the release staging branch.
 
 **Current code is not being deployed yet.**
 
-Repository/release readiness is ahead of deployment readiness.
+Repository/release readiness is ahead of deployment readiness. The commercial closure integration is verified on draft PR #11; no deployment has been triggered.
 
 Remaining deployment work:
 

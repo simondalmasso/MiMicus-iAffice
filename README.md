@@ -42,13 +42,15 @@ The previous default-branch content is preserved intact at:
 
 Current release gates include:
 
-- 200 tests passing
+- 243 tests passing
 - coverage >= 90%
 - Ruff passing
 - mypy passing
 - Python package build passing
 - cockpit JavaScript syntax passing
 - Cloudflare Worker dry-run passing
+- commercial closer handoff + read-only funnel analytics verified
+- optional NVIDIA NIM provider profile available without becoming a mandatory dependency
 - no autonomous real-world effect adapter enabled
 
 See [STATUS.md](STATUS.md) for the live checkpoint and [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for release gates.
