@@ -1,7 +1,7 @@
 # MiMicus iAffice — Current checkpoint
 
 **State now:** repository consolidation is complete and `main` is the canonical product branch.  
-**Release staging branch:** `release/mimicus-v0.3-prep` is maintained as the verified staging/reference line.  
+**Release staging branch:** `release/mimicus-v0.3-prep` currently trails canonical `main` and is a historical release reference until explicitly fast-forwarded and reverified.  
 **Legacy default-main preservation:** `legacy/main-setters-radar-2026-10-03`.
 
 ## Verified release gates
@@ -30,8 +30,10 @@ The CI workflow runs these gates on `main` and the release staging branch.
 - completion-driven DAG scheduler;
 - one-use exact-envelope effect authorization;
 - causal replay anchored to the append-only event ledger;
-- optional NVIDIA NIM / DeepSeek V4.1 Flash provider profile behind explicit credential/cost configuration;
-- observational Cloudflare cockpit;
+- optional NVIDIA NIM / DeepSeek V4.1 Flash provider profile behind explicit credential/cost configuration and development/prototyping scope guardrails;
+- MCP Streamable HTTP mutating surface restricted to loopback until transport authentication exists;
+- observational Cloudflare cockpit with synthetic public data explicitly classified as `SIMULATED_FIXTURE`;
+- hardened Worker response headers and explicit JSON 404 for unknown `/api/*` routes;
 - no autonomous real-world effect adapter enabled.
 
 ## Repository state now
@@ -40,7 +42,7 @@ The CI workflow runs these gates on `main` and the release staging branch.
 - one-time source-absorption workflow retired;
 - nested legacy workflow metadata removed from `core/`;
 - consolidated `Mimicus CI` covers core + cockpit gates;
-- root/core documentation synchronized;
+- root/core governance and security documentation synchronized to the current runtime surface;
 - commercial source/setter contract documented at `docs/COMMERCIAL-DATA-CONTRACT.md`;
 - historical deployment evidence explicitly marked historical;
 - external capability research lives under `docs/research/` and has no runtime authority.
@@ -57,7 +59,7 @@ The CI workflow runs these gates on `main` and the release staging branch.
 
 **Current code is not being deployed yet.**
 
-Repository/release readiness is ahead of deployment readiness. Commercial closure PR #11 is merged into `main`; canonical `main` has passed post-merge core + cockpit CI. No deployment has been triggered.
+Repository/release readiness is ahead of deployment readiness. Commercial closure, NVIDIA provider guardrails, MCP loopback hardening, and cockpit truth/security hardening are integrated on `main`. The public deployment has not been updated by these repository changes.
 
 Remaining deployment work:
 
