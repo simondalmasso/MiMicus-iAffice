@@ -31,6 +31,8 @@ class OpenAICompatibleProvider(OpenAIAgentsProvider):
             raise ValueError("OpenAI-compatible provider requires an API key")
         if not self.provider_id.strip():
             raise ValueError("provider_id must be non-empty")
+        if self.max_output_tokens is not None and self.max_output_tokens < 1:
+            raise ValueError("max_output_tokens must be positive")
 
     @property
     def capabilities(self) -> ProviderCapabilities:
@@ -38,8 +40,8 @@ class OpenAICompatibleProvider(OpenAIAgentsProvider):
         return replace(
             base,
             provider_id=self.provider_id,
-            version=self.provider_version,
-            adapter_version="openai-compatible-chat-completions/mimicus-v1",
+            version=f"{self.provider_version}:maxout={self.max_output_tokens if self.max_output_tokens is not None else 'provider-default'}",
+            adapter_version="openai-compatible-chat-completions/mimicus-v2",
             known_zero_cost=self.known_zero_cost,
             estimated_max_cost_per_call=0.0 if self.known_zero_cost else base.estimated_max_cost_per_call,
             pricing_metadata_authoritative=self.known_zero_cost or base.pricing_metadata_authoritative,
