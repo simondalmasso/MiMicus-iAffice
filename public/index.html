@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0e1213">
   <title>Mimicus iAffice</title>
-  <meta name="description" content="Mimicus iAffice — autonomous swarm cockpit">
+  <meta name="description" content="Mimicus iAffice — governed operator cockpit with explicit live/simulated provenance">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
@@ -16,7 +16,7 @@
         <div class="brand-name">Mimicus</div>
       </div>
       <div class="status-row">
-        <span class="pill ok"><i></i>Operativo</span>
+        <span class="pill" id="modePill"><i class="dim"></i>SIMULACIÓN</span>
         <span class="pill">API <b id="apiLatency">42ms</b></span>
         <span class="pill">Server <i class="dim"></i></span>
       </div>
@@ -111,7 +111,7 @@
     <footer>
       <span>MIMICUS iAFFICE</span>
       <span>IMMUNE SWARM CORE · <code>565407e</code></span>
-      <span id="runtimeStatus">SIMULATION SAFE</span>
+      <span id="runtimeStatus">SIMULATED_FIXTURE</span>
     </footer>
   </main>
   <script src="/app.js" defer></script>
