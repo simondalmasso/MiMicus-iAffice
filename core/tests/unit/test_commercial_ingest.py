@@ -106,3 +106,36 @@ def test_missing_active_is_not_silently_synthesized() -> None:
 
     with pytest.raises(ValueError, match="active"):
         normalize_prospect(row)
+
+
+def test_normalize_preserves_bounded_closer_source_brief() -> None:
+    candidate = normalize_prospect(_finding())
+
+    assert candidate.source_brief.company == "Buyer Co"
+    assert candidate.source_brief.location == "Remote"
+    assert candidate.source_brief.need == "Concrete buyer need"
+    assert candidate.source_brief.category == "tech"
+    assert candidate.source_brief.application_mode == "direct"
+    assert candidate.source_brief.compensation_raw == "No publicado"
+    assert candidate.source_brief.setter_reason == "verified signal"
+
+
+def test_closer_source_brief_is_optional_and_does_not_create_fake_data() -> None:
+    row = _finding()
+    for key in ("company", "location", "description", "category", "applicationMode", "salary"):
+        row.pop(key, None)
+    rank = row["rank"]
+    assert isinstance(rank, dict)
+    rank.pop("reason", None)
+
+    candidate = normalize_prospect(row)
+
+    assert candidate.source_brief.model_dump(mode="json") == {
+        "company": None,
+        "location": None,
+        "need": None,
+        "category": None,
+        "application_mode": None,
+        "compensation_raw": None,
+        "setter_reason": None,
+    }
