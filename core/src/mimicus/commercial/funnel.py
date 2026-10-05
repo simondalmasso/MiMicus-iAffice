@@ -220,7 +220,7 @@ def _metrics(rows: list[CommercialCalibrationRow]) -> FunnelMetrics:
         disposition_counts=dict(dispositions),
         next_action_counts=dict(next_actions),
         current_commercial_stage_counts=dict(stages),
-        terminal_outcome_counts=dict(terminal),
+        terminal_outcome_counts={str(key): int(value) for key, value in terminal.items()},
         terminal_win_rate=win_rate,
         qualified_to_proposal=_transition(
             rows,
