@@ -28,6 +28,9 @@ def normalize_prospect(row: Mapping[str, Any]) -> LeadCandidate:
     if not isinstance(outreach, Mapping):
         raise ValueError("outreach must be an object")
 
+    salary = row.get("salary")
+    compensation_raw = salary.get("raw") if isinstance(salary, Mapping) else None
+
     commercial = row.get("commercial")
     if commercial is None:
         commercial = {"stage": "unknown"}
@@ -69,6 +72,15 @@ def normalize_prospect(row: Mapping[str, Any]) -> LeadCandidate:
             "contacted_at": outreach.get("contactedAt"),
             "source_url": row.get("sourceUrl"),
             "direct_url": row.get("directUrl"),
+            "source_brief": {
+                "company": row.get("company"),
+                "location": row.get("location"),
+                "need": row.get("description"),
+                "category": row.get("category"),
+                "application_mode": row.get("applicationMode"),
+                "compensation_raw": compensation_raw,
+                "setter_reason": rank.get("reason"),
+            },
             "commercial": {
                 "stage": commercial.get("stage", "unknown"),
                 "updated_at": commercial.get("updatedAt"),

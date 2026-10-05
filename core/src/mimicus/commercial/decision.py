@@ -6,6 +6,7 @@ from datetime import datetime
 from mimicus.canonical import sha256_obj
 from mimicus.commercial.models import (
     CommercialActionTicket,
+    CommercialSourceBrief,
     CommercialStage,
     LeadCandidate,
     LeadDecision,
@@ -400,6 +401,7 @@ class DeterministicLeadDecisionService:
         if not candidate.buyer or not candidate.source_url or not candidate.direct_url:
             raise RuntimeError("WORK_NOW candidate must have complete closer contact metadata")
 
+        source_brief = CommercialSourceBrief.model_validate(candidate.source_brief)
         payload = {
             "prospect_id": decision.prospect_id,
             "lane": decision.lane,
@@ -411,6 +413,7 @@ class DeterministicLeadDecisionService:
             "next_action": decision.next_action.value,
             "rank_position": decision.rank_position,
             "decision_hash": decision.decision_hash,
+            "source_brief": source_brief.model_dump(mode="json"),
             "effect_scope": "commercial-outreach",
             "requires_human_approval": True,
         }
@@ -425,6 +428,7 @@ class DeterministicLeadDecisionService:
             next_action=decision.next_action,
             rank_position=decision.rank_position,
             decision_hash=decision.decision_hash,
+            source_brief=source_brief,
             effect_scope="commercial-outreach",
             requires_human_approval=True,
             ticket_hash=sha256_obj(payload),

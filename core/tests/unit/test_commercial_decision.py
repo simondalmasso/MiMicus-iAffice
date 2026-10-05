@@ -674,3 +674,50 @@ def test_action_queue_is_input_order_invariant() -> None:
 
     assert left.action_queue == right.action_queue
     assert left.batch_hash == right.batch_hash
+
+
+def test_action_ticket_carries_source_brief_without_granting_authority() -> None:
+    base = _candidate("brief", status="replied", score=80)
+    enriched = base.model_copy(
+        update={
+            "source_brief": {
+                "company": "Buyer Co",
+                "location": "Remote",
+                "need": "Need a bounded CRM cleanup this week",
+                "category": "crm",
+                "application_mode": "direct",
+                "compensation_raw": "USD 150 fixed",
+                "setter_reason": "buyer explicitly requested help",
+            }
+        }
+    )
+
+    batch = DeterministicLeadDecisionService().decide(
+        [enriched],
+        _policy(max_work=1),
+        as_of=AS_OF,
+    )
+
+    ticket = batch.action_queue[0]
+    assert ticket.source_brief.need == "Need a bounded CRM cleanup this week"
+    assert ticket.source_brief.compensation_raw == "USD 150 fixed"
+    assert ticket.requires_human_approval is True
+
+
+def test_source_brief_changes_hash_but_not_stage_or_disposition() -> None:
+    service = DeterministicLeadDecisionService()
+    base = _candidate("brief-hash", status="replied", score=80)
+    left_candidate = base.model_copy(
+        update={"source_brief": {"need": "Need A"}}
+    )
+    right_candidate = base.model_copy(
+        update={"source_brief": {"need": "Need B"}}
+    )
+
+    left = service.decide([left_candidate], _policy(max_work=1), as_of=AS_OF)
+    right = service.decide([right_candidate], _policy(max_work=1), as_of=AS_OF)
+
+    assert left.decisions[0].stage == right.decisions[0].stage == LeadStage.REPLIED
+    assert left.decisions[0].disposition == right.decisions[0].disposition == LeadDisposition.WORK_NOW
+    assert left.decisions[0].decision_hash != right.decisions[0].decision_hash
+    assert left.action_queue[0].ticket_hash != right.action_queue[0].ticket_hash

@@ -62,6 +62,43 @@ class CommercialStageEvidence(BaseModel):
         return value
 
 
+class CommercialSourceBrief(BaseModel):
+    """Bounded source observations for a human/closer handoff.
+
+    These fields are context only. They never grant stage, disposition,
+    next-action or effect authority.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    company: str | None = Field(default=None, max_length=256)
+    location: str | None = Field(default=None, max_length=256)
+    need: str | None = Field(default=None, max_length=4000)
+    category: str | None = Field(default=None, max_length=128)
+    application_mode: str | None = Field(default=None, max_length=128)
+    compensation_raw: str | None = Field(default=None, max_length=512)
+    setter_reason: str | None = Field(default=None, max_length=1000)
+
+    @field_validator(
+        "company",
+        "location",
+        "need",
+        "category",
+        "application_mode",
+        "compensation_raw",
+        "setter_reason",
+        mode="before",
+    )
+    @classmethod
+    def normalize_optional_text(cls, value: object) -> object:
+        if value is None:
+            return None
+        if not isinstance(value, str):
+            raise ValueError("commercial source brief fields must be strings")
+        normalized = value.strip()
+        return normalized or None
+
+
 class CommercialContext(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -116,6 +153,7 @@ class LeadCandidate(BaseModel):
     contacted_at: datetime | None = None
     source_url: str | None = None
     direct_url: str | None = None
+    source_brief: CommercialSourceBrief = Field(default_factory=CommercialSourceBrief)
     commercial: CommercialContext = Field(default_factory=CommercialContext)
 
     @field_validator("published_at", "verified_at", "contacted_at")
@@ -190,6 +228,7 @@ class CommercialActionTicket(BaseModel):
     next_action: LeadNextAction
     rank_position: int = Field(ge=1)
     decision_hash: str = Field(min_length=64, max_length=64)
+    source_brief: CommercialSourceBrief = Field(default_factory=CommercialSourceBrief)
     effect_scope: Literal["commercial-outreach"] = "commercial-outreach"
     requires_human_approval: Literal[True] = True
     ticket_hash: str = Field(min_length=64, max_length=64)
