@@ -40,7 +40,7 @@ function secureResponse(response) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (url.pathname === "/api/health") {
+    if (url.pathname === "/api/health" || url.pathname === "/health") {
       return new Response(JSON.stringify({
         ok: true,
         service: "mimicus",
@@ -54,6 +54,12 @@ export default {
     }
     if (url.pathname === "/api/runtime") {
       return new Response(JSON.stringify(runtime), { headers: jsonHeaders });
+    }
+    if (url.pathname.startsWith("/api/")) {
+      return new Response(JSON.stringify({ ok: false, error: "not_found" }), {
+        status: 404,
+        headers: jsonHeaders
+      });
     }
     return secureResponse(await env.ASSETS.fetch(request));
   }
