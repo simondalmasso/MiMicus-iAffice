@@ -25,6 +25,7 @@ class ProviderCapabilities:
     known_zero_cost: bool = False
     estimated_max_cost_per_call: float | None = None
     pricing_metadata_authoritative: bool = False
+    max_output_tokens: int | None = None
     tool_manifest_hash: str = "no-tools"
     evidence_acquisition_available: bool = False
 
