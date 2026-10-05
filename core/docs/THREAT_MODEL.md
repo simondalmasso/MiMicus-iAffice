@@ -33,4 +33,4 @@ V0.2.2 contains an effect authorization and dispatch seam, but no autonomous rea
 
 ## MCP exposure
 
-The MCP server exposes only two narrow tools. `get_mimicus_run` is read-only/idempotent. `run_mimicus` can persist a run and, when `learn=true`, evidence-gated memory changes, so it is not annotated read-only or idempotent. The offline profile does not require an external model network call.
+The MCP server exposes three narrow tools. `get_mimicus_run` is read-only/idempotent. `run_mimicus` can persist a run and, when `learn=true`, evidence-gated memory changes, so it is not annotated read-only or idempotent. `submit_verification` can persist authenticated verification receipts and trigger evidence-gated learning/revocation effects, so it is also a mutating tool. Until transport authentication is implemented, the MCP HTTP server fails closed on non-loopback bind addresses. The offline profile does not require an external model network call.
