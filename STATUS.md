@@ -1,10 +1,14 @@
 # MiMicus iAffice — Current checkpoint
 
 **State now:** repository consolidation is complete and `main` is the canonical product branch.  
-**Release staging branch:** `release/mimicus-v0.3-prep` mirrors the same product line.  
+**Release staging branch:** `release/mimicus-v0.3-prep` is being aligned to the canonical `main` checkpoint.  
 **Legacy default-main preservation:** `legacy/main-setters-radar-2026-10-03`.
 
 ## Verified release gates
+
+Canonical checkpoint: `main@99630429edcbf2cff9a397b97e8b60ecbdde91b4`  
+Post-merge CI: `37272050139` — **SUCCESS**
+
 
 The consolidated product has passed:
 
@@ -29,6 +33,7 @@ The CI workflow runs these gates on `main` and the release staging branch.
 - completion-driven DAG scheduler;
 - one-use exact-envelope effect authorization;
 - causal replay anchored to the append-only event ledger;
+- optional NVIDIA NIM / DeepSeek V4.1 Flash provider profile behind explicit credential/cost configuration;
 - observational Cloudflare cockpit;
 - no autonomous real-world effect adapter enabled.
 
@@ -54,12 +59,11 @@ The CI workflow runs these gates on `main` and the release staging branch.
 
 **Current code is not being deployed yet.**
 
-Repository/release readiness is ahead of deployment readiness. The commercial closure integration is verified on draft PR #11; no deployment has been triggered.
+Repository/release readiness is ahead of deployment readiness. Commercial closure PR #11 is merged into `main`; post-merge CI run `37272050139` is SUCCESS. No deployment has been triggered.
 
 Remaining deployment work:
 
-1. exact-head CI on canonical `main`;
-2. optional preview/live health verification;
-3. production deployment only after explicit release decision.
+1. optional preview/live health verification;
+2. production deployment only after explicit release decision.
 
 There is no known architectural blocker at this checkpoint.
