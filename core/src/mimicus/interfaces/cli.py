@@ -61,6 +61,8 @@ def doctor(profile: str) -> dict[str, object]:
         "placeholder_services": placeholders,
         "provider_ready": not profile_config.network_allowed or credential_present,
         "provider_live_credential_present": credential_present,
+        "provider_usage_scope": profile_config.usage_scope,
+        "production_entitlement_required": profile_config.production_entitlement_required,
         "provider_supports_tools": provider_caps.supports_tools,
         "provider_tool_manifest_hash": provider_caps.tool_manifest_hash,
         "evidence_acquisition_available": provider_caps.evidence_acquisition_available,
