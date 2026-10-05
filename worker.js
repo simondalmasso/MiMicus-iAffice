@@ -1,7 +1,10 @@
 const runtime = {
   product: "MiMicus iAffice",
   supervisor: "LAYA",
-  mode: "simulation-safe",
+  mode: "simulation-fixture",
+  evidenceClass: "SIMULATED_FIXTURE",
+  dataOrigin: "synthetic-ui-fixture",
+  sideEffects: false,
   release: "v0.3-prep",
   corePackage: "mimicus-swarm",
   coreVersion: "0.2.2",
@@ -9,11 +12,30 @@ const runtime = {
   morphologies: ["solo","paired_verify","parallel_fanout","sparse_graph","hierarchical_fanout_fanin"]
 };
 
-const headers = {
-  "content-type": "application/json; charset=utf-8",
-  "cache-control": "no-store",
-  "x-content-type-options": "nosniff"
+const securityHeaders = {
+  "strict-transport-security": "max-age=31536000; includeSubDomains",
+  "content-security-policy": "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+  "x-content-type-options": "nosniff",
+  "x-frame-options": "DENY",
+  "referrer-policy": "no-referrer",
+  "permissions-policy": "camera=(), microphone=(), geolocation=()"
 };
+
+const jsonHeaders = {
+  ...securityHeaders,
+  "content-type": "application/json; charset=utf-8",
+  "cache-control": "no-store"
+};
+
+function secureResponse(response) {
+  const headers = new Headers(response.headers);
+  for (const [name, value] of Object.entries(securityHeaders)) headers.set(name, value);
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers
+  });
+}
 
 export default {
   async fetch(request, env) {
@@ -25,13 +47,14 @@ export default {
         runtime: "cloudflare-workers",
         ui: "monochrome-v2",
         release: runtime.release,
+        evidenceClass: runtime.evidenceClass,
         coreVersion: runtime.coreVersion,
         coreSourceHead: runtime.sourceHead
-      }), { headers });
+      }), { headers: jsonHeaders });
     }
     if (url.pathname === "/api/runtime") {
-      return new Response(JSON.stringify(runtime), { headers });
+      return new Response(JSON.stringify(runtime), { headers: jsonHeaders });
     }
-    return env.ASSETS.fetch(request);
+    return secureResponse(await env.ASSETS.fetch(request));
   }
 };
