@@ -602,3 +602,75 @@ def test_terminal_commercial_stage_requires_matching_outcome_evidence(commercial
     )
     with_decision = _by_id(with_proof)[f"{commercial_stage}-proof"]
     assert with_decision.disposition == LeadDisposition.COMPLETE  # type: ignore[union-attr]
+
+
+def test_work_now_produces_auditable_closer_action_ticket() -> None:
+    batch = DeterministicLeadDecisionService().decide(
+        [
+            _candidate("reply", status="replied", score=80),
+            _candidate("weak", status="prepared", score=10),
+        ],
+        _policy(max_work=1, prepared_min_score=70),
+        as_of=AS_OF,
+    )
+
+    assert len(batch.action_queue) == 1
+    ticket = batch.action_queue[0]
+    decision = _by_id(batch)["reply"]
+
+    assert ticket.prospect_id == "reply"
+    assert ticket.lane == "facebook"
+    assert ticket.buyer == "Buyer"
+    assert ticket.title == "Lead reply"
+    assert ticket.source_url == "https://example.test/reply"
+    assert ticket.direct_url == "https://example.test/reply/contact"
+    assert ticket.next_action == LeadNextAction.QUALIFY
+    assert ticket.commercial_stage == CommercialStage.UNKNOWN
+    assert ticket.rank_position == 1
+    assert ticket.decision_hash == decision.decision_hash  # type: ignore[union-attr]
+    assert ticket.effect_scope == "commercial-outreach"
+    assert ticket.requires_human_approval is True
+    assert len(ticket.ticket_hash) == 64
+    assert all(row.prospect_id != "weak" for row in batch.action_queue)
+
+
+def test_non_work_dispositions_never_produce_action_tickets() -> None:
+    batch = DeterministicLeadDecisionService().decide(
+        [
+            _candidate("rejected", scam_risk="high"),
+            _candidate("repair", status="contacted", contacted_at=None),
+            _candidate("completed", status="closed", commercial_stage="won"),
+            _candidate("held", status="prepared", score=10),
+        ],
+        _policy(max_work=1, prepared_min_score=70),
+        as_of=AS_OF,
+    )
+
+    assert batch.action_queue == ()
+
+
+def test_action_ticket_hash_binds_contact_target_and_decision() -> None:
+    service = DeterministicLeadDecisionService()
+    base = _candidate("target", status="replied")
+    changed_target = base.model_copy(update={"direct_url": "https://example.test/target/alternate"})
+
+    left = service.decide([base], _policy(), as_of=AS_OF)
+    right = service.decide([changed_target], _policy(), as_of=AS_OF)
+
+    assert left.action_queue[0].ticket_hash != right.action_queue[0].ticket_hash
+    assert left.action_queue[0].decision_hash != right.action_queue[0].decision_hash
+
+
+def test_action_queue_is_input_order_invariant() -> None:
+    service = DeterministicLeadDecisionService()
+    candidates = [
+        _candidate("fb-reply", status="replied", score=10),
+        _candidate("fb-prepared", status="prepared", score=90),
+        _candidate("rd-reply", lane="reddit", status="replied", score=20),
+    ]
+
+    left = service.decide(candidates, _policy(max_work=3), as_of=AS_OF)
+    right = service.decide(list(reversed(candidates)), _policy(max_work=3), as_of=AS_OF)
+
+    assert left.action_queue == right.action_queue
+    assert left.batch_hash == right.batch_hash

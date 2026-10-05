@@ -177,11 +177,30 @@ class LeadDecision(BaseModel):
     decision_hash: str = Field(min_length=64, max_length=64)
 
 
+class CommercialActionTicket(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    prospect_id: str = Field(min_length=1)
+    lane: Literal["facebook", "reddit"]
+    buyer: str = Field(min_length=1)
+    title: str = Field(min_length=1)
+    source_url: str = Field(min_length=1)
+    direct_url: str = Field(min_length=1)
+    commercial_stage: CommercialStage
+    next_action: LeadNextAction
+    rank_position: int = Field(ge=1)
+    decision_hash: str = Field(min_length=64, max_length=64)
+    effect_scope: Literal["commercial-outreach"] = "commercial-outreach"
+    requires_human_approval: Literal[True] = True
+    ticket_hash: str = Field(min_length=64, max_length=64)
+
+
 class LeadDecisionBatch(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     input_ids: tuple[str, ...]
     decisions: tuple[LeadDecision, ...]
+    action_queue: tuple[CommercialActionTicket, ...] = ()
     selected_by_lane: Mapping[str, tuple[str, ...]]
     held_ids: tuple[str, ...]
     rejected_ids: tuple[str, ...]

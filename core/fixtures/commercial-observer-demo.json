@@ -2,7 +2,7 @@
   "findings": [
     {
       "id": "demo-proposal",
-      "title": "Demo buyer with evidenced proposal",
+      "title": "Demo proposal-stage buyer",
       "buyer": "Demo Buyer",
       "sourceName": "Facebook",
       "sourceUrl": "https://example.test/demo-proposal",
@@ -23,10 +23,94 @@
         "stage": "proposal",
         "evidence": [
           {
+            "stage": "qualified",
+            "observedAt": "2026-10-03T18:30:00-03:00",
+            "sourceRef": "demo:qualified"
+          },
+          {
             "stage": "proposal",
             "observedAt": "2026-10-03T19:00:00-03:00",
-            "sourceRef": "demo:proposal-confirmation",
-            "summary": "Sanitized fixture evidence."
+            "sourceRef": "demo:proposal"
+          }
+        ]
+      }
+    },
+    {
+      "id": "demo-won",
+      "title": "Demo won buyer",
+      "buyer": "Demo Buyer 2",
+      "sourceName": "Reddit",
+      "sourceUrl": "https://example.test/demo-won",
+      "directUrl": "https://example.test/demo-won/contact",
+      "publishedAt": "2026-10-02T12:00:00-03:00",
+      "verifiedAt": "2026-10-02T18:00:00-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "workerFee": false,
+      "scamRisk": "low",
+      "rank": {"score": 88},
+      "outreach": {
+        "status": "closed",
+        "channel": "reddit_comment",
+        "contactedAt": "2026-10-02T19:00:00-03:00"
+      },
+      "commercial": {
+        "stage": "won",
+        "evidence": [
+          {
+            "stage": "qualified",
+            "observedAt": "2026-10-02T20:00:00-03:00",
+            "sourceRef": "demo:won-qualified"
+          },
+          {
+            "stage": "proposal",
+            "observedAt": "2026-10-03T09:00:00-03:00",
+            "sourceRef": "demo:won-proposal"
+          },
+          {
+            "stage": "won",
+            "observedAt": "2026-10-03T20:00:00-03:00",
+            "sourceRef": "demo:won"
+          }
+        ]
+      }
+    },
+    {
+      "id": "demo-lost",
+      "title": "Demo lost buyer",
+      "buyer": "Demo Buyer 3",
+      "sourceName": "Facebook",
+      "sourceUrl": "https://example.test/demo-lost",
+      "directUrl": "https://example.test/demo-lost/contact",
+      "publishedAt": "2026-10-01T12:00:00-03:00",
+      "verifiedAt": "2026-10-01T18:00:00-03:00",
+      "active": true,
+      "argentinaEligible": true,
+      "workerFee": false,
+      "scamRisk": "low",
+      "rank": {"score": 75},
+      "outreach": {
+        "status": "closed",
+        "channel": "messenger",
+        "contactedAt": "2026-10-01T19:00:00-03:00"
+      },
+      "commercial": {
+        "stage": "lost",
+        "evidence": [
+          {
+            "stage": "qualified",
+            "observedAt": "2026-10-01T20:00:00-03:00",
+            "sourceRef": "demo:lost-qualified"
+          },
+          {
+            "stage": "proposal",
+            "observedAt": "2026-10-02T09:00:00-03:00",
+            "sourceRef": "demo:lost-proposal"
+          },
+          {
+            "stage": "lost",
+            "observedAt": "2026-10-03T10:00:00-03:00",
+            "sourceRef": "demo:lost"
           }
         ]
       }
@@ -34,7 +118,7 @@
     {
       "id": "demo-weak-prepared",
       "title": "Demo weak untouched lead",
-      "buyer": "Demo Buyer 2",
+      "buyer": "Demo Buyer 4",
       "sourceName": "Facebook",
       "sourceUrl": "https://example.test/demo-weak",
       "directUrl": "https://example.test/demo-weak/contact",

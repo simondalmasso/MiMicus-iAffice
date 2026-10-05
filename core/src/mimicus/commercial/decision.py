@@ -5,6 +5,7 @@ from datetime import datetime
 
 from mimicus.canonical import sha256_obj
 from mimicus.commercial.models import (
+    CommercialActionTicket,
     CommercialStage,
     LeadCandidate,
     LeadDecision,
@@ -43,6 +44,7 @@ class DeterministicLeadDecisionService:
         if duplicates:
             raise ValueError(f"duplicate prospect_id values: {duplicates}")
 
+        candidate_by_id = {candidate.prospect_id: candidate for candidate in candidates}
         policy_hash = sha256_obj(policy)
         assessments = [self._assess(candidate, policy, as_of=as_of) for candidate in candidates]
         decisions: list[LeadDecision] = []
@@ -114,6 +116,11 @@ class DeterministicLeadDecisionService:
                 ),
             )
         )
+        action_queue = tuple(
+            self._action_ticket(decision, candidate_by_id[decision.prospect_id])
+            for decision in canonical_decisions
+            if decision.disposition == LeadDisposition.WORK_NOW
+        )
         held_ids = tuple(
             sorted(
                 decision.prospect_id
@@ -146,6 +153,7 @@ class DeterministicLeadDecisionService:
             "as_of": as_of.isoformat(),
             "input_ids": sorted(ids),
             "decisions": [decision.model_dump(mode="json") for decision in canonical_decisions],
+            "action_queue": [ticket.model_dump(mode="json") for ticket in action_queue],
             "selected_by_lane": selected_by_lane,
             "held_ids": held_ids,
             "rejected_ids": rejected_ids,
@@ -156,6 +164,7 @@ class DeterministicLeadDecisionService:
         return LeadDecisionBatch(
             input_ids=tuple(sorted(ids)),
             decisions=canonical_decisions,
+            action_queue=action_queue,
             selected_by_lane=selected_by_lane,
             held_ids=held_ids,
             rejected_ids=rejected_ids,
@@ -379,6 +388,46 @@ class DeterministicLeadDecisionService:
             -candidate.setter_score,
             -candidate.verified_at.timestamp(),
             candidate.prospect_id,
+        )
+
+    @staticmethod
+    def _action_ticket(
+        decision: LeadDecision,
+        candidate: LeadCandidate,
+    ) -> CommercialActionTicket:
+        if decision.rank_position is None:
+            raise RuntimeError("WORK_NOW decision must have a rank position")
+        if not candidate.buyer or not candidate.source_url or not candidate.direct_url:
+            raise RuntimeError("WORK_NOW candidate must have complete closer contact metadata")
+
+        payload = {
+            "prospect_id": decision.prospect_id,
+            "lane": decision.lane,
+            "buyer": candidate.buyer,
+            "title": candidate.title,
+            "source_url": candidate.source_url,
+            "direct_url": candidate.direct_url,
+            "commercial_stage": decision.commercial_stage.value,
+            "next_action": decision.next_action.value,
+            "rank_position": decision.rank_position,
+            "decision_hash": decision.decision_hash,
+            "effect_scope": "commercial-outreach",
+            "requires_human_approval": True,
+        }
+        return CommercialActionTicket(
+            prospect_id=decision.prospect_id,
+            lane=decision.lane,
+            buyer=candidate.buyer,
+            title=candidate.title,
+            source_url=candidate.source_url,
+            direct_url=candidate.direct_url,
+            commercial_stage=decision.commercial_stage,
+            next_action=decision.next_action,
+            rank_position=decision.rank_position,
+            decision_hash=decision.decision_hash,
+            effect_scope="commercial-outreach",
+            requires_human_approval=True,
+            ticket_hash=sha256_obj(payload),
         )
 
     @staticmethod

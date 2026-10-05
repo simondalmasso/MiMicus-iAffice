@@ -43,6 +43,26 @@ jobs:
           assert payload["selected_by_lane"]["facebook"][0] == "demo-proposal"
           assert "demo-weak-prepared" in payload["held_ids"]
           PY
+      - name: Commercial funnel smoke
+        env:
+          MIMICUS_DATABASE_URL: "sqlite:///:memory:"
+        run: |
+          mimicus funnel \
+            --profile offline \
+            --ledger-file fixtures/commercial-observer-demo.json \
+            --policy-file config/commercial-policy-v1.json \
+            --as-of "2026-10-04T00:00:00-03:00" > /tmp/mimicus-funnel.json
+          python - <<'PY'
+          import json
+          payload = json.load(open("/tmp/mimicus-funnel.json", encoding="utf-8"))
+          assert payload["overall"]["lead_count"] == 4
+          assert payload["overall"]["terminal_outcome_counts"] == {"lost": 1, "won": 1}
+          assert payload["overall"]["terminal_win_rate"] == 0.5
+          assert payload["overall"]["qualified_to_proposal"]["advanced_count"] == 3
+          assert payload["overall"]["proposal_to_terminal"]["advanced_count"] == 2
+          assert "Demo Buyer" not in json.dumps(payload)
+          assert "demo:" not in json.dumps(payload)
+          PY
       - name: Tests and coverage
         run: pytest --cov=mimicus --cov-report=term-missing
       - name: Ruff

@@ -138,6 +138,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_triage.add_argument("--as-of", required=True)
     p_triage.add_argument("--trace-jsonl", action="store_true")
 
+    p_funnel = sub.add_parser("funnel")
+    p_funnel.add_argument("--profile", choices=sorted(PROFILES), default="offline")
+    p_funnel.add_argument("--ledger-file", required=True)
+    p_funnel.add_argument("--policy-file", required=True)
+    p_funnel.add_argument("--as-of", required=True)
+
     p_observe = sub.add_parser("observe")
     source_group = p_observe.add_mutually_exclusive_group(required=True)
     source_group.add_argument("--ledger-file")
@@ -264,6 +270,18 @@ def main(argv: Sequence[str] | None = None) -> int:
 
         batch = _engine(args.profile).triage_prospects(ledger, policy=policy, as_of=as_of)
         print(batch.model_dump_json(indent=2))
+        return 0
+    if args.command == "funnel":
+        ledger = _load_json_object(args.ledger_file, label="ledger")
+        policy_payload = _load_json_object(args.policy_file, label="policy")
+        policy = LeadDecisionPolicy.model_validate(policy_payload)
+        as_of = _parse_aware_datetime(args.as_of, label="as_of")
+        snapshot = _engine(args.profile).commercial_funnel(
+            ledger,
+            policy=policy,
+            as_of=as_of,
+        )
+        print(snapshot.model_dump_json(indent=2))
         return 0
     if args.command == "observe":
         from mimicus.commercial.observer import ActivityBuffer, CommercialObserver, FileLedgerSource, UrlLedgerSource

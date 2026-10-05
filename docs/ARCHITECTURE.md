@@ -63,13 +63,23 @@ DeterministicLeadDecisionService
        v
 LAYA authoritative queue
        |
-       +--> WORK_NOW
+       +--> WORK_NOW --> CommercialActionTicket --> human/effect approval boundary
        +--> HOLD
        +--> REPAIR_DATA
+       +--> COMPLETE
        +--> REJECT
+
+same normalized candidates + authoritative batch
+       |
+       v
+read-only CommercialFunnelSnapshot
+       |
+       +--> stage counts / transition rates / latency
+       +--> terminal win rate
+       +--> sanitized calibration rows
 ```
 
-Setter ranking is an input signal, not authority. The gate remains deterministic and free of network/model calls.
+Setter ranking is an input signal, not authority. The gate remains deterministic and free of network/model calls. A `CommercialActionTicket` is not an effect approval: it is an auditable handoff record for the human/closer layer, while real external mutation still requires the exact-envelope `EffectApprovalReceipt`. Funnel analytics are read-only and cannot alter LAYA decisions.
 
 ## Effects
 
@@ -131,3 +141,8 @@ A new framework or service is added only when it provides a separable primitive 
 - has a mandatory-$0 path or removable fallback;
 - can be benchmarked;
 - can be removed without breaking evidence, memory or effect authority.
+
+
+## Optional provider profiles
+
+The control plane can use provider adapters without changing orchestration authority. The NVIDIA profile uses the generic OpenAI-compatible provider against NVIDIA NIM and defaults to `deepseek-ai/deepseek-v4.1-flash`. It is optional: no NVIDIA credential is required for offline operation, and zero-cost status is fail-closed unless explicitly confirmed by operator configuration.
