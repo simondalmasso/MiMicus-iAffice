@@ -1,13 +1,10 @@
 # MiMicus iAffice — Current checkpoint
 
 **State now:** repository consolidation is complete and `main` is the canonical product branch.  
-**Release staging branch:** `release/mimicus-v0.3-prep` is being aligned to the canonical `main` checkpoint.  
+**Release staging branch:** `release/mimicus-v0.3-prep` is maintained as the verified staging/reference line.  
 **Legacy default-main preservation:** `legacy/main-setters-radar-2026-10-03`.
 
 ## Verified release gates
-
-Canonical checkpoint: `main@99630429edcbf2cff9a397b97e8b60ecbdde91b4`  
-Post-merge CI: `37272050139` — **SUCCESS**
 
 
 The consolidated product has passed:
@@ -44,6 +41,7 @@ The CI workflow runs these gates on `main` and the release staging branch.
 - nested legacy workflow metadata removed from `core/`;
 - consolidated `Mimicus CI` covers core + cockpit gates;
 - root/core documentation synchronized;
+- commercial source/setter contract documented at `docs/COMMERCIAL-DATA-CONTRACT.md`;
 - historical deployment evidence explicitly marked historical;
 - external capability research lives under `docs/research/` and has no runtime authority.
 
@@ -59,7 +57,7 @@ The CI workflow runs these gates on `main` and the release staging branch.
 
 **Current code is not being deployed yet.**
 
-Repository/release readiness is ahead of deployment readiness. Commercial closure PR #11 is merged into `main`; post-merge CI run `37272050139` is SUCCESS. No deployment has been triggered.
+Repository/release readiness is ahead of deployment readiness. Commercial closure PR #11 is merged into `main`; canonical `main` has passed post-merge core + cockpit CI. No deployment has been triggered.
 
 Remaining deployment work:
 

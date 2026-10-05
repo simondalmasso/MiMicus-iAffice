@@ -91,6 +91,7 @@ The public Worker is observational. It is not a second LAYA control plane.
 - [Deployment / release gates](docs/DEPLOYMENT.md)
 - [Repository layout](docs/REPOSITORY.md)
 - [Branch map](docs/BRANCHES.md)
+- [Commercial data contract](docs/COMMERCIAL-DATA-CONTRACT.md)
 - [Current status](STATUS.md)
 
 ## History
