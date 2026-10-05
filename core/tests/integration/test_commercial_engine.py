@@ -160,3 +160,36 @@ def test_laya_reading_trace_exposes_sanitized_commercial_evidence_state(tmp_path
     serialized = str(reading)
     assert "Private detail must not be emitted by trace." not in serialized
     assert "messenger:thread-42" not in serialized
+
+
+def test_engine_preserves_source_brief_into_authoritative_action_ticket(tmp_path: Path) -> None:
+    engine = MiMicusEngine(f"sqlite:///{tmp_path / 'commercial-brief.db'}")
+    finding = _finding("brief-e2e", status="replied", score=91)
+    finding.update(
+        {
+            "company": "Buyer Co",
+            "location": "Remote",
+            "description": "Need CRM deduplication and a bounded migration this week.",
+            "category": "crm",
+            "applicationMode": "direct",
+            "salary": {"raw": "USD 150 fixed"},
+        }
+    )
+    rank = finding["rank"]
+    assert isinstance(rank, dict)
+    rank["reason"] = "buyer has explicit scope and direct contact"
+
+    batch = engine.triage_prospects(
+        {"findings": [finding]},
+        policy=_policy(),
+        as_of=AS_OF,
+    )
+
+    assert len(batch.action_queue) == 1
+    ticket = batch.action_queue[0]
+    assert ticket.prospect_id == "brief-e2e"
+    assert ticket.source_brief.need == "Need CRM deduplication and a bounded migration this week."
+    assert ticket.source_brief.category == "crm"
+    assert ticket.source_brief.compensation_raw == "USD 150 fixed"
+    assert ticket.source_brief.setter_reason == "buyer has explicit scope and direct contact"
+    assert ticket.requires_human_approval is True
