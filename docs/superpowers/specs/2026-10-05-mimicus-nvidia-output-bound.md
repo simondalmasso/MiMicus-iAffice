@@ -40,3 +40,8 @@ NVIDIA API reference checked 2026-10-05:
 - OpenAI-compatible POST /v1/chat/completions.
 - documented max_tokens range 1..1048576.
 - endpoint default max_tokens 262144.
+
+
+## Implementation note
+
+The resolved output-token cap is material runtime configuration. It is exposed through `ProviderCapabilities.max_output_tokens` and included in the OpenAI-compatible provider version string so agent exact fingerprints cannot silently reuse calibration across different output bounds.
