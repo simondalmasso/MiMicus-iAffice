@@ -112,3 +112,63 @@ def test_explicit_zero_cost_reports_known_zero_cost() -> None:
     assert caps.estimated_max_cost_per_call == 0.0
     assert caps.pricing_metadata_authoritative is True
     assert provider._monetary_cost(None) == 0.0
+
+
+def test_openai_compatible_output_cap_reaches_agent_model_settings(monkeypatch: pytest.MonkeyPatch) -> None:
+    import sys
+    import types
+
+    module = types.ModuleType("agents")
+
+    class ModelSettings:
+        def __init__(self, *, max_tokens: int | None = None):
+            self.max_tokens = max_tokens
+
+    class Agent:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+    module.ModelSettings = ModelSettings
+    module.Agent = Agent
+    monkeypatch.setitem(sys.modules, "agents", module)
+
+    provider = OpenAICompatibleProvider(
+        model="deepseek-ai/deepseek-v4.1-flash",
+        provider_id="nvidia_nim",
+        provider_version="nvidia-nim:deepseek-ai/deepseek-v4.1-flash",
+        base_url="https://integrate.api.nvidia.com/v1",
+        api_key="nvapi-secret",
+        max_output_tokens=8192,
+    )
+
+    agent = provider.build_agent("critic", "test")
+
+    assert agent.kwargs["model_settings"].max_tokens == 8192
+    assert provider.capabilities.max_output_tokens == 8192
+    assert "maxout=8192" in provider.capabilities.version
+
+
+def test_compatible_output_cap_changes_agent_fingerprint() -> None:
+    from mimicus.plugins.services import BuiltinAgentFactory
+
+    low = OpenAICompatibleProvider(
+        model="deepseek-ai/deepseek-v4.1-flash",
+        provider_id="nvidia_nim",
+        provider_version="nvidia-nim:deepseek-ai/deepseek-v4.1-flash",
+        base_url="https://integrate.api.nvidia.com/v1",
+        api_key="nvapi-secret",
+        max_output_tokens=4096,
+    )
+    high = OpenAICompatibleProvider(
+        model="deepseek-ai/deepseek-v4.1-flash",
+        provider_id="nvidia_nim",
+        provider_version="nvidia-nim:deepseek-ai/deepseek-v4.1-flash",
+        base_url="https://integrate.api.nvidia.com/v1",
+        api_key="nvapi-secret",
+        max_output_tokens=8192,
+    )
+
+    low_fp = BuiltinAgentFactory(low.capabilities).candidates()[0].fingerprint
+    high_fp = BuiltinAgentFactory(high.capabilities).candidates()[0].fingerprint
+
+    assert low_fp != high_fp
