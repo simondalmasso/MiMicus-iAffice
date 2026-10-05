@@ -7,6 +7,7 @@ from typing import Any
 
 from pydantic import ConfigDict, Field, model_validator
 
+from mimicus.commercial.funnel import CommercialFunnelSnapshot, build_commercial_funnel
 from mimicus.commercial.models import CommercialTraceEvent, LeadDecisionBatch, LeadDecisionPolicy
 from mimicus.commercial.prospect_ingest import normalize_ledger
 from mimicus.orchestration.legacy_engine import (
@@ -86,6 +87,20 @@ class RunResult(LegacyRunResult):
 
 
 class MiMicusEngine(LegacyMiMicusEngine):
+    def commercial_funnel(
+        self,
+        payload: dict[str, Any],
+        *,
+        policy: LeadDecisionPolicy,
+        as_of: datetime,
+    ) -> CommercialFunnelSnapshot:
+        candidates = normalize_ledger(payload)
+        service = self.services.lead_decision
+        if service is None:
+            raise RuntimeError("lead decision service is not mounted")
+        batch = service.decide(candidates, policy, as_of=as_of)
+        return build_commercial_funnel(candidates, batch, as_of=as_of)
+
     def triage_prospects(
         self,
         payload: dict[str, Any],
