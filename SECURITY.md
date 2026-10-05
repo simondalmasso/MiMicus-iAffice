@@ -12,7 +12,8 @@ The combined MiMicus iAffice release also enforces:
 - no blind retry after an uncertain remote effect outcome;
 - loopback-only local commercial observer;
 - causal replay anchored to the append-only event ledger;
-- observational Cloudflare cockpit with no command ingress into LAYA.
+- observational Cloudflare cockpit with no command ingress into LAYA;
+- mutating MCP HTTP transport restricted to loopback until transport authentication exists.
 
 Security invariants and failure injection are documented in [core/docs/THREAT_MODEL.md](core/docs/THREAT_MODEL.md).
 
