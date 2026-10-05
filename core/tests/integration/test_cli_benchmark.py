@@ -45,6 +45,8 @@ def test_doctor_reports_nvidia_credential_and_cost_preflight(tmp_path: Path, mon
     assert unknown_cost["provider_ready"] is True
     assert unknown_cost["provider_live_credential_present"] is True
     assert unknown_cost["pricing_preflight_status"] == "REQUIRED_FOR_MULTI_CALL"
+    assert unknown_cost["provider_usage_scope"] == "development_prototyping"
+    assert unknown_cost["production_entitlement_required"] is True
 
     monkeypatch.setenv("MIMICUS_NVIDIA_KNOWN_ZERO_COST", "1")
     confirmed_free = doctor("nvidia")

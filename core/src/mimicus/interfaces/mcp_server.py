@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ipaddress
 import os
 from datetime import datetime
 from typing import Any, Literal
@@ -100,8 +101,19 @@ def create_mcp_server(profile: str = "offline") -> Any:
     return server
 
 
+def _is_loopback_host(host: str) -> bool:
+    if host.lower() == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
 def serve(profile: str = "offline", host: str = "127.0.0.1", port: int = 8765) -> None:
     Settings(profile=profile).validate()
+    if not _is_loopback_host(host):
+        raise ValueError("MCP host must be loopback-only until transport authentication is implemented")
     server = create_mcp_server(profile)
     server.run(
         transport="streamable-http",
