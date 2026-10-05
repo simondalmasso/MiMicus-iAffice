@@ -145,4 +145,4 @@ A new framework or service is added only when it provides a separable primitive 
 
 ## Optional provider profiles
 
-The control plane can use provider adapters without changing orchestration authority. The NVIDIA profile uses the generic OpenAI-compatible provider against NVIDIA NIM and defaults to `deepseek-ai/deepseek-v4.1-flash`. It is optional: no NVIDIA credential is required for offline operation, and zero-cost status is fail-closed unless explicitly confirmed by operator configuration.
+The control plane can use provider adapters without changing orchestration authority. The NVIDIA profile uses the generic OpenAI-compatible provider against NVIDIA NIM and defaults to `deepseek-ai/deepseek-v4.1-flash`. It is optional: no NVIDIA credential is required for offline operation, and zero-cost status is fail-closed unless explicitly confirmed by operator configuration. NVIDIA's hosted Free Endpoint is treated as development/prototyping scope; production entitlement remains an external prerequisite and is surfaced by `doctor`.
