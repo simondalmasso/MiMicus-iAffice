@@ -19,7 +19,7 @@ class Settings:
         resolved = profile or os.environ.get("MIMICUS_PROFILE") or "offline"
         return cls(
             profile=resolved,
-            database_url=os.getenv("MIMICUS_DATABASE_URL") or os.getenv("DATABASE_URL", "sqlite:///./mimicus.db"),
+            database_url=os.getenv("MIMICUS_DATABASE_URL") or os.getenv("DATABASE_URL") or "sqlite:///./mimicus.db",
             max_agents=int(os.getenv("MIMICUS_MAX_AGENTS", "5")),
             max_tests=int(os.getenv("MIMICUS_MAX_TESTS", "4")),
             information_floor=float(os.getenv("MIMICUS_INFORMATION_FLOOR", "0.05")),
