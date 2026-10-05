@@ -1,6 +1,8 @@
 const stream = document.getElementById("activityStream");
 const pauseButton = document.getElementById("pauseStream");
 const autopilot = document.getElementById("autopilot");
+const modePill = document.getElementById("modePill");
+const truthBanner = document.getElementById("truthBanner");
 
 let paused = false;
 let simulationCursor = 0;
@@ -15,8 +17,8 @@ const simulationLines = [
   ["ESPÍA","Envío bloqueado hasta human-gate."],
   ["CAZADOR","12 nuevos leads agendados — Industria: Real Estate."],
   ["CAZADOR","12 nuevos leads agendados — Industria: Real Estate (AR)."],
-  ["EXTRACCIÓN","Prepara agendado con Estudio Contable Purenal — Cliente 18:00."],
-  ["LAYA","Asigna asincronía unidad data — Rendimiento Puerto SF."],
+  ["EXTRACCIÓN","Prepara agendado con Cliente Demo — ventana 18:00."],
+  ["LAYA","Asigna asincronía unidad data — Dataset Demo."],
   ["LOGÍSTICO","Queue consolidada; 0 duplicados; 3 handoffs confirmados."],
   ["SETTER","Secuencia de seguimiento preparada; salida externa deshabilitada."],
   ["SISTEMA","MiMicus immune core archivado y trazable en source 565407e."]
@@ -55,11 +57,14 @@ function appendLog(agent,msg,when){
 function appendSimulationLine(){
   if(paused || liveMode) return;
   const [agent,msg] = simulationLines[simulationCursor++ % simulationLines.length];
-  appendLog(agent,msg);
+  appendLog(`SIM/${agent}`,msg);
 }
 
 function startSimulation(){
   if(liveMode || simulationTimer) return;
+  modePill.textContent="SIMULACIÓN";
+  truthBanner.innerHTML="<b>SIMULATED_FIXTURE</b> · datos sintéticos de demostración; no representan actividad, ingresos ni conversiones reales.";
+  document.getElementById("runtimeStatus").textContent="SIMULATED_FIXTURE";
   for(let i=0;i<7;i++) appendSimulationLine();
   simulationTimer = setInterval(appendSimulationLine,5200);
 }
@@ -171,6 +176,8 @@ function startLiveActivity(){
   stream.replaceChildren();
   setLiveMetricMode();
   document.getElementById("runtimeStatus").textContent="LIVE LAYA";
+  modePill.textContent="LIVE OBSERVER";
+  truthBanner.innerHTML="<b>LIVE_OBSERVED</b> · observer local read-only conectado; las decisiones externas permanecen deshabilitadas.";
   appendLog("SISTEMA","Observer local conectado · decisiones externas deshabilitadas.");
   void pollLiveActivity();
   liveTimer = setInterval(()=>{ void pollLiveActivity(); },1000);
@@ -212,7 +219,7 @@ async function boot(){
       return;
     }
 
-    document.getElementById("runtimeStatus").textContent=health.ok ? "EDGE READY" : "DEGRADED";
+    document.getElementById("runtimeStatus").textContent=health.ok ? (runtime?.evidenceClass ?? "SIMULATED_FIXTURE") : "DEGRADED";
     if(runtime?.sourceHead){
       appendLog(
         "SISTEMA",
@@ -221,7 +228,7 @@ async function boot(){
     }
     startSimulation();
   }catch{
-    document.getElementById("runtimeStatus").textContent="LOCAL PREVIEW";
+    document.getElementById("runtimeStatus").textContent="LOCAL PREVIEW · SIMULATED_FIXTURE";
     startSimulation();
   }
 }
