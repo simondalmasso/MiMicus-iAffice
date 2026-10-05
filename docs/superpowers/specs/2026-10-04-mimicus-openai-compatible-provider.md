@@ -14,6 +14,7 @@ Add one reusable provider adapter for OpenAI-compatible Chat Completions endpoin
 - Base URL must be HTTPS and must not contain embedded credentials.
 - Network provider is opt-in.
 - The NVIDIA profile is not assumed to be free forever.
+- NVIDIA hosted free endpoint access is development/prototyping scope; production entitlement is external and mandatory under NVIDIA's published terms.
 
 ## Cost policy
 
@@ -30,7 +31,7 @@ The operator may explicitly assert the current free tier for a run with:
 
 `MIMICUS_NVIDIA_KNOWN_ZERO_COST=1`
 
-That opt-in makes budget accounting record zero cost. This is an operator assertion, not a baked-in vendor guarantee.
+That opt-in makes budget accounting record zero cost. This is an operator assertion for a development/prototyping session, not a baked-in vendor guarantee and not a production-license assertion.
 
 ## NVIDIA defaults
 

@@ -36,6 +36,8 @@ class Profile:
     provider: str
     database_kind: str
     credential_env: str | None = None
+    usage_scope: str = "configured_provider_terms"
+    production_entitlement_required: bool = False
 
 
 def _env_bool(name: str, *, default: bool = False) -> bool:
@@ -68,10 +70,18 @@ def _env_float(name: str) -> float | None:
 
 
 PROFILES = {
-    "offline": Profile("offline", False, "scripted", "sqlite"),
+    "offline": Profile("offline", False, "scripted", "sqlite", usage_scope="offline_local"),
     "openai": Profile("openai", True, "openai_agents", "sqlite", "OPENAI_API_KEY"),
-    "nvidia": Profile("nvidia", True, "nvidia_nim", "sqlite", "NVIDIA_API_KEY"),
-    "test": Profile("test", False, "scripted", "sqlite-temp"),
+    "nvidia": Profile(
+        "nvidia",
+        True,
+        "nvidia_nim",
+        "sqlite",
+        "NVIDIA_API_KEY",
+        usage_scope="development_prototyping",
+        production_entitlement_required=True,
+    ),
+    "test": Profile("test", False, "scripted", "sqlite-temp", usage_scope="offline_test"),
 }
 
 
