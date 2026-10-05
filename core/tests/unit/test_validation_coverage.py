@@ -24,10 +24,12 @@ from mimicus.validation import e2e, worker
 
 def test_phenotypes_and_settings_validation(monkeypatch) -> None:
     assert len(PHENOTYPES) == 5
-    monkeypatch.setenv("DATABASE_URL", "sqlite:///:memory:")
+    monkeypatch.setenv("DATABASE_URL", "sqlite:///legacy.db")
+    monkeypatch.setenv("MIMICUS_DATABASE_URL", "sqlite:///:memory:")
     monkeypatch.setenv("MIMICUS_MAX_AGENTS", "4")
     settings = Settings.from_env("offline")
     settings.validate()
+    assert settings.database_url == "sqlite:///:memory:"
     for bad in [
         Settings(profile="bad"),
         Settings(max_agents=0),
@@ -110,7 +112,7 @@ def test_mcp_server_with_fake_sdk(monkeypatch) -> None:
     monkeypatch.setitem(sys.modules, "mcp.server", server_module)
     monkeypatch.setitem(sys.modules, "mcp_types", types_module)
     monkeypatch.setenv("MIMICUS_DATABASE_URL", "sqlite:///:memory:")
-    mcp_server._ENGINE = None
+    mcp_server._ENGINES.clear()
     server = mcp_server.create_mcp_server("offline")
     run_fn = server.tools["run_mimicus"][0]
     get_fn = server.tools["get_mimicus_run"][0]
@@ -129,6 +131,8 @@ def test_mcp_serve_with_fake_create(monkeypatch) -> None:
     mcp_server.serve("offline", "127.0.0.1", 9999)
     assert observed["streamable_http_path"] == "/mcp"
     assert observed["stateless_http"] is True
+    with pytest.raises(ValueError, match="loopback-only"):
+        mcp_server.serve("offline", "0.0.0.0", 9999)
 
 
 def test_worker_mcp_with_fake_transport(monkeypatch, tmp_path) -> None:

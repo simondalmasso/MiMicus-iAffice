@@ -3,8 +3,10 @@
 MiMicus uses the official Python MCP SDK v2.0.0 and serves Streamable HTTP at `/mcp`.
 
 ```bash
-mimicus serve --profile offline --host 0.0.0.0 --port 8765
+mimicus serve --profile offline --host 127.0.0.1 --port 8765
 ```
+
+The MCP transport is intentionally loopback-only because the server exposes mutating tools and does not yet implement transport authentication. Binding to non-loopback addresses fails closed. Use an authenticated/approved tunnel or gateway for any remote exposure.
 
 The exact-head E2E launches this server in a subprocess, connects with the official MCP `Client`, calls `run_mimicus`, then calls `get_mimicus_run` and verifies the persisted ledger replay. `OPENAI_API_KEY` is removed from that subprocess environment.
 
