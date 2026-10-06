@@ -7,10 +7,56 @@ from typing import Any, Literal
 
 from mimicus.claims.evidence_bundle import EvidenceInput
 from mimicus.config import Settings
+from mimicus.effects.admission import (
+    ActionAdmissionError,
+    ActionAdmissionPolicy,
+    ActionAdmissionRule,
+    ToolEffectClass,
+)
 from mimicus.orchestration.engine import MiMicusEngine, RunRequest
 from mimicus.verification.models import VerificationSubmission
 
 _ENGINES: dict[tuple[str, str], MiMicusEngine] = {}
+
+_MCP_ACTION_POLICY = ActionAdmissionPolicy(
+    version="mcp-tool-effects-v1",
+    rules=(
+        ActionAdmissionRule(
+            adapter="mcp",
+            operation="run_mimicus",
+            effect_class=ToolEffectClass.MUTATING,
+        ),
+        ActionAdmissionRule(
+            adapter="mcp",
+            operation="submit_verification",
+            effect_class=ToolEffectClass.MUTATING,
+        ),
+        ActionAdmissionRule(
+            adapter="mcp",
+            operation="get_mimicus_run",
+            effect_class=ToolEffectClass.READ_ONLY,
+        ),
+    ),
+)
+
+
+def _mcp_annotation_payload(tool_name: str, *, profile: str) -> dict[str, bool]:
+    decision = _MCP_ACTION_POLICY.require_known(adapter="mcp", operation=tool_name)
+    read_only = decision.effect_class == ToolEffectClass.READ_ONLY
+    return {
+        "readOnlyHint": read_only,
+        "destructiveHint": False,
+        "idempotentHint": read_only,
+        "openWorldHint": tool_name == "run_mimicus" and profile in {"openai", "nvidia"},
+    }
+
+
+def _declared_mcp_tools() -> set[str]:
+    return {
+        rule.operation
+        for rule in _MCP_ACTION_POLICY.rules
+        if rule.adapter == "mcp"
+    }
 
 
 def _engine(profile: str = "offline") -> MiMicusEngine:
@@ -30,10 +76,16 @@ def create_mcp_server(profile: str = "offline") -> Any:
         version="0.3.1",
         description="Persistent auditable immune swarm with authenticated verified adjudication and immutable claim lineage.",
     )
-    write_annotations = ToolAnnotations.model_validate({"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": profile == "openai"})
-    get_annotations = ToolAnnotations.model_validate({"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False})
+    registered_tools: set[str] = set()
 
-    @server.tool(annotations=write_annotations)
+    def admitted_tool(tool_name: str):
+        annotations = ToolAnnotations.model_validate(
+            _mcp_annotation_payload(tool_name, profile=profile)
+        )
+        registered_tools.add(tool_name)
+        return server.tool(annotations=annotations)
+
+    @admitted_tool("run_mimicus")
     def run_mimicus(
         task: str,
         domain: str | None = None,
@@ -57,7 +109,7 @@ def create_mcp_server(profile: str = "offline") -> Any:
         )
         return _engine(profile).run(request).model_dump(mode="json")
 
-    @server.tool(annotations=write_annotations)
+    @admitted_tool("submit_verification")
     def submit_verification(
         run_id: str,
         claim_hash: str,
@@ -91,12 +143,25 @@ def create_mcp_server(profile: str = "offline") -> Any:
         )
         return _engine(profile).submit_verification(submission)
 
-    @server.tool(annotations=get_annotations)
+    @admitted_tool("get_mimicus_run")
     def get_mimicus_run(run_id: str) -> dict[str, Any]:
         result = _engine(profile).get_run(run_id)
         if result is None:
             return {"found": False, "run_id": run_id}
         return {"found": True, **result}
+
+    declared_tools = _declared_mcp_tools()
+    if registered_tools != declared_tools:
+        raise ActionAdmissionError(
+            "MCP tool admission policy drift: "
+            f"declared={sorted(declared_tools)} registered={sorted(registered_tools)}"
+        )
+    server_tools = getattr(server, "tools", None)
+    if isinstance(server_tools, dict) and set(server_tools) != declared_tools:
+        raise ActionAdmissionError(
+            "MCP server tool surface drift: "
+            f"declared={sorted(declared_tools)} actual={sorted(server_tools)}"
+        )
 
     return server
 
