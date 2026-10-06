@@ -12,7 +12,7 @@ license = "MIT"
 authors = [{name = "MiMicus contributors"}]
 dependencies = [
   "alembic==1.18.4",
-  "mcp==2.0.0",
+  "mcp==2.2.0",
   "openai-agents==0.21.1",
   "pydantic==2.13.4",
   "SQLAlchemy==2.0.50",
