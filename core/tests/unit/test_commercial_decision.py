@@ -6,6 +6,7 @@ import pytest
 
 from mimicus.commercial.decision import DeterministicLeadDecisionService
 from mimicus.commercial.models import (
+    CommercialGoalCode,
     CommercialStage,
     LeadCandidate,
     LeadDecisionPolicy,
@@ -721,3 +722,91 @@ def test_source_brief_changes_hash_but_not_stage_or_disposition() -> None:
     assert left.decisions[0].disposition == right.decisions[0].disposition == LeadDisposition.WORK_NOW
     assert left.decisions[0].decision_hash != right.decisions[0].decision_hash
     assert left.action_queue[0].ticket_hash != right.action_queue[0].ticket_hash
+
+
+@pytest.mark.parametrize(
+    ("candidate", "goal_code", "target_lead_stage", "target_commercial_stages", "requires_evidence"),
+    [
+        (
+            _candidate("goal-contact", status="prepared"),
+            CommercialGoalCode.OBTAIN_REPLY,
+            LeadStage.REPLIED,
+            (),
+            False,
+        ),
+        (
+            _candidate("goal-qualify", status="replied"),
+            CommercialGoalCode.QUALIFY,
+            LeadStage.QUALIFIED,
+            (CommercialStage.QUALIFIED,),
+            True,
+        ),
+        (
+            _candidate("goal-propose", status="replied", commercial_stage="qualified"),
+            CommercialGoalCode.ADVANCE_TO_PROPOSAL,
+            LeadStage.PROPOSAL,
+            (CommercialStage.PROPOSAL,),
+            True,
+        ),
+        (
+            _candidate("goal-resolve", status="replied", commercial_stage="proposal"),
+            CommercialGoalCode.RESOLVE_PROPOSAL,
+            LeadStage.TERMINAL,
+            (CommercialStage.WON, CommercialStage.LOST),
+            True,
+        ),
+        (
+            _candidate(
+                "goal-followup",
+                status="contacted",
+                contacted_at=AS_OF - timedelta(hours=48),
+            ),
+            CommercialGoalCode.OBTAIN_REPLY,
+            LeadStage.REPLIED,
+            (),
+            False,
+        ),
+    ],
+)
+def test_action_ticket_has_deterministic_success_goal(
+    candidate: LeadCandidate,
+    goal_code: CommercialGoalCode,
+    target_lead_stage: LeadStage,
+    target_commercial_stages: tuple[CommercialStage, ...],
+    requires_evidence: bool,
+) -> None:
+    batch = DeterministicLeadDecisionService().decide(
+        [candidate],
+        _policy(max_work=1),
+        as_of=AS_OF,
+    )
+
+    assert len(batch.action_queue) == 1
+    ticket = batch.action_queue[0]
+    assert ticket.goal.code == goal_code
+    assert ticket.goal.target_lead_stage == target_lead_stage
+    assert ticket.goal.target_commercial_stages == target_commercial_stages
+    assert ticket.goal.requires_stage_evidence is requires_evidence
+    assert ticket.requires_human_approval is True
+
+
+def test_action_goal_is_bound_into_ticket_hash() -> None:
+    service = DeterministicLeadDecisionService()
+    due = _candidate(
+        "goal-hash",
+        status="contacted",
+        contacted_at=AS_OF - timedelta(hours=48),
+    )
+    proposal = _candidate(
+        "goal-hash",
+        status="replied",
+        commercial_stage="proposal",
+    )
+
+    due_batch = service.decide([due], _policy(max_work=1), as_of=AS_OF)
+    proposal_batch = service.decide([proposal], _policy(max_work=1), as_of=AS_OF)
+
+    assert due_batch.action_queue[0].goal.code == CommercialGoalCode.OBTAIN_REPLY
+    assert proposal_batch.action_queue[0].goal.code == CommercialGoalCode.RESOLVE_PROPOSAL
+    assert due_batch.action_queue[0].ticket_hash != proposal_batch.action_queue[0].ticket_hash
+    assert due_batch.batch_hash != proposal_batch.batch_hash
