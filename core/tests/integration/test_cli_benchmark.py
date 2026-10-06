@@ -36,6 +36,10 @@ def test_cli_doctor_run_benchmark_and_plugin(tmp_path: Path, monkeypatch, capsys
 
 
 
+def test_doctor_reports_patched_mcp_sdk() -> None:
+    assert doctor("offline")["mcp_version"] == "2.2.0"
+
+
 def test_doctor_reports_nvidia_credential_and_cost_preflight(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("MIMICUS_DATABASE_URL", f"sqlite:///{tmp_path / 'nvidia-doctor.db'}")
     monkeypatch.setenv("NVIDIA_API_KEY", "nvapi-test")
