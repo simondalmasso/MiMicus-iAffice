@@ -12,6 +12,7 @@ from pydantic import ValidationError
 
 from mimicus.agents.phenotypes import PHENOTYPES
 from mimicus.config import Settings
+from mimicus.effects.admission import ActionAdmissionError
 from mimicus.falsifiers.builtins import builtin_specs
 from mimicus.falsifiers.spec import FalsifierSpec
 from mimicus.germinal.mutate import mutate_params
@@ -114,6 +115,13 @@ def test_mcp_server_with_fake_sdk(monkeypatch) -> None:
     monkeypatch.setenv("MIMICUS_DATABASE_URL", "sqlite:///:memory:")
     mcp_server._ENGINES.clear()
     server = mcp_server.create_mcp_server("offline")
+    run_annotations = server.tools["run_mimicus"][1]["annotations"]
+    verify_annotations = server.tools["submit_verification"][1]["annotations"]
+    get_annotations = server.tools["get_mimicus_run"][1]["annotations"]
+    assert run_annotations["readOnlyHint"] is False
+    assert verify_annotations["readOnlyHint"] is False
+    assert get_annotations["readOnlyHint"] is True
+    assert get_annotations["idempotentHint"] is True
     run_fn = server.tools["run_mimicus"][0]
     get_fn = server.tools["get_mimicus_run"][0]
     result = run_fn("K3 TAM 12x mismatch", domain="finance", evidence=None, budget_usd=0.0, max_agents=4, depth="normal", learn=True)
@@ -122,6 +130,11 @@ def test_mcp_server_with_fake_sdk(monkeypatch) -> None:
     assert get_fn("missing")["found"] is False
     server.run(transport="streamable-http")
     assert server.run_kwargs["transport"] == "streamable-http"
+
+
+def test_mcp_action_annotation_fails_closed_for_unclassified_tool() -> None:
+    with pytest.raises(ActionAdmissionError, match="unclassified"):
+        mcp_server._mcp_annotation_payload("future_tool", profile="offline")
 
 
 def test_mcp_serve_with_fake_create(monkeypatch) -> None:
