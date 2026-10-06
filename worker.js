@@ -8,7 +8,7 @@ const runtime = {
   release: "v0.3-prep",
   corePackage: "mimicus-swarm",
   coreVersion: "0.2.2",
-  sourceHead: "565407eb1296eae617f5b14b512d2e0cf08c6c02",
+  historicalCoreCheckpoint: "565407eb1296eae617f5b14b512d2e0cf08c6c02",
   morphologies: ["solo","paired_verify","parallel_fanout","sparse_graph","hierarchical_fanout_fanin"]
 };
 
@@ -49,7 +49,7 @@ export default {
         release: runtime.release,
         evidenceClass: runtime.evidenceClass,
         coreVersion: runtime.coreVersion,
-        coreSourceHead: runtime.sourceHead
+        historicalCoreCheckpoint: runtime.historicalCoreCheckpoint
       }), { headers: jsonHeaders });
     }
     if (url.pathname === "/api/runtime") {
