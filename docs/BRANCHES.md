@@ -44,4 +44,4 @@ Merged implementation branches may be retained temporarily for audit provenance,
 
 Different filenames do not guarantee independence. If two branches alter the same schema, migration chain, workflow, public API, authority boundary, orchestration invariant, deployment config, or release-status truth, they are coupled and require one integration owner.
 
-See `AGENTS.md` and `docs/GOVERNANCE.md`.
+See `AGENTS.md`, `docs/GOVERNANCE.md`, and the dated read-only classification in `docs/BRANCH-AUDIT-2026-10-06.md`.
