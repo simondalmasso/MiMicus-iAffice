@@ -42,7 +42,7 @@ The optional local commercial observer reads file or HTTPS prospect sources, de-
 
 ## Effect authorization boundary
 
-External effects are deny-by-default. `EffectActionEnvelope` binds adapter, operation, destination, resource, payload and scope into a canonical hash. A durable `EffectApprovalReceipt` authorizes exactly that hash for a bounded time window and can be consumed only once.
+External effects are deny-by-default. Before future tools may bypass the effect boundary, `ActionAdmissionPolicy` must explicitly classify the exact adapter + operation pair as `READ_ONLY`; `MUTATING` and unclassified `UNKNOWN` actions cannot bypass that gate. `EffectActionEnvelope` binds adapter, operation, destination, resource, payload and scope into a canonical hash. A durable `EffectApprovalReceipt` authorizes exactly that hash for a bounded time window and can be consumed only once.
 
 `EffectDispatcher` verifies adapter identity before consuming the approval. Successful dispatch persists an outcome hash. If the adapter raises after invocation, the intent becomes `UNKNOWN`; the approval remains consumed and Mimicus does not blindly retry because the remote side effect may already have happened. V0.2.2 ships the authorization/dispatch seam but no autonomous real-world adapter.
 
