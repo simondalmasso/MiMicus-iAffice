@@ -146,6 +146,22 @@ def test_large_qualify_queue_is_qualification_backlog_when_no_stronger_signal_ex
     assert diagnosis.focus == "qualify_replied_leads"
 
 
+def test_partial_downstream_sample_is_insufficient_not_no_bottleneck() -> None:
+    diagnosis = diagnose_commercial_funnel(
+        _snapshot(
+            _metrics(
+                q2p=(3, 2, 0),
+                p2t=(2, 1, 0),
+                won=1,
+            )
+        ),
+        _policy(),
+    )
+
+    assert diagnosis.bottleneck == CommercialBottleneck.INSUFFICIENT_DATA
+    assert diagnosis.focus == "collect_stage_evidence"
+
+
 def test_sparse_funnel_is_insufficient_data() -> None:
     diagnosis = diagnose_commercial_funnel(
         _snapshot(_metrics(leads=2, qualify=1)),

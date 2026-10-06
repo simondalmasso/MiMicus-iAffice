@@ -116,12 +116,12 @@ def diagnose_commercial_funnel(
         reasons = ("qualify_queue_above_threshold",)
         focus = "qualify_replied_leads"
     else:
-        enough_transition_evidence = (
+        enough_full_funnel_evidence = (
             q2p.eligible_count >= policy.min_transition_samples
-            or p2t.eligible_count >= policy.min_transition_samples
-            or terminal_count >= policy.min_terminal_samples
+            and p2t.eligible_count >= policy.min_transition_samples
+            and terminal_count >= policy.min_terminal_samples
         )
-        if enough_transition_evidence:
+        if enough_full_funnel_evidence:
             bottleneck = CommercialBottleneck.NO_OBSERVED_BOTTLENECK
             reasons = ("configured_thresholds_met",)
             focus = "maintain_and_measure"

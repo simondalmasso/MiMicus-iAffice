@@ -46,7 +46,7 @@ Thresholds are configuration, not hidden heuristics.
 - `PROPOSAL_STALL` — enough qualified leads exist, but too few reach proposal.
 - `QUALIFICATION_BACKLOG` — a material number of current actions are QUALIFY and there is not yet stronger transition evidence.
 - `INSUFFICIENT_DATA` — not enough evidence to identify a bottleneck.
-- `NO_OBSERVED_BOTTLENECK` — enough evidence exists and configured thresholds are met.
+- `NO_OBSERVED_BOTTLENECK` — qualified→proposal, proposal→terminal and terminal-outcome sample counts all meet their configured minimums and configured thresholds are met; partial downstream samples remain `INSUFFICIENT_DATA`.
 
 Priority is deterministic in the order above, except `LOW_WIN_RATE` is evaluated after proposal-to-terminal progression so "no terminal outcomes" is not mislabeled as a win-rate problem.
 
