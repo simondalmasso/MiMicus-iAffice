@@ -296,7 +296,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 snapshot,
                 diagnosis_policy,
             )
-            payload: dict[str, object] = {
+            funnel_payload: dict[str, object] = {
                 "snapshot": snapshot.model_dump(mode="json"),
                 "diagnosis": diagnosis.model_dump(mode="json"),
             }
@@ -305,10 +305,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                     diagnosis,
                     diagnosis_policy,
                 )
-                payload["intervention"] = intervention.model_dump(mode="json")
+                funnel_payload["intervention"] = intervention.model_dump(mode="json")
             print(
                 json.dumps(
-                    payload,
+                    funnel_payload,
                     indent=2,
                     sort_keys=True,
                 )

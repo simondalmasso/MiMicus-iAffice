@@ -77,6 +77,7 @@ def plan_commercial_intervention(
         raise ValueError("diagnosis policy hash does not match intervention policy")
 
     bottleneck = diagnosis.bottleneck
+    criteria: tuple[CommercialMetricCriterion, ...]
 
     if bottleneck == CommercialBottleneck.DATA_QUALITY:
         code = CommercialInterventionCode.REPAIR_STAGE_EVIDENCE
