@@ -42,8 +42,8 @@ The previous default-branch content is preserved intact at:
 
 Current release gates include:
 
-- 243 tests passing
-- coverage >= 90%
+- 279 tests passing
+- 90.38% total coverage (90% gate)
 - Ruff passing
 - mypy passing
 - Python package build passing
@@ -53,7 +53,7 @@ Current release gates include:
 - optional NVIDIA NIM provider profile available without becoming a mandatory dependency
 - no autonomous real-world effect adapter enabled
 
-See [STATUS.md](STATUS.md) for the live checkpoint and [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for release gates.
+See [STATUS.md](STATUS.md) for the live checkpoint, [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for release gates, and [docs/OPERATING-COST.md](docs/OPERATING-COST.md) for the USD 0 operating boundary.
 
 ## Core quick start
 
@@ -89,6 +89,8 @@ The public Worker is observational. It is not a second LAYA control plane.
 - [Threat model](core/docs/THREAT_MODEL.md)
 - [Memory trust model](core/docs/MEMORY_TRUST_MODEL.md)
 - [Deployment / release gates](docs/DEPLOYMENT.md)
+- [Operating cost contract](docs/OPERATING-COST.md)
+- [Divergent branch audit (2026-10-06)](docs/BRANCH-AUDIT-2026-10-06.md)
 - [Repository layout](docs/REPOSITORY.md)
 - [Branch map](docs/BRANCHES.md)
 - [Commercial data contract](docs/COMMERCIAL-DATA-CONTRACT.md)
