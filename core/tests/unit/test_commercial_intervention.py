@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import pytest
+
+from mimicus.canonical import sha256_obj
 from mimicus.commercial.diagnosis import (
     CommercialBottleneck,
     CommercialDiagnosisPolicy,
@@ -29,7 +32,7 @@ def _diagnosis(
 ) -> CommercialFunnelDiagnosis:
     return CommercialFunnelDiagnosis(
         snapshot_hash="a" * 64,
-        policy_hash="b" * 64,
+        policy_hash=sha256_obj(_policy()),
         bottleneck=bottleneck,
         reasons=("test",),
         focus="test_focus",
@@ -161,7 +164,7 @@ def test_no_bottleneck_maintains_configured_floor_contract() -> None:
     assert criteria["terminal_win_rate"].target == 0.4
 
 
-def test_intervention_hash_binds_policy_and_is_stable() -> None:
+def test_intervention_hash_is_stable_for_same_diagnosis_and_policy() -> None:
     diagnosis = _diagnosis(
         CommercialBottleneck.PROPOSAL_STALL,
         metrics={"qualified_to_proposal_rate": 0.2},
@@ -172,8 +175,15 @@ def test_intervention_hash_binds_policy_and_is_stable() -> None:
     assert left == right
     assert len(left.intervention_hash) == 64
 
-    changed = plan_commercial_intervention(
-        diagnosis,
-        _policy().model_copy(update={"min_transition_rate": 0.7}),
+
+def test_intervention_rejects_policy_mismatch() -> None:
+    diagnosis = _diagnosis(
+        CommercialBottleneck.PROPOSAL_STALL,
+        metrics={"qualified_to_proposal_rate": 0.2},
     )
-    assert changed.intervention_hash != left.intervention_hash
+
+    with pytest.raises(ValueError, match="policy hash"):
+        plan_commercial_intervention(
+            diagnosis,
+            _policy().model_copy(update={"min_transition_rate": 0.7}),
+        )
