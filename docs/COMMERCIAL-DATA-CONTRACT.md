@@ -179,6 +179,40 @@ The diagnosis is a **read-only analytical artifact**:
 
 `NO_OBSERVED_BOTTLENECK` is intentionally conservative: it is emitted only when qualified→proposal, proposal→terminal **and** terminal-outcome sample counts each meet their configured minimums and no stronger configured bottleneck condition fired. Partial downstream evidence remains `INSUFFICIENT_DATA`.
 
+## Deterministic intervention planning
+
+`mimicus funnel ... --diagnose --intervene` may derive one deterministic `CommercialInterventionPlan` from the diagnosis and the exact `CommercialDiagnosisPolicy` that produced it.
+
+The intervention plan is a **read-only measurable experiment contract**. It contains:
+
+- the bound `snapshot_hash` and `diagnosis_hash`;
+- the diagnosis `policy_hash`;
+- one canonical intervention code;
+- the diagnosis focus;
+- frozen metric criteria containing `metric`, `comparator`, `target` and observed `baseline`;
+- `intervention_hash`, which binds the complete semantic plan.
+
+Targets are not invented by a model. They come from the explicit diagnosis policy:
+
+- stage-data defects → `invalid_order_count == 0`;
+- proposal→terminal stall → `proposal_to_terminal_rate >= min_transition_rate`;
+- low win rate → `terminal_win_rate >= min_terminal_win_rate`;
+- qualified→proposal stall → `qualified_to_proposal_rate >= min_transition_rate`;
+- qualification backlog → `qualify_count < min_qualify_backlog`;
+- insufficient data → configured minimum sample counts;
+- no observed bottleneck → maintain configured sample/rate floors.
+
+Authority remains unchanged:
+
+- the plan does not alter lead ranking or WIP;
+- it does not change `LeadDisposition`, `LeadNextAction` or `CommercialActionGoal`;
+- it does not create an effect approval;
+- it does not draft or send a message;
+- it does not mutate setter or CRM state;
+- it performs no provider/model call.
+
+A diagnosis created under one diagnosis policy cannot be combined with a different policy to manufacture a new intervention; policy-hash mismatch fails closed.
+
 ## Example lifecycle
 
 ```text

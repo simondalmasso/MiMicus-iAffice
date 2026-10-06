@@ -81,6 +81,25 @@ read-only CommercialFunnelSnapshot
 
 Setter ranking is an input signal, not authority. The gate remains deterministic and free of network/model calls. A `CommercialActionTicket` is not an effect approval: it is an auditable handoff record for the human/closer layer, while real external mutation still requires the exact-envelope `EffectApprovalReceipt`. Funnel analytics are read-only and cannot alter LAYA decisions.
 
+## Commercial intervention planning
+
+The read-only funnel path has three explicit layers:
+
+```text
+CommercialFunnelSnapshot
+        |
+        v
+CommercialFunnelDiagnosis
+        |
+        v
+CommercialInterventionPlan
+        |
+        v
+human/operator experiment
+```
+
+`CommercialInterventionPlan` translates a diagnosed bottleneck into explicit metric criteria using only source-controlled diagnosis policy thresholds. It is deterministic, zero-cost and hashed. It does **not** change LAYA decisions and it is not permission to perform an external effect. Message drafting, CRM mutation and sending remain outside this analytical layer and continue to require the normal human/effect boundary.
+
 ## Effects
 
 A real external mutation requires an exact canonical action envelope and a durable one-use approval receipt.
