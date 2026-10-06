@@ -1,0 +1,118 @@
+name: Mimicus production deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: Type DEPLOY_MIMICUS
+        required: true
+        type: string
+      expected_sha:
+        description: Exact main SHA approved for production
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: mimicus-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  verify-and-deploy:
+    if: github.ref == 'refs/heads/main' && inputs.confirm == 'DEPLOY_MIMICUS'
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+
+      - name: Enforce exact approved main SHA
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$EXPECTED_SHA" = "$GITHUB_SHA"
+
+      - name: Require exact-head Mimicus CI PASS
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/core-ci.yml/runs?branch=main&event=push&head_sha=$GITHUB_SHA&per_page=20" \
+            --jq '.workflow_runs[] | select(.conclusion == "success") | .head_sha' \
+            | grep -Fx "$GITHUB_SHA"
+
+      - name: Require Cloudflare credentials without printing values
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
+            test -n "${!name:-}" || { echo "MISSING_SECRET:$name" >&2; exit 45; }
+          done
+
+      - name: Cockpit release gates
+        run: |
+          node --check public/app.js
+          node scripts/check-cockpit-contract.mjs
+          npx --yes wrangler@4.134.0 deploy --dry-run
+
+      - name: Deploy exact main Worker
+        run: npx --yes wrangler@4.134.0 deploy
+
+      - name: Live acceptance gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://mimicus.simondalmasso44.workers.dev"
+          body="$(mktemp)"
+          headers="$(mktemp)"
+
+          assert_security_headers() {
+            local file="$1"
+            grep -qi '^strict-transport-security:' "$file"
+            grep -qi '^content-security-policy:' "$file"
+            grep -qi '^x-content-type-options:[[:space:]]*nosniff' "$file"
+            grep -qi '^x-frame-options:[[:space:]]*DENY' "$file"
+            grep -qi '^referrer-policy:[[:space:]]*no-referrer' "$file"
+          }
+
+          curl -fsS -D "$headers" -o "$body" "$base/"
+          assert_security_headers "$headers"
+
+          curl -fsS -D "$headers" -o "$body" "$base/health"
+          grep -qi '^content-type:[[:space:]]*application/json' "$headers"
+          assert_security_headers "$headers"
+          grep -q '"ok":true' "$body"
+          grep -q '"service":"mimicus"' "$body"
+
+          curl -fsS -D "$headers" -o "$body" "$base/api/health"
+          grep -qi '^content-type:[[:space:]]*application/json' "$headers"
+          assert_security_headers "$headers"
+          grep -q '"ok":true' "$body"
+
+          curl -fsS -D "$headers" -o "$body" "$base/api/runtime"
+          grep -qi '^content-type:[[:space:]]*application/json' "$headers"
+          assert_security_headers "$headers"
+          grep -q '"evidenceClass":"SIMULATED_FIXTURE"' "$body"
+
+          status="$(curl -sS -D "$headers" -o "$body" -w '%{http_code}' "$base/api/definitely-not-real")"
+          test "$status" = "404"
+          grep -qi '^content-type:[[:space:]]*application/json' "$headers"
+          assert_security_headers "$headers"
+          grep -q '"error":"not_found"' "$body"
