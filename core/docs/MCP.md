@@ -1,6 +1,6 @@
 # MCP and ChatGPT setup
 
-MiMicus uses the official Python MCP SDK v2.0.0 and serves Streamable HTTP at `/mcp`.
+MiMicus uses the official Python MCP SDK v2.2.0 and serves Streamable HTTP at `/mcp`.
 
 ```bash
 mimicus serve --profile offline --host 127.0.0.1 --port 8765
