@@ -59,6 +59,25 @@ def _require_env(name: str) -> str:
     return value.strip()
 
 
+def _env_int(
+    name: str,
+    *,
+    default: int,
+    minimum: int,
+    maximum: int,
+) -> int:
+    value = os.getenv(name)
+    if value is None or not value.strip():
+        return default
+    try:
+        parsed = int(value)
+    except ValueError as exc:
+        raise ValueError(f"{name} must be an integer") from exc
+    if parsed < minimum or parsed > maximum:
+        raise ValueError(f"{name} must be between {minimum} and {maximum}")
+    return parsed
+
+
 def _env_float(name: str) -> float | None:
     value = os.getenv(name)
     if value is None or not value.strip():
@@ -104,6 +123,12 @@ def _build_provider(profile_name: str) -> Provider:
             provider_id="nvidia_nim",
             provider_version=f"nvidia-nim:{model}",
             known_zero_cost=_env_bool("MIMICUS_NVIDIA_KNOWN_ZERO_COST"),
+            max_output_tokens=_env_int(
+                "MIMICUS_NVIDIA_MAX_OUTPUT_TOKENS",
+                default=8192,
+                minimum=1,
+                maximum=1_048_576,
+            ),
             input_usd_per_million_tokens=_env_float("MIMICUS_NVIDIA_INPUT_USD_PER_MILLION_TOKENS"),
             output_usd_per_million_tokens=_env_float("MIMICUS_NVIDIA_OUTPUT_USD_PER_MILLION_TOKENS"),
             max_cost_per_call_usd=_env_float("MIMICUS_NVIDIA_MAX_COST_PER_CALL_USD"),

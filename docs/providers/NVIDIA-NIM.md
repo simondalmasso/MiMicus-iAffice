@@ -62,3 +62,24 @@ This flag is a **cost assertion for that run only**. It is not a production-lice
 - https://build.nvidia.com/models?q=deepseek
 
 Checked 2026-10-05.
+
+
+## Output bound
+
+NVIDIA's DeepSeek V4.1 Flash Chat Completions API currently documents a vendor default of 262,144 output tokens when `max_tokens` is omitted.
+
+MiMicus therefore sets an explicit development-safe default:
+
+```bash
+MIMICUS_NVIDIA_MAX_OUTPUT_TOKENS=8192
+```
+
+Override with a positive integer up to the endpoint's documented maximum of 1,048,576.
+
+The resolved bound is:
+
+- applied to both generation and challenge model calls through Agents SDK `ModelSettings(max_tokens=...)`;
+- exposed by `mimicus doctor --profile nvidia` as `provider_max_output_tokens`;
+- included in the provider runtime version, so exact agent fingerprints change when the bound changes.
+
+This is a safety/latency bound, not a claim about NVIDIA quotas or billing.

@@ -68,6 +68,7 @@ def doctor(profile: str) -> dict[str, object]:
         "evidence_acquisition_available": provider_caps.evidence_acquisition_available,
         "pricing_metadata_authoritative": provider_caps.pricing_metadata_authoritative,
         "estimated_max_cost_per_call": provider_caps.estimated_max_cost_per_call,
+        "provider_max_output_tokens": provider_caps.max_output_tokens,
         "pricing_preflight_status": "READY" if provider_caps.known_zero_cost or provider_caps.estimated_max_cost_per_call is not None else "REQUIRED_FOR_MULTI_CALL",
         "mcp_version": mcp_version,
         "secrets_printed": False,

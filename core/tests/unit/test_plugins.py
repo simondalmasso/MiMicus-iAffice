@@ -93,3 +93,32 @@ def test_nvidia_free_tier_flag_rejects_ambiguous_values(monkeypatch: pytest.Monk
 
     with pytest.raises(ValueError, match="boolean"):
         build_kernel("nvidia", "sqlite:///:memory:")
+
+
+def test_nvidia_profile_has_bounded_output_default_and_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("NVIDIA_API_KEY", "nvapi-test-key")
+    monkeypatch.delenv("MIMICUS_NVIDIA_MAX_OUTPUT_TOKENS", raising=False)
+
+    default_kernel = build_kernel("nvidia", "sqlite:///:memory:")
+    default_kernel.mount_all()
+    default_provider = default_kernel.services.get("model_provider")
+    assert default_provider is not None
+    assert default_provider.capabilities.max_output_tokens == 8192
+    default_kernel.unmount_all()
+
+    monkeypatch.setenv("MIMICUS_NVIDIA_MAX_OUTPUT_TOKENS", "4096")
+    override_kernel = build_kernel("nvidia", "sqlite:///:memory:")
+    override_kernel.mount_all()
+    override_provider = override_kernel.services.get("model_provider")
+    assert override_provider is not None
+    assert override_provider.capabilities.max_output_tokens == 4096
+    override_kernel.unmount_all()
+
+
+@pytest.mark.parametrize("value", ["0", "-1", "1048577", "not-an-int"])
+def test_nvidia_output_cap_rejects_invalid_values(monkeypatch: pytest.MonkeyPatch, value: str) -> None:
+    monkeypatch.setenv("NVIDIA_API_KEY", "nvapi-test-key")
+    monkeypatch.setenv("MIMICUS_NVIDIA_MAX_OUTPUT_TOKENS", value)
+
+    with pytest.raises(ValueError, match="MIMICUS_NVIDIA_MAX_OUTPUT_TOKENS"):
+        build_kernel("nvidia", "sqlite:///:memory:")

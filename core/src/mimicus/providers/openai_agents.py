@@ -17,6 +17,7 @@ class OpenAIAgentsProvider(Provider):
     model: str
     max_turns: int = 3
     timeout_seconds: float = 30.0
+    max_output_tokens: int | None = None
     input_usd_per_million_tokens: float | None = None
     output_usd_per_million_tokens: float | None = None
     max_cost_per_call_usd: float | None = None
@@ -55,6 +56,7 @@ class OpenAIAgentsProvider(Provider):
             known_zero_cost=False,
             estimated_max_cost_per_call=self.max_cost_per_call_usd,
             pricing_metadata_authoritative=authoritative_pricing,
+            max_output_tokens=self.max_output_tokens,
             tool_manifest_hash=sha256_obj({"tools": tool_manifest}),
             evidence_acquisition_available=bool(tool_manifest),
         )
@@ -64,6 +66,13 @@ class OpenAIAgentsProvider(Provider):
 
     def _run_config(self) -> Any | None:
         return None
+
+    def _model_settings(self) -> Any | None:
+        if self.max_output_tokens is None:
+            return None
+        from agents import ModelSettings
+
+        return ModelSettings(max_tokens=self.max_output_tokens)
 
     def build_agent(self, phenotype: str, domain: str) -> Any:
         from agents import Agent
@@ -83,6 +92,9 @@ class OpenAIAgentsProvider(Provider):
         }
         if self.tools:
             kwargs["tools"] = list(self.tools)
+        model_settings = self._model_settings()
+        if model_settings is not None:
+            kwargs["model_settings"] = model_settings
         return Agent(**kwargs)
 
     @staticmethod
@@ -238,6 +250,9 @@ class OpenAIAgentsProvider(Provider):
         }
         if self.tools:
             kwargs["tools"] = list(self.tools)
+        model_settings = self._model_settings()
+        if model_settings is not None:
+            kwargs["model_settings"] = model_settings
         agent = Agent(**kwargs)
         run_kwargs: dict[str, Any] = {"max_turns": self.max_turns}
         run_config = self._run_config()
