@@ -103,6 +103,7 @@ A source/setter must **not** provide or manufacture:
 - `decision_hash`;
 - `batch_hash`;
 - `CommercialActionTicket`;
+- `CommercialActionGoal`;
 - `EffectApprovalReceipt`;
 - effect intent/outcome state.
 
@@ -130,11 +131,22 @@ The live sanitized LAYA trace does not emit this brief. Future model-assisted dr
 
 For every authoritative `WORK_NOW` decision, MiMicus creates one deterministic `CommercialActionTicket`.
 
-The ticket carries the contact target and authoritative `next_action`, but:
+The ticket carries the contact target, authoritative `next_action`, and one deterministic `goal` describing the observable transition that counts as success.
+
+Goal mapping is derived only by `DeterministicLeadDecisionService`:
+
+- `CONTACT` / pre-proposal `FOLLOW_UP` → obtain a reply;
+- `QUALIFY` → reach `qualified` with matching stage evidence;
+- `PROPOSE` → reach `proposal` with matching stage evidence;
+- proposal `FOLLOW_UP` → resolve to `won` or `lost` with matching outcome evidence.
+
+The goal is included in `ticket_hash` and therefore in the batch hash. Source/setter input cannot supply it.
+
+The ticket remains a handoff contract, not action authority:
 
 - it is **not** permission to send;
 - it always declares `requires_human_approval=true`;
-- it is bound into the decision batch hash;
+- success criteria do not grant stage authority;
 - any real external mutation still requires the independent exact-envelope effect approval boundary.
 
 ## Funnel measurement

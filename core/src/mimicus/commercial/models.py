@@ -46,6 +46,22 @@ class LeadStage(StrEnum):
     UNKNOWN = "unknown"
 
 
+class CommercialGoalCode(StrEnum):
+    OBTAIN_REPLY = "obtain_reply"
+    QUALIFY = "qualify"
+    ADVANCE_TO_PROPOSAL = "advance_to_proposal"
+    RESOLVE_PROPOSAL = "resolve_proposal"
+
+
+class CommercialActionGoal(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    code: CommercialGoalCode
+    target_lead_stage: LeadStage
+    target_commercial_stages: tuple[CommercialStage, ...] = ()
+    requires_stage_evidence: bool = False
+
+
 class CommercialStageEvidence(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -228,6 +244,7 @@ class CommercialActionTicket(BaseModel):
     next_action: LeadNextAction
     rank_position: int = Field(ge=1)
     decision_hash: str = Field(min_length=64, max_length=64)
+    goal: CommercialActionGoal
     source_brief: CommercialSourceBrief = Field(default_factory=CommercialSourceBrief)
     effect_scope: Literal["commercial-outreach"] = "commercial-outreach"
     requires_human_approval: Literal[True] = True
