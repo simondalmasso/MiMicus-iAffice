@@ -63,7 +63,7 @@ class ActionAdmissionPolicy(BaseModel):
         return stripped
 
     @model_validator(mode="after")
-    def reject_duplicate_rules(self) -> "ActionAdmissionPolicy":
+    def reject_duplicate_rules(self) -> ActionAdmissionPolicy:
         seen: set[tuple[str, str]] = set()
         duplicates: set[tuple[str, str]] = set()
         for rule in self.rules:
