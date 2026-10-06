@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from mimicus.canonical import sha256_obj
 from mimicus.commercial.diagnosis import (
     CommercialBottleneck,
     CommercialDiagnosisPolicy,
@@ -12,7 +13,6 @@ from mimicus.commercial.funnel import (
     FunnelMetrics,
     FunnelTransitionStats,
 )
-from mimicus.canonical import sha256_obj
 
 AS_OF = datetime(2026, 10, 5, 23, 0, tzinfo=UTC)
 
