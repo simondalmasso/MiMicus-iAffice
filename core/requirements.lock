@@ -24,8 +24,8 @@ jsonschema-specifications==2025.9.1
 librt==0.15.0
 Mako==1.4.1
 MarkupSafe==3.0.3
-mcp==2.0.0
-mcp-types==2.0.0
+mcp==2.2.0
+mcp-types==2.2.0
 mypy==2.3.0
 mypy_extensions==1.1.0
 openai==3.1.0
