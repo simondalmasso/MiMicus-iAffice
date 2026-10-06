@@ -15,6 +15,7 @@ MiMicus protects the integrity of verified claims, memory authority, calibration
 - **Poisoned mutation**: declarative mutation only, frozen fossils, deterministic precision/recall/critical-regression promotion gate, immutable parent.
 - **Ledger tamper**: each event is SHA-256 chained over canonical payload and prior hash; replay checks linkage, event hash and expected head.
 - **Causal-result tamper**: causal replay recomputes the semantic Morphology-DAG contract and requires its semantic hash to match the chain-protected `causal_execution_recorded` ledger anchor. Mutable result JSON cannot self-authorize by re-hashing itself.
+- **Tool-effect misclassification**: only an exact source-controlled `READ_ONLY` rule may bypass the effect gate. Explicit `MUTATING` and unmatched `UNKNOWN` operations fail dangerous. The MCP surface derives read-only annotations from the same policy and fails construction when its declared tool surface drifts.
 - **Effect substitution**: approval is bound to the exact canonical envelope hash. Payload, destination, resource, operation, scope or adapter changes invalidate the approval before dispatch.
 - **Approval replay/race**: approvals are durable, time-bounded and atomically one-use. Concurrent consumers cannot both dispatch the same approved envelope.
 - **Uncertain remote effect outcome**: an adapter exception after invocation produces `UNKNOWN`, keeps the approval consumed and forbids blind redispatch.
@@ -29,7 +30,7 @@ MiMicus protects the integrity of verified claims, memory authority, calibration
 
 ## Effect boundary
 
-V0.2.2 contains an effect authorization and dispatch seam, but no autonomous real-world adapter is enabled by default. A real adapter must preserve the existing exact-envelope, one-use approval contract. Future browser/computer adapters also require explicit action admission and network-egress policy before they can be considered production-safe; those capabilities are not implied by the current effect seam.
+V0.2.2 contains an effect authorization and dispatch seam, but no autonomous real-world adapter is enabled by default. A real adapter must preserve the existing exact-envelope, one-use approval contract. Future browser/computer adapters also require this explicit action admission plus network-egress policy before they can be considered production-safe; those capabilities are not implied by the current effect seam.
 
 ## MCP exposure
 
