@@ -246,3 +246,87 @@ def test_cli_funnel_diagnose_reports_qualification_backlog_without_changing_snap
     assert payload["diagnosis"]["bottleneck"] == "QUALIFICATION_BACKLOG"
     assert payload["diagnosis"]["focus"] == "qualify_replied_leads"
     assert payload["diagnosis"]["supporting_metrics"]["qualify_count"] == 3
+
+
+def test_cli_funnel_intervene_emits_measurable_plan(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setenv("MIMICUS_DATABASE_URL", "sqlite:///:memory:")
+    ledger = tmp_path / "ledger.json"
+    policy = tmp_path / "policy.json"
+    _write_json(
+        ledger,
+        {
+            "findings": [
+                _finding("reply-1", status="replied", score=90),
+                _finding("reply-2", status="replied", score=85),
+                _finding("reply-3", status="replied", score=80),
+            ]
+        },
+    )
+    _write_json(
+        policy,
+        {
+            "version": "intervention-cli-v1",
+            "max_work_per_lane": 3,
+            "follow_up_after_hours": {"messenger": 24},
+        },
+    )
+
+    rc = main(
+        [
+            "funnel",
+            "--ledger-file",
+            str(ledger),
+            "--policy-file",
+            str(policy),
+            "--as-of",
+            "2026-10-01T15:34:00-03:00",
+            "--diagnose",
+            "--intervene",
+        ]
+    )
+
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["diagnosis"]["bottleneck"] == "QUALIFICATION_BACKLOG"
+    assert payload["intervention"]["code"] == "QUALIFY_BACKLOG"
+    criterion = payload["intervention"]["criteria"][0]
+    assert criterion["metric"] == "qualify_count"
+    assert criterion["comparator"] == "lt"
+    assert criterion["target"] == 3
+    assert len(payload["intervention"]["intervention_hash"]) == 64
+
+
+def test_cli_funnel_intervene_requires_diagnose(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("MIMICUS_DATABASE_URL", "sqlite:///:memory:")
+    ledger = tmp_path / "ledger.json"
+    policy = tmp_path / "policy.json"
+    _write_json(ledger, {"findings": [_finding("reply", status="replied")]})
+    _write_json(
+        policy,
+        {
+            "version": "intervention-cli-v1",
+            "max_work_per_lane": 3,
+            "follow_up_after_hours": {"messenger": 24},
+        },
+    )
+
+    with pytest.raises(SystemExit, match="--intervene requires --diagnose"):
+        main(
+            [
+                "funnel",
+                "--ledger-file",
+                str(ledger),
+                "--policy-file",
+                str(policy),
+                "--as-of",
+                "2026-10-01T15:34:00-03:00",
+                "--intervene",
+            ]
+        )
