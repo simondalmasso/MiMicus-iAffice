@@ -182,3 +182,67 @@ def test_cli_triage_trace_jsonl_streams_laya_pipeline(
     assert rows[2]["reasons"] == ["stage:replied", "within_lane_wip"]
     assert rows[3]["selected_by_lane"]["facebook"] == ["live-lead"]
     assert rows[3]["batch_hash"]
+
+
+def test_cli_funnel_diagnose_reports_qualification_backlog_without_changing_snapshot_contract(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setenv("MIMICUS_DATABASE_URL", "sqlite:///:memory:")
+    ledger = tmp_path / "ledger.json"
+    policy = tmp_path / "policy.json"
+    _write_json(
+        ledger,
+        {
+            "findings": [
+                _finding("reply-1", status="replied", score=90),
+                _finding("reply-2", status="replied", score=85),
+                _finding("reply-3", status="replied", score=80),
+            ]
+        },
+    )
+    _write_json(
+        policy,
+        {
+            "version": "diagnosis-cli-v1",
+            "max_work_per_lane": 3,
+            "follow_up_after_hours": {"messenger": 24},
+        },
+    )
+
+    default_rc = main(
+        [
+            "funnel",
+            "--ledger-file",
+            str(ledger),
+            "--policy-file",
+            str(policy),
+            "--as-of",
+            "2026-10-01T15:34:00-03:00",
+        ]
+    )
+    assert default_rc == 0
+    default_payload = json.loads(capsys.readouterr().out)
+    assert "snapshot_hash" in default_payload
+    assert "diagnosis" not in default_payload
+
+    diagnosis_rc = main(
+        [
+            "funnel",
+            "--ledger-file",
+            str(ledger),
+            "--policy-file",
+            str(policy),
+            "--as-of",
+            "2026-10-01T15:34:00-03:00",
+            "--diagnose",
+        ]
+    )
+    assert diagnosis_rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["snapshot"]["snapshot_hash"] == default_payload["snapshot_hash"]
+    assert payload["diagnosis"]["snapshot_hash"] == default_payload["snapshot_hash"]
+    assert payload["diagnosis"]["bottleneck"] == "QUALIFICATION_BACKLOG"
+    assert payload["diagnosis"]["focus"] == "qualify_replied_leads"
+    assert payload["diagnosis"]["supporting_metrics"]["qualify_count"] == 3
