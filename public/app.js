@@ -21,7 +21,7 @@ const simulationLines = [
   ["LAYA","Asigna asincronía unidad data — Dataset Demo."],
   ["LOGÍSTICO","Queue consolidada; 0 duplicados; 3 handoffs confirmados."],
   ["SETTER","Secuencia de seguimiento preparada; salida externa deshabilitada."],
-  ["SISTEMA","MiMicus immune core archivado y trazable en source 565407e."]
+  ["SISTEMA","Checkpoint histórico del core: 565407e · no implica HEAD actual."]
 ];
 
 function stamp(value = new Date()){
@@ -220,10 +220,10 @@ async function boot(){
     }
 
     document.getElementById("runtimeStatus").textContent=health.ok ? (runtime?.evidenceClass ?? "SIMULATED_FIXTURE") : "DEGRADED";
-    if(runtime?.sourceHead){
+    if(runtime?.historicalCoreCheckpoint){
       appendLog(
         "SISTEMA",
-        `Core absorbido: ${runtime.sourceHead.slice(0,7)} · ${runtime.morphologies.length} morphologies.`
+        `Checkpoint histórico: ${runtime.historicalCoreCheckpoint.slice(0,7)} · ${runtime.morphologies.length} morphologies.`
       );
     }
     startSimulation();
