@@ -1,4 +1,10 @@
 from mimicus.commercial.decision import DeterministicLeadDecisionService
+from mimicus.commercial.diagnosis import (
+    CommercialBottleneck,
+    CommercialDiagnosisPolicy,
+    CommercialFunnelDiagnosis,
+    diagnose_commercial_funnel,
+)
 from mimicus.commercial.funnel import (
     CommercialCalibrationRow,
     CommercialFunnelSnapshot,
@@ -21,6 +27,9 @@ from mimicus.commercial.prospect_ingest import normalize_ledger, normalize_prosp
 
 __all__ = [
     "CommercialActionTicket",
+    "CommercialBottleneck",
+    "CommercialDiagnosisPolicy",
+    "CommercialFunnelDiagnosis",
     "CommercialCalibrationRow",
     "CommercialSourceBrief",
     "CommercialFunnelSnapshot",
@@ -35,6 +44,7 @@ __all__ = [
     "LeadDisposition",
     "LeadStage",
     "build_commercial_funnel",
+    "diagnose_commercial_funnel",
     "normalize_ledger",
     "normalize_prospect",
 ]
