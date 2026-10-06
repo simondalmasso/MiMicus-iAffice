@@ -59,7 +59,7 @@ Frozen fields:
 - `bottleneck`
 - `reasons`
 - `focus`
-- `supporting_counts`
+- `supporting_metrics`
 - `diagnosis_hash`
 
 The hash binds all semantic diagnosis fields except itself.
