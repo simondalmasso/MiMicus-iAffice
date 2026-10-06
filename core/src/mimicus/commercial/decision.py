@@ -5,7 +5,9 @@ from datetime import datetime
 
 from mimicus.canonical import sha256_obj
 from mimicus.commercial.models import (
+    CommercialActionGoal,
     CommercialActionTicket,
+    CommercialGoalCode,
     CommercialSourceBrief,
     CommercialStage,
     LeadCandidate,
@@ -402,6 +404,7 @@ class DeterministicLeadDecisionService:
             raise RuntimeError("WORK_NOW candidate must have complete closer contact metadata")
 
         source_brief = CommercialSourceBrief.model_validate(candidate.source_brief)
+        goal = DeterministicLeadDecisionService._action_goal(decision)
         payload = {
             "prospect_id": decision.prospect_id,
             "lane": decision.lane,
@@ -413,6 +416,7 @@ class DeterministicLeadDecisionService:
             "next_action": decision.next_action.value,
             "rank_position": decision.rank_position,
             "decision_hash": decision.decision_hash,
+            "goal": goal.model_dump(mode="json"),
             "source_brief": source_brief.model_dump(mode="json"),
             "effect_scope": "commercial-outreach",
             "requires_human_approval": True,
@@ -428,10 +432,48 @@ class DeterministicLeadDecisionService:
             next_action=decision.next_action,
             rank_position=decision.rank_position,
             decision_hash=decision.decision_hash,
+            goal=goal,
             source_brief=source_brief,
             effect_scope="commercial-outreach",
             requires_human_approval=True,
             ticket_hash=sha256_obj(payload),
+        )
+
+    @staticmethod
+    def _action_goal(decision: LeadDecision) -> CommercialActionGoal:
+        if decision.next_action == LeadNextAction.CONTACT:
+            return CommercialActionGoal(
+                code=CommercialGoalCode.OBTAIN_REPLY,
+                target_lead_stage=LeadStage.REPLIED,
+            )
+        if decision.next_action == LeadNextAction.QUALIFY:
+            return CommercialActionGoal(
+                code=CommercialGoalCode.QUALIFY,
+                target_lead_stage=LeadStage.QUALIFIED,
+                target_commercial_stages=(CommercialStage.QUALIFIED,),
+                requires_stage_evidence=True,
+            )
+        if decision.next_action == LeadNextAction.PROPOSE:
+            return CommercialActionGoal(
+                code=CommercialGoalCode.ADVANCE_TO_PROPOSAL,
+                target_lead_stage=LeadStage.PROPOSAL,
+                target_commercial_stages=(CommercialStage.PROPOSAL,),
+                requires_stage_evidence=True,
+            )
+        if decision.next_action == LeadNextAction.FOLLOW_UP:
+            if decision.commercial_stage == CommercialStage.PROPOSAL:
+                return CommercialActionGoal(
+                    code=CommercialGoalCode.RESOLVE_PROPOSAL,
+                    target_lead_stage=LeadStage.TERMINAL,
+                    target_commercial_stages=(CommercialStage.WON, CommercialStage.LOST),
+                    requires_stage_evidence=True,
+                )
+            return CommercialActionGoal(
+                code=CommercialGoalCode.OBTAIN_REPLY,
+                target_lead_stage=LeadStage.REPLIED,
+            )
+        raise RuntimeError(
+            f"WORK_NOW action {decision.next_action.value} has no success goal"
         )
 
     @staticmethod
