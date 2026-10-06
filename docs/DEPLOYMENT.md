@@ -77,13 +77,19 @@ Completed:
 
 ## Gate F — deployment
 
-Still intentionally pending:
+The repository now contains a manual production channel at `.github/workflows/deploy-production.yml`.
 
-1. exact-head CI on canonical `main`;
-2. optional preview deployment;
-3. preview health/UI verification;
-4. explicit production release decision;
-5. production deployment.
+It is intentionally **not** triggered by push. A production run requires all of the following:
+
+1. the workflow is dispatched from `main`;
+2. the operator types `DEPLOY_MIMICUS`;
+3. the operator supplies the exact approved `main` SHA;
+4. the workflow runs through the GitHub `production` environment;
+5. `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are configured as environment/repository secrets;
+6. cockpit syntax, provenance and Wrangler dry-run gates pass before deployment;
+7. live acceptance verifies security headers, JSON health/runtime responses and JSON 404 behavior after deployment.
+
+The workflow's existence does not authorize a release by itself. Exact-head CI on canonical `main` and an explicit production release decision remain required.
 
 ## Rollback
 
