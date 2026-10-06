@@ -10,6 +10,7 @@ from pathlib import Path
 from mimicus import __version__
 from mimicus.benchmark import write_benchmark
 from mimicus.canonical import sha256_obj
+from mimicus.commercial.diagnosis import CommercialDiagnosisPolicy, diagnose_commercial_funnel
 from mimicus.commercial.models import LeadDecisionPolicy
 from mimicus.config import Settings
 from mimicus.orchestration.engine import MiMicusEngine, RunRequest, _spec_keys, scenario_fixture
@@ -146,6 +147,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_funnel.add_argument("--ledger-file", required=True)
     p_funnel.add_argument("--policy-file", required=True)
     p_funnel.add_argument("--as-of", required=True)
+    p_funnel.add_argument("--diagnose", action="store_true")
 
     p_observe = sub.add_parser("observe")
     source_group = p_observe.add_mutually_exclusive_group(required=True)
@@ -284,6 +286,22 @@ def main(argv: Sequence[str] | None = None) -> int:
             policy=policy,
             as_of=as_of,
         )
+        if args.diagnose:
+            diagnosis = diagnose_commercial_funnel(
+                snapshot,
+                CommercialDiagnosisPolicy(),
+            )
+            print(
+                json.dumps(
+                    {
+                        "snapshot": snapshot.model_dump(mode="json"),
+                        "diagnosis": diagnosis.model_dump(mode="json"),
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+            )
+            return 0
         print(snapshot.model_dump_json(indent=2))
         return 0
     if args.command == "observe":
