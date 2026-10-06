@@ -9,7 +9,9 @@ A green core does not automatically authorize production.
 From `core/`:
 
 ```bash
-python -m pip install -e ".[dev]"
+python -m pip install -r requirements.lock
+python -m pip install --no-deps -e .
+python -m pip check
 pytest --cov=mimicus --cov-report=term-missing
 ruff check src tests
 mypy src/mimicus
