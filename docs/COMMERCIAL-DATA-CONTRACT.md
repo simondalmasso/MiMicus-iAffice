@@ -164,6 +164,33 @@ It measures:
 
 Calibration rows are deliberately sanitized: buyer names, titles, URLs, evidence references/summaries and commercial free text are excluded.
 
+### Funnel diagnosis
+
+`mimicus funnel --diagnose` adds a deterministic, read-only diagnosis over the same `CommercialFunnelSnapshot`.
+
+The default `mimicus funnel` output remains unchanged. With `--diagnose`, the CLI returns:
+
+```json
+{
+  "snapshot": {},
+  "diagnosis": {}
+}
+```
+
+Diagnosis policy uses explicit thresholds for minimum sample sizes, transition rates, terminal win rate and qualification backlog. It may classify the observed bottleneck as:
+
+- `DATA_QUALITY`;
+- `TERMINAL_STALL`;
+- `LOW_WIN_RATE`;
+- `PROPOSAL_STALL`;
+- `QUALIFICATION_BACKLOG`;
+- `INSUFFICIENT_DATA`;
+- `NO_OBSERVED_BOTTLENECK`.
+
+The diagnosis is observational only. It does **not** change LAYA ranking, disposition, action goals or effect approval; it does not call a model/provider, mutate source data or send anything.
+
+The diagnosis artifact contains only sanitized aggregate metrics plus snapshot/policy hashes and a canonical `diagnosis_hash`. Buyer names, titles, URLs and evidence free text are not included.
+
 ## Example lifecycle
 
 ```text
