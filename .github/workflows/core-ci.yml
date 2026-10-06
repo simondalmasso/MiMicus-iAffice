@@ -84,5 +84,7 @@ jobs:
           node-version: "24"
       - name: JavaScript syntax
         run: node --check public/app.js
+      - name: Cockpit DOM and provenance contract
+        run: node scripts/check-cockpit-contract.mjs
       - name: Worker dry-run
         run: npx --yes wrangler@4.134.0 deploy --dry-run

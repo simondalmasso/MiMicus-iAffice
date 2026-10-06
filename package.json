@@ -6,6 +6,7 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "check:js": "node --check public/app.js",
-    "check": "npm run check:js && wrangler deploy --dry-run"
+    "check:cockpit": "node scripts/check-cockpit-contract.mjs",
+    "check": "npm run check:js && npm run check:cockpit && wrangler deploy --dry-run"
   }
 }
