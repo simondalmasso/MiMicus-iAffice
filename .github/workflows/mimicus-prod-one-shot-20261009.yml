@@ -18,18 +18,18 @@ jobs:
     if: >-
       github.repository == 'simondalmasso/MiMicus-iAffice' &&
       github.ref == 'refs/heads/governance/mimicus-prod-one-shot-20261009-v1' &&
-      github.event.before == '34d1aff262bd76ed5a0e869c6b9467bc327e2e3a' &&
-      github.event.head_commit.message == 'release: retry owner-authorized one-shot Mimicus deployment (YAML quoting fixed)'
+      github.event.before == 'd717130580ff054879a8ecc7cfad94e1ccb69538' &&
+      github.event.head_commit.message == 'release: publish verified Mimicus static header fix to production'
     runs-on: ubuntu-latest
     environment: production
     env:
-      APPROVED_MAIN_SHA: "9cc8856efd343dd988a0ae60784b271ebaab16d8"
+      APPROVED_MAIN_SHA: "e420e8af12ce6a2abdd2ebd84dd63b5fdc590dba"
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: "9cc8856efd343dd988a0ae60784b271ebaab16d8"
+          ref: "e420e8af12ce6a2abdd2ebd84dd63b5fdc590dba"
           fetch-depth: 0
 
       - uses: actions/setup-node@v5
@@ -39,7 +39,7 @@ jobs:
       - name: Enforce exact approved main SHA
         shell: bash
         env:
-          EXPECTED_SHA: "9cc8856efd343dd988a0ae60784b271ebaab16d8"
+          EXPECTED_SHA: "e420e8af12ce6a2abdd2ebd84dd63b5fdc590dba"
         run: |
           set -euo pipefail
           test "$GITHUB_REF" = "refs/heads/governance/mimicus-prod-one-shot-20261009-v1"
