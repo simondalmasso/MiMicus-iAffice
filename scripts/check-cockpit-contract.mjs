@@ -15,8 +15,29 @@ if (/\bsourceHead\s*:|\bcoreSourceHead\s*:/.test(worker)) {
   throw new Error("ambiguous current-source fields are forbidden in simulation Worker metadata");
 }
 
-if (!worker.includes("historicalCoreCheckpoint")) {
-  throw new Error("Worker must label the archived core SHA as historicalCoreCheckpoint");
+// A public observability UI may only display real observations.
+// It must not boot into synthetic timelines or fabricated business KPIs.
+const banned = [
+  "simulationLines", "startSimulation", "SIMULATED_FIXTURE",
+  "14.578", "312.3M", "22.70M", "mPipeline2", "Autopilot SIM",
+  "historicalCoreCheckpoint", "565407eb1296eae617f5b14b512d2e0cf08c6c02"
+];
+for (const term of banned) {
+  if (html.includes(term) || app.includes(term) || worker.includes(term)) {
+    throw new Error("non-live cockpit content forbidden: " + term);
+  }
+}
+if (!worker.includes("coreConnected: false") || !worker.includes("agentActivityAvailable: false")) {
+  throw new Error("public Worker must deny unverified LAYA connectivity");
+}
+if (!worker.includes("externalEffectsEnabled: false")) {
+  throw new Error("public Worker must explicitly deny effect authority");
+}
+if (!worker.includes('"LIVE_OBSERVED"') || !worker.includes('"/api/status"')) {
+  throw new Error("public Worker must expose a real status endpoint");
+}
+if (!app.includes("local-live-observer") || !app.includes("/api/activity?since=")) {
+  throw new Error("actual Python observer integration was removed");
 }
 
 
