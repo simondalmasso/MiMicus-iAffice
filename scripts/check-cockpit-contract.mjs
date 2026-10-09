@@ -5,8 +5,8 @@ const app = readFileSync("public/app.js", "utf8");
 const worker = readFileSync("worker.js", "utf8");
 
 const ids = [
-  ...app.matchAll(/getElementById\\(["']([^"']+)["']\\)/g),
-  ...app.matchAll(/\\bget\\(["']([^"']+)["']\\)/g)
+  ...app.matchAll(/getElementById\(["']([^"']+)["']\)/g),
+  ...app.matchAll(/\bget\(["']([^"']+)["']\)/g)
 ].map((match) => match[1]);
 const missing = [...new Set(ids)].filter((id) => !html.includes(`id="${id}"`) && !html.includes(`id='${id}'`));
 
