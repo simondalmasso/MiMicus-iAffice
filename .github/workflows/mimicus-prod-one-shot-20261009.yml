@@ -15,7 +15,11 @@ concurrency:
 
 jobs:
   verify-and-deploy:
-    if: github.repository == 'simondalmasso/MiMicus-iAffice' && github.ref == 'refs/heads/governance/mimicus-prod-one-shot-20261009-v1' && github.event.before == '9cc8856efd343dd988a0ae60784b271ebaab16d8' && github.event.head_commit.message == 'release: execute owner-authorized one-shot Mimicus production deploy'
+    if: >-
+      github.repository == 'simondalmasso/MiMicus-iAffice' &&
+      github.ref == 'refs/heads/governance/mimicus-prod-one-shot-20261009-v1' &&
+      github.event.before == '34d1aff262bd76ed5a0e869c6b9467bc327e2e3a' &&
+      github.event.head_commit.message == 'release: retry owner-authorized one-shot Mimicus deployment (YAML quoting fixed)'
     runs-on: ubuntu-latest
     environment: production
     env:
