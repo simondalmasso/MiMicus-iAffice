@@ -109,7 +109,14 @@ jobs:
           curl -fsS -D "$headers" -o "$body" "$base/api/runtime"
           grep -qi '^content-type:[[:space:]]*application/json' "$headers"
           assert_security_headers "$headers"
-          grep -q '"evidenceClass":"SIMULATED_FIXTURE"' "$body"
+          grep -q '"evidenceClass":"LIVE_OBSERVED"' "$body"
+          grep -q '"coreConnected":false' "$body"
+          grep -q '"externalEffectsEnabled":false' "$body"
+
+          curl -fsS -D "$headers" -o "$body" "$base/api/status"
+          grep -qi '^content-type:[[:space:]]*application/json' "$headers"
+          assert_security_headers "$headers"
+          grep -q '"coreConnected":false' "$body"
 
           status="$(curl -sS -D "$headers" -o "$body" -w '%{http_code}' "$base/api/definitely-not-real")"
           test "$status" = "404"

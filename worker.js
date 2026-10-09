@@ -1,17 +1,5 @@
-const runtime = {
-  product: "MiMicus iAffice",
-  supervisor: "LAYA",
-  mode: "simulation-fixture",
-  evidenceClass: "SIMULATED_FIXTURE",
-  dataOrigin: "synthetic-ui-fixture",
-  sideEffects: false,
-  release: "v0.3-prep",
-  corePackage: "mimicus-swarm",
-  coreVersion: "0.2.2",
-  historicalCoreCheckpoint: "565407eb1296eae617f5b14b512d2e0cf08c6c02",
-  morphologies: ["solo","paired_verify","parallel_fanout","sparse_graph","hierarchical_fanout_fanin"]
-};
-
+// Public edge telemetry only. Python LAYA is NOT hosted inside this Worker.
+// Never expose internal agent messages, synthetic metrics, or effect authority here.
 const securityHeaders = {
   "strict-transport-security": "max-age=31536000; includeSubDomains",
   "content-security-policy": "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
@@ -37,29 +25,48 @@ function secureResponse(response) {
   });
 }
 
+function jsonResponse(body, status = 200) {
+  return new Response(JSON.stringify(body), { status, headers: jsonHeaders });
+}
+
+function operationalStatus() {
+  return {
+    service: "mimicus",
+    surface: "cloudflare-edge",
+    observedAt: new Date().toISOString(),
+    evidenceClass: "LIVE_OBSERVED",
+    edgeReachable: true,
+    decisionAuthority: "MiMicusEngine",
+    coreConnected: false,
+    agentActivityAvailable: false,
+    activeAgentCount: null,
+    businessMetricsAvailable: false,
+    externalEffectsEnabled: false,
+    coreConnectionReason: "Python LAYA control plane is not connected to this public Worker",
+    message: "Cloud edge operational; Python LAYA requires a separately authenticated runtime"
+  };
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    const api = url.pathname === "/health" || url.pathname.startsWith("/api/");
+    if (api && request.method !== "GET" && request.method !== "HEAD") {
+      return jsonResponse({ ok: false, error: "method_not_allowed" }, 405);
+    }
     if (url.pathname === "/api/health" || url.pathname === "/health") {
-      return new Response(JSON.stringify({
+      return jsonResponse({
         ok: true,
         service: "mimicus",
         runtime: "cloudflare-workers",
-        ui: "monochrome-v2",
-        release: runtime.release,
-        evidenceClass: runtime.evidenceClass,
-        coreVersion: runtime.coreVersion,
-        historicalCoreCheckpoint: runtime.historicalCoreCheckpoint
-      }), { headers: jsonHeaders });
+        ...operationalStatus()
+      });
     }
-    if (url.pathname === "/api/runtime") {
-      return new Response(JSON.stringify(runtime), { headers: jsonHeaders });
+    if (url.pathname === "/api/status" || url.pathname === "/api/runtime") {
+      return jsonResponse({ mode: "cloud-edge", ...operationalStatus() });
     }
     if (url.pathname.startsWith("/api/")) {
-      return new Response(JSON.stringify({ ok: false, error: "not_found" }), {
-        status: 404,
-        headers: jsonHeaders
-      });
+      return jsonResponse({ ok: false, error: "not_found" }, 404);
     }
     return secureResponse(await env.ASSETS.fetch(request));
   }
