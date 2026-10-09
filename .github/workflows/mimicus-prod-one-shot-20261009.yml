@@ -18,18 +18,18 @@ jobs:
     if: >-
       github.repository == 'simondalmasso/MiMicus-iAffice' &&
       github.ref == 'refs/heads/governance/mimicus-prod-one-shot-20261009-v1' &&
-      github.event.before == 'd717130580ff054879a8ecc7cfad94e1ccb69538' &&
-      github.event.head_commit.message == 'release: publish verified Mimicus static header fix to production'
+      github.event.before == '6d824831de2166f02bad72ce2c6b2521af38760f' &&
+      github.event.head_commit.message == 'release: publish honest operational cockpit without invented agent metrics'
     runs-on: ubuntu-latest
     environment: production
     env:
-      APPROVED_MAIN_SHA: "e420e8af12ce6a2abdd2ebd84dd63b5fdc590dba"
+      APPROVED_MAIN_SHA: "9f743b9cba4039e7a77ebb57700a6da49e413a81"
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: "e420e8af12ce6a2abdd2ebd84dd63b5fdc590dba"
+          ref: "9f743b9cba4039e7a77ebb57700a6da49e413a81"
           fetch-depth: 0
 
       - uses: actions/setup-node@v5
@@ -39,7 +39,7 @@ jobs:
       - name: Enforce exact approved main SHA
         shell: bash
         env:
-          EXPECTED_SHA: "e420e8af12ce6a2abdd2ebd84dd63b5fdc590dba"
+          EXPECTED_SHA: "9f743b9cba4039e7a77ebb57700a6da49e413a81"
         run: |
           set -euo pipefail
           test "$GITHUB_REF" = "refs/heads/governance/mimicus-prod-one-shot-20261009-v1"
@@ -93,6 +93,10 @@ jobs:
 
           curl -fsS -D "$headers" -o "$body" "$base/"
           assert_security_headers "$headers"
+          grep -q 'Control operativo' "$body"
+          grep -q 'No hay mensajes de agentes verificados' "$body"
+          ! grep -q '14.578' "$body"
+          ! grep -q 'Autopilot SIM' "$body"
 
           curl -fsS -D "$headers" -o "$body" "$base/health"
           grep -qi '^content-type:[[:space:]]*application/json' "$headers"
@@ -108,7 +112,14 @@ jobs:
           curl -fsS -D "$headers" -o "$body" "$base/api/runtime"
           grep -qi '^content-type:[[:space:]]*application/json' "$headers"
           assert_security_headers "$headers"
-          grep -q '"evidenceClass":"SIMULATED_FIXTURE"' "$body"
+          grep -q '"evidenceClass":"LIVE_OBSERVED"' "$body"
+          grep -q '"coreConnected":false' "$body"
+          grep -q '"externalEffectsEnabled":false' "$body"
+
+          curl -fsS -D "$headers" -o "$body" "$base/api/status"
+          grep -qi '^content-type:[[:space:]]*application/json' "$headers"
+          assert_security_headers "$headers"
+          grep -q '"coreConnected":false' "$body"
 
           status="$(curl -sS -D "$headers" -o "$body" -w '%{http_code}' "$base/api/definitely-not-real")"
           test "$status" = "404"
