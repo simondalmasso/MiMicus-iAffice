@@ -1,6 +1,6 @@
 # MiMicus iAffice
 
-MiMicus iAffice is a governed multi-agent runtime with a monochrome operator cockpit.
+MiMicus iAffice contains a governed Python multi-agent runtime and a separate, publicly deployed operational cockpit. The cockpit reports only verified edge observations, not simulated commercial activity.
 
 The repository has two product surfaces:
 
@@ -42,8 +42,8 @@ The previous default-branch content is preserved intact at:
 
 Current release gates include:
 
-- 279 tests passing
-- 90.38% total coverage (90% gate)
+- 290 tests passing at the 2026-10-09 runtime checkpoint
+- >=90% total coverage gate passing
 - Ruff passing
 - mypy passing
 - Python package build passing
@@ -80,7 +80,7 @@ mimicus observe \
 npx wrangler dev
 ```
 
-The public Worker is observational. It is not a second LAYA control plane.
+The public Worker is observational. It is not a second LAYA control plane, does not execute Python, has no live remote agent-room backend and cannot honestly display agent messages until a real authenticated LAYA event bridge exists. The public status API reports the edge as reachable and the separate core as disconnected. No synthetic metrics, fake agent chats or simulated activity are rendered. See [STATUS.md](STATUS.md) for the exact CI, deploy and unresolved production boundaries.
 
 ## Documentation
 
