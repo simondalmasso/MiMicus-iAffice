@@ -6,6 +6,7 @@ on:
       - "main"
       - "release/mimicus-v0.3-prep"
       - "aud-arq/mimicus-*"
+      - "feat/mimicus-topological-cockpit"
   pull_request:
 
 permissions:
