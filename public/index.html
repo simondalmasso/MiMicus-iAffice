@@ -3,95 +3,116 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#0b1013">
-  <meta name="description" content="MiMicus — estado operativo verificable de LAYA y sus observadores">
-  <title>MiMicus — Control operativo</title>
+  <meta name="theme-color" content="#0b0b0d">
+  <meta name="description" content="MiMicus iAffice — cockpit topológico, supervisión LAYA y decisiones comerciales verificables.">
+  <title>MiMicus — LAYA / Operations</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <div class="workspace">
-    <aside class="sidebar" aria-label="Navegación">
-      <a class="wordmark" href="/" aria-label="MiMicus Inicio"><span class="symbol" aria-hidden="true">◈</span> MiMicus<span class="mark">/</span></a>
-      <div class="nav-label">ESPACIO DE TRABAJO</div>
-      <a class="nav-link active" href="#overview">Estado del sistema</a>
-      <a class="nav-link" href="#activity">Registro LAYA</a>
-      <a class="nav-link" href="#connection">Conexión del núcleo</a>
-      <div class="sidebar-foot">
-        <span class="live-indicator" aria-hidden="true"></span>
-        <span id="sidebarStatus">Comprobando conexión</span>
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="MiMicus iAffice, inicio">
+        <span class="brand-glyph" aria-hidden="true">✳</span>
+        <span>MiMicus<span class="brand-slash"> / </span><small>iAFFICE</small></span>
+      </a>
+      <div class="topbar-center"><span class="tiny-square"></span> LAYA <span class="topbar-rule"></span> OPERATIONAL INTELLIGENCE</div>
+      <div class="topbar-right"><span id="globalState" class="state-pill">VERIFICANDO</span><time id="utcClock" aria-label="Hora UTC">--:--:-- UTC</time></div>
+    </header>
+
+    <main class="main">
+      <section class="topology-hero" aria-label="Topología conceptual del motor Mimicus">
+        <div class="hero-grain" aria-hidden="true"></div>
+        <canvas id="topologyCanvas" aria-hidden="true"></canvas>
+        <div class="hero-corner top-left">
+          <div class="eyebrow">01 / TOPOLOGÍA</div>
+          <h1>Un cerebro.<br><em>Múltiples formas.</em></h1>
+          <p>LAYA gobierna la ejecución. Evidencia, memoria, verificación y efectos obedecen a un mismo plano de control.</p>
+        </div>
+        <div class="hero-corner top-right">
+          <div class="stat-line"><span>ORQUESTADOR</span><strong>MiMicusEngine</strong></div>
+          <div class="stat-line"><span>MORFOLOGÍAS</span><strong>05 / CANÓNICAS</strong></div>
+          <div class="stat-line"><span>EFECTOS</span><strong id="heroEffects">DENEGADOS POR DEFECTO</strong></div>
+          <div class="stat-line"><span>FUENTE</span><strong id="heroSource">SIN TELEMETRÍA LAYA</strong></div>
+        </div>
+        <div class="hero-center-label" aria-hidden="true"><span>LAYA</span><small>SUPERVISOR / CORE</small></div>
+        <div class="hero-bottom">
+          <div class="legend"><span class="legend-line"></span> TOPOLOGÍA CONCEPTUAL <span class="legend-separator">/</span> NO ES TELEMETRÍA DE AGENTES</div>
+          <div class="hero-actions"><button type="button" id="topologyToggle" class="text-button">PAUSAR MOVIMIENTO</button><span id="heroCoordinates">X +0.00 / Y +0.00</span></div>
+        </div>
+      </section>
+
+      <section class="section-heading" aria-label="Panel operativo">
+        <div><span class="eyebrow">02 / CONTROL OPERATIVO</span><h2>Decisiones, no simulaciones.</h2></div>
+        <div class="heading-actions"><span class="source-chip" id="sourceLabel">ORIGEN NO VERIFICADO</span><button class="outline-button" type="button" id="refreshBtn">↻ &nbsp; ACTUALIZAR</button></div>
+      </section>
+
+      <div class="dashboard-grid">
+        <aside class="left-stack" aria-label="Estado y observabilidad de LAYA">
+          <section class="panel state-panel">
+            <div class="panel-title"><span>ESTADO DEL SISTEMA</span><span class="panel-index">A / 04</span></div>
+            <div class="status-entry"><span class="status-icon" id="edgeDot"></span><div><small>WORKER / EDGE</small><strong id="edgeStatus">Comprobando…</strong><p id="edgeDetail">Conectando al endpoint de salud</p></div></div>
+            <div class="status-entry"><span class="status-icon" id="coreDot"></span><div><small>LAYA / PYTHON</small><strong id="coreStatus">Comprobando…</strong><p id="coreDetail">No se presupone conexión</p></div></div>
+            <div class="status-entry"><span class="status-icon" id="activityDot"></span><div><small>TRAZAS / LEADS</small><strong id="activityStatus">Sin verificar</strong><p id="activityDetail">A la espera del observador</p></div></div>
+            <div class="status-entry"><span class="status-icon" id="effectsDot"></span><div><small>AUTORIZACIÓN DE EFECTOS</small><strong id="effectStatus">Sin verificar</strong><p>El cockpit no puede enviar mensajes ni ejecutar acciones externas.</p></div></div>
+          </section>
+
+          <section class="panel anatomy-panel">
+            <div class="panel-title"><span>ANATOMÍA DE LA DECISIÓN</span><span class="panel-index">B / 04</span></div>
+            <div class="anatomy-row"><span class="anatomy-num">01</span><div><strong>INGESTA</strong><small>Setters Facebook / Reddit</small></div><span class="anatomy-line"></span></div>
+            <div class="anatomy-row"><span class="anatomy-num">02</span><div><strong>LAYA READING</strong><small>Evidencia + política explícita</small></div><span class="anatomy-line"></span></div>
+            <div class="anatomy-row"><span class="anatomy-num">03</span><div><strong>DECISION GATE</strong><small>WORK / HOLD / REPAIR / REJECT</small></div><span class="anatomy-line"></span></div>
+            <div class="anatomy-row"><span class="anatomy-num">04</span><div><strong>PROVENANCE</strong><small>Hash de lote + motivos</small></div></div>
+          </section>
+
+          <section class="panel diagnostics-panel" id="connection">
+            <div class="panel-title"><span>CONEXIÓN / DIAGNÓSTICO</span><span class="panel-index">C / 04</span></div>
+            <div class="diag-row"><span>Último control</span><strong id="lastCheck">—</strong></div>
+            <div class="diag-row"><span>Latencia edge</span><strong id="edgeLatency">—</strong></div>
+            <div class="diag-row"><span>Origen</span><strong id="originStatus">No verificado</strong></div>
+            <p id="connectionDetail">El Worker público es observacional. La ejecución real requiere el proceso local del observador Python.</p>
+            <div class="diag-links"><a href="http://127.0.0.1:8788/" target="_blank" rel="noopener noreferrer">OBSERVADOR LOCAL ↗</a><a href="https://github.com/simondalmasso/MiMicus-iAffice/blob/main/docs/MIMICUS-LIVE-OBSERVER.md" target="_blank" rel="noopener noreferrer">DOCUMENTACIÓN ↗</a></div>
+            <button type="button" id="copyDiagnostics" class="wide-button">COPIAR DIAGNÓSTICO <span>↗</span></button>
+          </section>
+        </aside>
+
+        <section class="right-stack" aria-label="Terminal comercial y actividad real">
+          <section class="panel terminal-panel" id="activity">
+            <div class="terminal-header"><div><div class="eyebrow">03 / COMERCIAL INTELLIGENCE</div><h2>Terminal de decisiones<span class="terminal-cursor">_</span></h2></div><span class="terminal-tag">READ ONLY <span>↗</span></span></div>
+            <div class="terminal-tabs"><span class="terminal-tab active">EVENT STREAM</span><span class="terminal-tab">LAYA / DECISION</span><span id="sidebarStatus" class="terminal-session">VERIFICANDO CONEXIÓN</span></div>
+            <div class="terminal-feed">
+              <div class="log-header"><span>TIME</span><span>SOURCE</span><span>EVENT / EVIDENCE</span></div>
+              <div id="emptyLog" class="terminal-empty">
+                <div class="empty-art" aria-hidden="true"><span>◌</span><span>↘</span><span>◌</span></div>
+                <strong>Esperando evidencia del núcleo.</strong>
+                <p>Los eventos aparecerán al conectarte al observador real de LAYA. Esta pantalla nunca inventa actividad, prospectos ni resultados.</p>
+                <a href="#connection">VER CÓMO CONECTAR ↗</a>
+              </div>
+              <div id="activityStream" class="activity-stream" role="log" aria-live="polite" aria-label="Eventos verificados de LAYA"></div>
+            </div>
+            <div class="terminal-controls">
+              <form id="filterForm" class="filter-form" autocomplete="off"><label for="leadFilter" class="prompt-symbol">›</label><input id="leadFilter" type="search" placeholder="Filtrar eventos por lead, decisión o fuente…" aria-label="Filtrar eventos del observador" maxlength="120"><button type="submit">FILTRAR ↵</button></form>
+              <div class="terminal-control-bottom"><span id="filterState">CONSULTA LOCAL · SIN EFECTOS</span><div><button id="clearFilter" type="button" class="text-button">LIMPIAR FILTRO</button><button id="pauseStream" type="button" class="text-button" disabled>PAUSAR FEED</button></div></div>
+            </div>
+          </section>
+
+          <section class="lower-grid">
+            <article class="panel lead-panel">
+              <div class="panel-title"><span>ÚLTIMA DECISIÓN RECIBIDA</span><span class="panel-index">D / 04</span></div>
+              <div class="lead-decision-head"><span id="decisionDisposition">SIN DATOS</span><span class="decision-arrow">↗</span></div>
+              <p id="decisionProspect">No hay prospectos evaluados en esta sesión.</p>
+              <div class="lead-evidence"><span>ETAPA</span><strong id="decisionStage">—</strong><span>POLÍTICA</span><strong id="decisionPolicy">—</strong><span>MOTIVOS</span><strong id="decisionReasons">—</strong></div>
+            </article>
+            <article class="panel source-panel">
+              <div class="panel-title"><span>FUENTE DE VERDAD</span><span class="panel-index">SYSTEM</span></div>
+              <p>Esta interfaz representa sólo resultados recibidos del núcleo. Las aprobaciones externas no se generan desde el navegador.</p>
+              <div class="source-foot"><span class="tiny-square"></span> <span id="modeLabel">EDGE / OBSERVACIÓN</span></div>
+              <div class="source-foot muted"><span>ÚLTIMO CURSOR</span><strong id="cursorLabel">—</strong></div>
+              <div class="source-foot muted"><span>EFECTOS</span><strong>OFF</strong></div>
+            </article>
+          </section>
+        </section>
       </div>
-    </aside>
-
-    <main class="main" id="overview">
-      <div class="eyebrow">OPERACIONES / OBSERVABILIDAD</div>
-      <header class="page-header">
-        <div>
-          <h1>MiMicus <em>iAffice</em></h1>
-          <p>Estado obtenido de endpoints reales. Ninguna cifra comercial se genera en el navegador.</p>
-        </div>
-        <button id="refreshBtn" class="primary-button" type="button">Comprobar ahora <span aria-hidden="true">↗</span></button>
-      </header>
-
-      <section class="overview-grid" aria-label="Estado observado">
-        <article class="signal-card">
-          <div class="signal-heading">Cloudflare Worker <span class="signal-dot" id="edgeDot"></span></div>
-          <div class="signal-value" id="edgeStatus">Comprobando…</div>
-          <p id="edgeDetail">Esperando respuesta de /api/health</p>
-        </article>
-        <article class="signal-card">
-          <div class="signal-heading">Motor LAYA <span class="signal-dot" id="coreDot"></span></div>
-          <div class="signal-value" id="coreStatus">Comprobando…</div>
-          <p id="coreDetail">No se presupone conexión al núcleo Python</p>
-        </article>
-        <article class="signal-card">
-          <div class="signal-heading">Actividad de agentes <span class="signal-dot" id="activityDot"></span></div>
-          <div class="signal-value" id="activityStatus">Sin verificar</div>
-          <p id="activityDetail">Solo se muestran eventos recibidos de un observador activo</p>
-        </article>
-        <article class="signal-card">
-          <div class="signal-heading">Acciones externas <span class="signal-dot" id="effectsDot"></span></div>
-          <div class="signal-value" id="effectStatus">Sin verificar</div>
-          <p>Sin permisos implícitos de envío, CRM ni ejecución</p>
-        </article>
-      </section>
-
-      <section class="section-panel" id="activity" aria-label="Registro de actividad real">
-        <div class="section-top">
-          <div>
-            <div class="eyebrow">REGISTRO / EVENTOS</div>
-            <h2>Actividad verificable</h2>
-          </div>
-          <div class="actions">
-            <span class="mini-status" id="sourceLabel">Origen: pendiente</span>
-            <button type="button" class="quiet-button" id="pauseStream" disabled>Pausar</button>
-          </div>
-        </div>
-        <div class="empty-state" id="emptyLog">
-          <div class="empty-symbol" aria-hidden="true">⌁</div>
-          <h3>No hay mensajes de agentes verificados</h3>
-          <p>El Worker público no está conectado al motor Python LAYA. El registro aparecerá únicamente al iniciar el observador real.</p>
-        </div>
-        <div id="activityStream" class="activity-stream" role="log" aria-live="polite" aria-label="Eventos recibidos del observador real"></div>
-      </section>
-
-      <section class="connection-panel" id="connection">
-        <div>
-          <div class="eyebrow">LAYA / CONEXIÓN</div>
-          <h2>Conectar el núcleo real</h2>
-          <p id="connectionDetail">La web Cloudflare y MiMicusEngine son procesos diferentes. No hay un chat multiagente remoto conectado. El observador existente funciona localmente, en modo lectura.</p>
-          <div class="link-row">
-            <a href="http://127.0.0.1:8788/" target="_blank" rel="noopener noreferrer">Abrir observador local ↗</a>
-            <a href="https://github.com/simondalmasso/MiMicus-iAffice/blob/main/docs/MIMICUS-LIVE-OBSERVER.md" target="_blank" rel="noopener noreferrer">Guía de arranque ↗</a>
-          </div>
-        </div>
-        <div class="connection-check">
-          <span>Última comprobación</span><strong id="lastCheck">—</strong>
-          <span>Latencia HTTP</span><strong id="edgeLatency">—</strong>
-          <span>Origen de los datos</span><strong id="originStatus">No verificado</strong>
-          <button class="quiet-button" type="button" id="copyDiagnostics">Copiar diagnóstico</button>
-        </div>
-      </section>
-      <footer>MiMicus / Estado operativo real · Sin métricas ficticias · Sin operaciones autónomas habilitadas</footer>
+      <footer class="footer"><span>MiMicus iAffice <span class="muted">/ CONTROL PLANE</span></span><span>LAYA ES AUTORIDAD · EL COCKPIT OBSERVA · SIN MÉTRICAS FICTICIAS</span><span id="footerTime">UTC --:--:--</span></footer>
     </main>
   </div>
   <script src="/app.js" defer></script>
